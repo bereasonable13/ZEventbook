@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>
+        <?= appTitle ?> · Public
+    </title>
+    <?!= include('Styles'); ?>
+    <style>
+        /* Page-specific tweaks + top-centered toast + spinner */
+
+        .meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 12px;
+            align-items: center;
+        }
+
+        .badge {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--surface-2);
+            font-weight: 600;
+        }
+
+        .kpi {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .tbl {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .tbl th,
+        .tbl td {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--border);
+            text-align: left;
+        }
+
+        .brkt {
+            display: flex;
+            gap: 12px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .round {
+            min-width: 240px;
+        }
+
+        .match {
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 8px;
+            margin-bottom: 12px;
+        }
+
+        .slot {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 6px 8px;
+            border-radius: 8px;
+        }
+
+        .score {
+            min-width: 32px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .muted {
+            opacity: .65;
+        }
+
+        .shareRow {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .qr {
+            width: 128px;
+            height: 128px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        /* Show small QR automatically in TV mode */
+        body[data-tv="1"] .qr {
+            display: block;
+        }
+
+        /* Top-centered toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            transform: translateX(-50%);
+            top: 16px;
+            z-index: 4000;
+            background: #1d2a1f;
+            border: 1px solid #2b6c37;
+            color: #d5f5dd;
+            padding: 10px 14px;
+            border-radius: 10px;
+            min-width: 240px;
+            text-align: center;
+            display: none;
+        }
+
+        .toast.ok {
+            background: #1d2a1f;
+            border-color: #2b6c37;
+            color: #d5f5dd;
+        }
+
+        .toast.danger {
+            background: #3a1d1d;
+            border-color: #7f2d2d;
+            color: #ffd7d7;
+        }
+
+        /* Center spinner overlay */
+        .busy-overlay {
+            position: fixed;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(6, 10, 16, .55);
+            z-index: 3500;
+            backdrop-filter: blur(1px);
+        }
+
+        .busy-core {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px 18px;
+            min-width: 200px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, .35);
+        }
+
+        .busy-emoji {
+            font-size: 38px;
+            animation: spin 1.2s linear infinite;
+            display: block;
+        }
+
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .monoslug {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: .9rem;
+            opacity: .85;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+
+<body data-tv="<?= tv ? '1' : '' ?>">
+    <header class="appbar">
+        <div class="appbar__title">
+            <?= appTitle ?> · Public
+        </div>
+    </header>
+
+    <main class="container">
+
+        <!-- Event chooser (only when no eventId in URL) -->
+        <section class="card" id="chooserCard" hidden>
+            <h2 class="card__title">Event</h2>
+            <div class="grid grid--compact">
+                <select id="evSel" class="input" aria-label="Choose Event"
+                    title="Create/select an event in Admin. This list loads automatically."></select>
+                <div class="row">
+                    <button id="btnOpen" class="btn btn--primary">Open</button>
+                    <button id="btnRefresh" class="btn btn--ghost">↻</button>
+                </div>
+            </div>
+            <p id="chooseHint" class="hint">No events yet — ask an admin to create one.</p>
+        </section>
+
+        <!-- Event header -->
+        <section class="card" id="headCard" hidden>
+            <h2 id="evTitle" class="card__title">Event</h2>
+            <div class="meta">
+                <span id="evDate" class="badge"></span>
+                <span id="evFlow" class="badge"></span>
+                <span id="evElim" class="badge"></span>
+                <span id="evSeed" class="badge"></span>
+                <span class="spacer"></span>
+                <div>
+                    <div id="signupKpi" class="kpi">0</div>
+                    <div class="hint">Signups</div>
+                </div>
+            </div>
+
+            <div class="actions" style="margin-top:.75rem;">
+                <img id="qrImg" class="qr" alt="Event QR" />
+                <div class="row">
+                    <button id="btnShare" class="btn">Share</button>
+                    <button id="btnShowQR" class="btn btn--ghost">Show QR</button>
+                    <button id="btnCopyPublic" class="btn btn--ghost">Copy Public</button>
+                    <button id="btnCopyTV" class="btn btn--ghost">Copy TV</button>
+                    <button id="btnCopyPoster" class="btn btn--ghost">Copy Poster</button>
+                    <button id="btnCopyForm" class="btn btn--ghost">Copy Form</button>
+                    <a id="aOpenTV" target="_blank" class="btn btn--ghost" rel="noopener">Open TV</a>
+                    <button id="btnManualRefresh" class="btn btn--ghost">Refresh</button>
+                </div>
+            </div>
+            <p class="hint">Auto-refreshing. Scores and finals update as admins post results.</p>
+            <p id="slugRow" class="hint hidden">Slug: <span id="slugTxt" class="monoslug"></span></p>
+        </section>
+
+        <!-- Schedule -->
+        <section class="card" id="scheduleCard" hidden>
+            <h2 class="card__title">Schedule</h2>
+            <table class="tbl" id="scheduleTbl">
+                <thead>
+                    <tr>
+                        <th>Week</th>
+                        <th>Court</th>
+                        <th>Time</th>
+                        <th>Team A</th>
+                        <th>Team B</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <!-- Standings -->
+        <section class="card" id="standingsCard" hidden>
+            <h2 class="card__title">Standings</h2>
+            <table class="tbl" id="standingsTbl">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Team</th>
+                        <th>W</th>
+                        <th>L</th>
+                        <th>Pct</th>
+                        <th>PF</th>
+                        <th>PA</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </section>
+
+        <!-- Bracket -->
+        <section class="card" id="bracketCard" hidden>
+            <h2 class="card__title">Bracket</h2>
+            <div id="bracketWrap" class="brkt"></div>
+        </section>
+
+        <!-- Busy overlay + toast -->
+        <div id="busy" class="busy-overlay" aria-live="polite" aria-busy="true">
+            <div class="busy-core">
+                <div id="busyEmoji" class="busy-emoji">🏃‍♂️</div>
+                <div class="hint">Loading…</div>
+            </div>
+        </div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+    </main>
+
+    <script>
+        const EVENT_ID = '<?= eventId ?>' || '';
+        const IS_TV = document.body.dataset.tv === '1';
+
+        const $ = (s, p = document) => p.querySelector(s);
+        const $all = (s, p = document) => Array.from(p.querySelectorAll(s));
+
+        const BusyIcons = ['🏃‍♂️', '🥎', '🔴'];
+        function setBusy(on) {
+            const ov = $('#busy');
+            const emoji = $('#busyEmoji');
+            if (on) { emoji.textContent = BusyIcons[Math.floor(Math.random() * BusyIcons.length)]; ov.style.display = 'flex'; }
+            else { ov.style.display = 'none'; }
+            const btns = $all('button, [data-clickable], select, input'); btns.forEach(b => b.disabled = !!on && !b.dataset.ignoreBusy);
+        }
+        function toast(msg, ok = true) {
+            const t = $('#toast'); t.textContent = msg; t.className = 'toast ' + (ok ? 'ok' : 'danger'); t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2400);
+        }
+        async function copyText(txt) {
+            try { await navigator.clipboard.writeText(txt); toast('Link copied'); }
+            catch {
+                const ta = document.createElement('textarea'); ta.value = txt; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta); toast('Link copied (fallback)');
+            }
+        }
+
+        const state = {
+            eventId: EVENT_ID || '',
+            bundle: null,
+            share: null,
+            interval: null
+        };
+
+        /* ---------- chooser ---------- */
+        function loadEventsIntoChooser() {
+            setBusy(true);
+            google.script.run.withSuccessHandler(items => {
+                const sel = $('#evSel'); sel.innerHTML = '';
+                if (!items || !items.length) {
+                    $('#chooseHint').hidden = false; sel.innerHTML = '<option value="">No events</option>'; sel.disabled = true; setBusy(false); return;
+                }
+                $('#chooseHint').hidden = true; sel.disabled = false;
+                items.forEach(e => {
+                    const opt = document.createElement('option');
+                    opt.value = e.id; // <- use id from getEventsBasic()
+                    const label = (e.name && e.name.trim()) ? e.name : '(unnamed)';
+                    opt.textContent = [label, e.date ? `• ${e.date}` : '', e.flow ? `• ${e.flow}` : ''].filter(Boolean).join(' ');
+                    sel.appendChild(opt);
+                });
+                setBusy(false);
+            }).getEventsBasic();
+        }
+        $('#btnRefresh').addEventListener('click', loadEventsIntoChooser);
+        $('#btnOpen').addEventListener('click', () => {
+            const id = $('#evSel').value;
+            if (!id) return;
+            state.eventId = id;
+            history.replaceState(null, '', location.href.split('?')[0] + '?view=public&eventId=' + encodeURIComponent(id));
+            start();
+        });
+
+        /* ---------- header/meta ---------- */
+        function setHead(meta, counts) {
+            $('#headCard').hidden = false;
+            const label = (meta?.name && meta.name.trim()) ? meta.name : (meta?.slug || 'Event');
+            $('#evTitle').textContent = label;
+            $('#evDate').textContent = meta?.date || '';
+            // Display friendly flow
+            let flowLabel = '';
+            switch (meta?.flow) {
+                case 'SEASON_ONLY': flowLabel = 'Season'; break;
+                case 'SEASON_TOURNEY': flowLabel = 'Season → Tourney'; break;
+                case 'TOURNEY_ONLY': flowLabel = 'Tourney Only'; break;
+                case 'REGISTRATION': flowLabel = 'Registration'; break;
+            }
+            $('#evFlow').textContent = flowLabel || '';
+            $('#evElim').textContent = meta?.elimType === 'DOUBLE' ? 'Double Elim' :
+                meta?.elimType === 'SINGLE' ? 'Single Elim' : '';
+            $('#evSeed').textContent = meta?.seedMode === 'SEEDED' ? 'Seeded' :
+                meta?.seedMode === 'RANDOM' ? 'Random' : '';
+            $('#signupKpi').textContent = counts?.signups ?? 0;
+
+            // slug line (optional)
+            if (meta?.slug) { $('#slugTxt').textContent = meta.slug; $('#slugRow').classList.remove('hidden'); }
+            else { $('#slugRow').classList.add('hidden'); }
+
+            setupShare();
+        }
+
+        /* ---------- share (Public/TV/Poster/Form + QR) ---------- */
+        function setupShare() {
+            if (!state.eventId) return;
+            google.script.run.withSuccessHandler((links) => {
+                state.share = links || {};
+                const base = location.href.split('?')[0];
+                $('#aOpenTV').href = links.displayUrl || (base + '?view=public&eventId=' + encodeURIComponent(state.eventId) + '&tv=1');
+
+                // Buttons
+                $('#btnCopyPublic').onclick = () => { if (!links.publicUrl) return toast('No public link', false); copyText(links.publicUrl); };
+                $('#btnCopyTV').onclick = () => { if (!links.displayUrl) return toast('No TV link', false); copyText(links.displayUrl); };
+                $('#btnCopyPoster').onclick = () => { if (!links.posterUrl) return toast('No poster link', false); copyText(links.posterUrl); };
+                $('#btnCopyForm').onclick = () => { if (!links.formUrl) return toast('No form link yet', false); copyText(links.formUrl); };
+
+                $('#btnShare').onclick = () => {
+                    const url = links.publicUrl;
+                    if (navigator.share && url) navigator.share({ title: 'Follow live', url }).catch(() => { });
+                    else if (url) copyText(url);
+                };
+
+                $('#btnShowQR').onclick = () => {
+                    if (!links.qrPublicB64) { toast('No QR yet', false); return; }
+                    const img = $('#qrImg');
+                    img.src = `data:image/png;base64,${links.qrPublicB64}`;
+                    img.style.display = 'block';
+                    img.scrollIntoView({ behavior: 'smooth' });
+                };
+            }).getShareLinks(state.eventId);
+        }
+
+        /* ---------- schedule ---------- */
+        function renderSchedule(rows) {
+            const card = $('#scheduleCard');
+            const tb = $('#scheduleTbl tbody');
+            if (!rows || !rows.length) { card.hidden = true; tb.innerHTML = ''; return; }
+            card.hidden = false; tb.innerHTML = '';
+            rows.forEach(r => {
+                const sc = (r['Score A'] || r['Score B']) ? `${r['Score A'] || 0}–${r['Score B'] || 0}` : '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+<td>${r.Week ?? ''}</td>
+<td>${r.Court ?? ''}</td>
+<td>${r.Time ?? ''}</td>
+<td>${r['Team A'] ?? ''}</td>
+<td>${r['Team B'] ?? ''}</td>
+<td>${sc}</td>
+<td>${r.Status ?? ''}</td>`;
+                tb.appendChild(tr);
+            });
+        }
+
+        /* ---------- standings ---------- */
+        function renderStandings(rows) {
+            const card = $('#standingsCard');
+            const tb = $('#standingsTbl tbody');
+            if (!rows || !rows.length) { card.hidden = true; tb.innerHTML = ''; return; }
+            card.hidden = false; tb.innerHTML = '';
+            rows.forEach(r => {
+                const pct = (typeof r.Pct === 'number') ? r.Pct.toFixed(3) : '';
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+<td>${r.Rank ?? ''}</td>
+<td>${r.Team ?? ''}</td>
+<td>${r.W ?? 0}</td>
+<td>${r.L ?? 0}</td>
+<td>${pct}</td>
+<td>${r.PointsFor ?? 0}</td>
+<td>${r.PointsAgainst ?? 0}</td>`;
+                tb.appendChild(tr);
+            });
+        }
+
+        /* ---------- bracket ---------- */
+        function renderBracket(br) {
+            const wrap = $('#bracketWrap'); wrap.innerHTML = '';
+            if (!br || !Array.isArray(br.rounds) || !br.rounds.length) { $('#bracketCard').hidden = true; return; }
+            $('#bracketCard').hidden = false;
+            br.rounds.forEach(r => {
+                const col = document.createElement('div'); col.className = 'round';
+                const h = document.createElement('h3'); h.textContent = prettyRoundName(r.name); col.appendChild(h);
+                (r.matches || []).forEach(m => {
+                    const card = document.createElement('div'); card.className = 'match';
+                    (m.slots || []).forEach(s => {
+                        const row = document.createElement('div'); row.className = 'slot';
+                        row.innerHTML = `
+<div class="team">${s.team || '<span class="muted">TBD</span>'}</div>
+<div class="score">${s.score || ''}</div>`;
+                        card.appendChild(row);
+                    });
+                    col.appendChild(card);
+                });
+                wrap.appendChild(col);
+            });
+        }
+        function prettyRoundName(r) { if (!r) return 'Round'; if (/^R\d+$/i.test(r)) return 'Round ' + r.replace(/[^0-9]/g, ''); return r; }
+
+        /* ---------- load bundle ---------- */
+        function loadBundle() {
+            if (!state.eventId) return;
+            setBusy(true);
+            google.script.run.withSuccessHandler(data => {
+                setBusy(false);
+                state.bundle = data || {};
+                setHead(data.eventMeta || {}, data.counts || {});
+                renderSchedule(data.schedule || []);
+                renderStandings(data.standings || []);
+                renderBracket(data.bracket || { rounds: [] });
+            }).withFailureHandler(err => {
+                setBusy(false);
+                toast((err && err.message) || 'Load failed', false);
+            }).getPublicBundle(state.eventId);
+        }
+
+        /* ---------- auto refresh ---------- */
+        function startAutoRefresh() {
+            if (state.interval) clearInterval(state.interval);
+            const ms = IS_TV ? 15000 : 30000;
+            state.interval = setInterval(loadBundle, ms);
+        }
+        $('#btnManualRefresh').addEventListener('click', loadBundle);
+
+        /* ---------- boot ---------- */
+        function start() {
+            $('#chooserCard').hidden = !!state.eventId;
+            if (!state.eventId) {
+                loadEventsIntoChooser();
+                return;
+            }
+            loadBundle();
+            setupShare();
+            startAutoRefresh();
+        }
+
+        document.addEventListener('DOMContentLoaded', start);
+    </script>
+</body>
+
+</html>

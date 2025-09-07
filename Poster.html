@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>
+        <?= appTitle ?> – Poster
+    </title>
+    <?!= include('Styles'); ?>
+    <style>
+        /* Poster-specific (lean; global system styles in Styles) */
+        .poster-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            align-items: flex-end;
+            margin-bottom: .75rem;
+        }
+
+        .poster-toolbar .spacer {
+            flex: 1;
+        }
+
+        .poster-canvas {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 3 / 4;
+            margin: 0 auto;
+            background: var(--surface-2);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .layer-bg img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            opacity: .95;
+        }
+
+        .layer-scrim {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0, 0, 0, .35), rgba(0, 0, 0, .75));
+        }
+
+        .layer-content {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem;
+            gap: 1rem;
+        }
+
+        .poster-title {
+            font-size: clamp(2rem, 6vw, 4rem);
+            font-weight: 900;
+            line-height: 1.05;
+            letter-spacing: .5px;
+        }
+
+        .poster-sub {
+            font-size: clamp(1.1rem, 3.2vw, 1.6rem);
+            opacity: .95;
+        }
+
+        .poster-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem 1rem;
+            font-size: clamp(1rem, 3vw, 1.2rem);
+            opacity: .95;
+        }
+
+        .poster-qrwrap {
+            margin-top: auto;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .qrblock {
+            display: flex;
+            gap: .6rem;
+            align-items: center;
+            background: var(--surface-1);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: .6rem .8rem;
+        }
+
+        .qrblock img {
+            width: 144px;
+            height: 144px;
+            border-radius: 8px;
+            display: block;
+        }
+
+        .qrblock .label {
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .poster-cta {
+            font-size: clamp(1.1rem, 3vw, 1.5rem);
+            font-weight: 800;
+        }
+
+        .poster-brand {
+            font-size: .95rem;
+            opacity: .8;
+        }
+
+        .brandbar {
+            position: absolute;
+            bottom: .75rem;
+            right: .75rem;
+            left: .75rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brandbar img {
+            height: 32px;
+            object-fit: contain;
+        }
+
+        .hint-small {
+            font-size: .9rem;
+            opacity: .8;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* Print: hide controls, make canvas full width with margins */
+        @media print {
+
+            .appbar,
+            .poster-toolbar,
+            .toast,
+            .card>.card__title {
+                display: none !important;
+            }
+
+            body {
+                background: #fff;
+                color: #000;
+            }
+
+            .poster-canvas {
+                border: none;
+                max-width: 100%;
+            }
+
+            .container {
+                padding: 0;
+            }
+        }
+    </style>
+    <!-- Optional client-side export to PNG for posters -->
+    <script defer src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+
+<body>
+    <header class="appbar">
+        <div class="appbar__title">
+            <?= appTitle ?> – Poster
+        </div>
+    </header>
+
+    <!-- Busy overlay (unified across app) -->
+    <div id="busy" aria-live="polite">
+        <div class="card">
+            <div class="spinner">
+                <span class="mascot" data-kind="runner">🏃‍♂️</span>
+                <span class="mascot" data-kind="pitcher">🥎</span>
+                <span class="mascot" data-kind="bocce">🧶</span>
+            </div>
+            <div class="msg">Loading…</div>
+        </div>
+    </div>
+
+    <!-- Toast (top-center via Styles) -->
+    <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
+
+    <main class="container">
+        <section class="card">
+            <h2 class="card__title">Poster Builder</h2>
+
+            <div class="poster-toolbar">
+                <label class="select" style="min-width:260px;">
+                    <select id="eventSelect" title="Choose an event"></select>
+                    <span>Choose Event</span>
+                </label>
+
+                <input id="headline" class="input" placeholder="Headline (e.g., Fall League Night)" />
+                <input id="subhead" class="input" placeholder="Subhead (e.g., Signups Open · All skill levels)" />
+                <input id="dateLoc" class="input"
+                    placeholder="Date/Time & Location (e.g., Oct 5 · 6–9pm · PDX Arcade)" />
+                <input id="cta" class="input" placeholder="Call to action (e.g., Scan to Sign Up!)" />
+
+                <div class="spacer"></div>
+
+                <label class="btn" data-clickable>
+                    Upload BG Image
+                    <input id="bgUpload" type="file" accept="image/*" style="display:none;">
+                </label>
+                <label class="btn" data-clickable>
+                    Upload Sponsor Logo
+                    <input id="logoUpload" type="file" accept="image/*" style="display:none;">
+                </label>
+
+                <button id="btnRefreshQR" class="btn">Refresh QR</button>
+                <button id="btnExportPng" class="btn">Export PNG</button>
+                <button id="btnPrint" class="btn">Print / Save PDF</button>
+            </div>
+
+            <div id="poster" class="poster-canvas">
+                <div class="layer-bg"><img id="bgImg" alt="Poster background" /></div>
+                <div class="layer-scrim"></div>
+                <div class="layer-content">
+                    <div class="poster-title" id="titleText">Event</div>
+                    <div class="poster-sub" id="subText"></div>
+                    <div class="poster-meta" id="metaText"></div>
+
+                    <div class="poster-qrwrap">
+                        <div class="qrblock" id="qrPublic">
+                            <img id="qrPublicImg" alt="Public page QR" />
+                            <div>
+                                <div class="label">Event Info</div>
+                                <div class="hint-small" id="publicUrlTxt"></div>
+                            </div>
+                        </div>
+                        <div class="qrblock" id="qrForm">
+                            <img id="qrFormImg" alt="Signup form QR" />
+                            <div>
+                                <div class="label">Sign Up</div>
+                                <div class="hint-small" id="formUrlTxt"></div>
+                            </div>
+                        </div>
+                        <div class="poster-cta" id="ctaText"></div>
+                    </div>
+
+                    <div class="brandbar">
+                        <div class="poster-brand" id="brandTxt">Powered by
+                            <?= appTitle ?>
+                        </div>
+                        <img id="logoImg" class="hidden" alt="Sponsor logo" />
+                    </div>
+                </div>
+            </div>
+
+            <p class="hint" style="margin-top:.75rem;">
+                Tip: upload a background and logo, adjust headline/subhead/date/location/CTA.
+                The QR codes auto-build from your event’s Public and Signup URLs. Use <b>Print</b> to save as PDF,
+                or <b>Export PNG</b> for social posts and screens.
+            </p>
+        </section>
+    </main>
+
+    <script>
+        // ---------- State ----------
+        const STATE = {
+            events: [],
+            current: null,
+            // generated urls
+            publicUrl: '',
+            formUrl: ''
+        };
+
+        // ---------- Helpers ----------
+        const $ = s => document.querySelector(s);
+        const setText = (id, val) => { const el = $(id); if (el) el.textContent = val || ''; };
+        function toQR(url, size = 512) {
+            if (!url) return '';
+            return 'https://chart.googleapis.com/chart?cht=qr&chs=' + size + 'x' + size + '&chld=M|0&chl=' + encodeURIComponent(url);
+        }
+        function setQRImg(imgEl, url) {
+            if (!imgEl) return;
+            imgEl.src = url ? toQR(url, 512) : '';
+            imgEl.classList.toggle('hidden', !url);
+        }
+        function fileToImgSrc(file, cb) {
+            const r = new FileReader();
+            r.onload = e => cb(e.target.result);
+            r.readAsDataURL(file);
+        }
+        function toast(msg, ok = true) {
+            const t = $('#toast');
+            t.textContent = msg;
+            t.style.display = 'block';
+            t.className = 'toast ' + (ok ? 'ok' : 'danger');
+            setTimeout(() => t.style.display = 'none', 2400);
+        }
+        function setBusy(on, message) {
+            const ov = $('#busy');
+            if (!ov) return;
+            const msg = ov.querySelector('.msg');
+            if (msg) msg.textContent = message || 'Loading…';
+            ov.style.display = on ? 'grid' : 'none';
+            document.body.classList.toggle('is-busy', !!on);
+        }
+
+        function formatMeta(e) {
+            const date = e.startDate || e.date || '';
+            const flow = (e.flow === 'SEASON_TOURNEY' ? 'Season → Tourney' : (e.flow === 'TOURNEY_ONLY' ? 'Tourney Only' : e.flow || ''));
+            const elim = (e.elimType === 'DOUBLE' ? 'Double Elim' : 'Single Elim');
+            const seed = (e.seedMode === 'SEEDED' ? 'Seeded' : 'Random');
+            return [date, flow, elim, seed].filter(Boolean).join(' • ');
+        }
+
+        // ---------- Load events ----------
+        function loadEventsAndInit(selectId) {
+            $('#eventSelect').innerHTML = '<option disabled>Loading…</option>';
+            setBusy(true, 'Loading events…');
+            google.script.run
+                .withSuccessHandler((rows) => {
+                    try {
+                        STATE.events = rows || [];
+                        const sel = $('#eventSelect');
+                        sel.innerHTML = '';
+                        if (!STATE.events.length) {
+                            const o = document.createElement('option');
+                            o.textContent = 'No events found — create one in Admin';
+                            o.disabled = true; sel.appendChild(o); sel.disabled = true;
+                            updatePoster(null);
+                            return;
+                        }
+                        sel.disabled = false;
+                        STATE.events.forEach(e => {
+                            const o = document.createElement('option');
+                            o.value = e.eventId || e.id || '';
+                            const d = e.startDate || e.date || '';
+                            o.textContent = `${e.name}${d ? ' (' + d + ')' : ''}${e.isDefault ? ' ★' : ''}`;
+                            sel.appendChild(o);
+                        });
+
+                        // pick default/explicit
+                        let chosen = STATE.events.find(e => e.isDefault) || STATE.events[0];
+                        if (selectId) {
+                            const m = STATE.events.find(e => (e.eventId || e.id) === selectId);
+                            if (m) chosen = m;
+                        }
+                        sel.value = (chosen.eventId || chosen.id);
+                        setCurrent(chosen.eventId || chosen.id);
+                    } finally {
+                        setBusy(false);
+                    }
+                })
+                .withFailureHandler(err => {
+                    console.error('getEvents failed:', err);
+                    $('#eventSelect').innerHTML = '<option disabled>(error)</option>';
+                    toast('Failed to load events', false);
+                    updatePoster(null);
+                    setBusy(false);
+                })
+                .getEvents();
+        }
+
+        function setCurrent(eventId) {
+            STATE.current = STATE.events.find(e => (e.eventId || e.id) === eventId) || null;
+            updatePoster(STATE.current);
+        }
+
+        // ---------- Poster content wiring ----------
+        function updatePoster(e) {
+            // Safe defaults
+            const headline = $('#headline').value.trim() || (e?.name || 'Your Event');
+            const subhead = $('#subhead').value.trim();
+            const meta = $('#dateLoc').value.trim() || (e ? formatMeta(e) : '');
+            const cta = $('#cta').value.trim() || 'Scan the QR to learn more';
+
+            setText('#titleText', headline);
+            setText('#subText', subhead);
+            setText('#metaText', meta);
+            setText('#ctaText', cta);
+
+            // URLs → QR
+            const publicUrl = e?.publicUrl || '';
+            const formUrl = e?.formUrl || '';
+            STATE.publicUrl = publicUrl;
+            STATE.formUrl = formUrl;
+
+            setQRImg($('#qrPublicImg'), publicUrl);
+            setQRImg($('#qrFormImg'), formUrl);
+            setText('#publicUrlTxt', publicUrl);
+            setText('#formUrlTxt', formUrl);
+        }
+
+        // ---------- Inputs / Events ----------
+        $('#eventSelect').addEventListener('change', (ev) => setCurrent(ev.target.value));
+        ['headline', 'subhead', 'dateLoc', 'cta'].forEach(id => {
+            $('#' + id).addEventListener('input', () => updatePoster(STATE.current));
+        });
+
+        $('#bgUpload').addEventListener('change', (ev) => {
+            const f = ev.target.files?.[0]; if (!f) return;
+            fileToImgSrc(f, (src) => { $('#bgImg').src = src; });
+        });
+
+        $('#logoUpload').addEventListener('change', (ev) => {
+            const f = ev.target.files?.[0]; if (!f) return;
+            fileToImgSrc(f, (src) => {
+                const img = $('#logoImg');
+                img.src = src; img.classList.remove('hidden');
+            });
+        });
+
+        $('#btnRefreshQR').addEventListener('click', () => updatePoster(STATE.current));
+        $('#btnPrint').addEventListener('click', () => window.print());
+
+        $('#btnExportPng').addEventListener('click', async () => {
+            const node = document.getElementById('poster');
+            try {
+                setBusy(true, 'Rendering PNG…');
+                const canvas = await html2canvas(node, { backgroundColor: null, scale: 2, useCORS: true });
+                const png = canvas.toDataURL('image/png');
+                const a = document.createElement('a');
+                const name = (STATE.current?.name || 'NextUpPoster').replace(/[^\w\d_-]+/g, '_');
+                a.download = `${name}.png`;
+                a.href = png;
+                a.click();
+                toast('PNG exported');
+            } catch (e) {
+                console.error(e);
+                toast('Export failed. Try Print → Save as PDF as a fallback.', false);
+            } finally {
+                setBusy(false);
+            }
+        });
+
+        // ---------- Boot ----------
+        document.addEventListener('DOMContentLoaded', () => loadEventsAndInit());
+    </script>
+</body>
+
+</html>
