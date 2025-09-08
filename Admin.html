@@ -228,6 +228,151 @@
                 lines.push(`<div><strong>Structure:</strong> ${struct}</div>`);
                 $('#wizSummary').innerHTML = lines.join('');
             };
+            
+            
+            <script>
+// --- tiny helpers (only define if missing) ---
+if (typeof pct === 'undefined') {
+  window.pct = (n,d)=> d? Math.round((100*n)/d) : 0;
+}
+if (typeof renderPassBar === 'undefined') {
+  window.renderPassBar = function(el, total, passed) {
+    el.innerHTML='';
+    total=Number(total||0); passed=Number(passed||0);
+    const failed=Math.max(0,total-passed);
+    const w=260,h=16; const pW= total? Math.round(w*(passed/total)) : 0; const fW=w-pW;
+    const svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Pass rate">
+      <rect x="0" y="0" width="${w}" height="${h}" fill="#eee" rx="4" ry="4"/>
+      <rect x="0" y="0" width="${pW}" height="${h}" fill="#27ae60" rx="4" ry="4"/>
+      ${fW? `<rect x="${pW}" y="0" width="${fW}" height="${h}" fill="#e74c3c" rx="4" ry="4"/>` : '' }
+      <text x="${w-4}" y="${h-4}" text-anchor="end" font-size="11" fill="#333">${pct(passed,total)}%</text>
+    </svg>`;
+    el.insertAdjacentHTML('beforeend', svg);
+  };
+}
+
+// --- UNIVERSAL DIAGNOSTIC RENDERER ---
+window.renderDiagTable = function(report) {
+  const host = document.getElementById('diagOut');
+  if (!host) return;
+  host.innerHTML = '';
+
+  // Normalize shapes
+  const isAllCards = report && Array.isArray(report.results) && report.results.length &&
+                     report.results[0] && typeof report.results[0].name === 'string' &&
+                     Array.isArray(report.results[0].results);
+
+  const isSuiteRun = report && Array.isArray(report.results) &&
+                     !isAllCards;
+
+  // Header strip + pass bar
+  const top = document.createElement('div');
+  top.className = 'row';
+  top.style.alignItems = 'center';
+  const totals = (function() {
+    if (report && report.totals) return report.totals;
+    if (isSuiteRun) {
+      const total = report.results.length;
+      const passed = report.results.filter(t=>t.ok).length;
+      return { total, passed, failed: total - passed };
+    }
+    if (isAllCards) {
+      const total = report.results.reduce((a,s)=>a + (s.results ? s.results.length : 0), 0);
+      const passed = report.results.reduce((a,s)=>a + (s.results ? s.results.filter(t=>t.ok).length : 0), 0);
+      return { total, passed, failed: total - passed };
+    }
+    return { total: 0, passed: 0, failed: 0 };
+  })();
+
+  top.innerHTML = `
+    <div class="hint">
+      Total <b>${totals.total}</b> •
+      Passed <b style="color:var(--ok)">${totals.passed}</b> •
+      Failed <b style="color:var(--danger)">${totals.failed}</b>
+    </div>
+    <div id="passbar" style="margin-left:12px;"></div>
+  `;
+  host.appendChild(top);
+  renderPassBar(top.querySelector('#passbar'), totals.total, totals.passed);
+
+  // Shape 1: All-cards (multiple suites in one payload)
+  if (isAllCards) {
+    // Summary table by suite
+    const sum = document.createElement('table');
+    sum.className = 'table';
+    sum.innerHTML = `<thead>
+        <tr><th>Suite</th><th>OK</th><th>Tests</th><th>Passed</th><th>Failed</th></tr>
+      </thead><tbody></tbody>`;
+    const sbody = sum.querySelector('tbody');
+    report.results.forEach(s=>{
+      const total = (s.results||[]).length;
+      const passed = (s.results||[]).filter(t=>t.ok).length;
+      const failed = total - passed;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${s.name}</td>
+        <td style="font-weight:800;color:${s.ok?'var(--ok)':'var(--danger)'}">${s.ok?'PASS':'FAIL'}</td>
+        <td>${total}</td><td>${passed}</td><td>${failed}</td>`;
+      sbody.appendChild(tr);
+    });
+    host.appendChild(sum);
+
+    // Flatten tests for details
+    const flat = [];
+    report.results.forEach(s=>{
+      (s.results||[]).forEach(t=> flat.push({ suite:s.name, ...t }));
+    });
+
+    const tb = document.createElement('table');
+    tb.className = 'table';
+    tb.innerHTML = `<thead>
+      <tr><th>Suite</th><th>Test</th><th>OK</th><th>ms</th><th>Meta</th></tr>
+    </thead><tbody></tbody>`;
+    const body = tb.querySelector('tbody');
+    flat.forEach(r=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${r.suite}</td>
+        <td>${r.name}</td>
+        <td style="font-weight:800;color:${r.ok?'var(--ok)':'var(--danger)'}">${r.ok?'PASS':'FAIL'}</td>
+        <td>${r.ms||''}</td>
+        <td><code>${(typeof r.meta==='object'? JSON.stringify(r.meta): (r.meta||'')).toString().slice(0,200)}</code></td>
+      `;
+      body.appendChild(tr);
+    });
+    host.appendChild(tb);
+    return;
+  }
+
+  // Shape 2: Single suite run (report.results is list of tests)
+  if (isSuiteRun) {
+    const tb = document.createElement('table');
+    tb.className = 'table';
+    tb.innerHTML = `<thead>
+      <tr><th>#</th><th>Test</th><th>OK</th><th>ms</th><th>Meta</th></tr>
+    </thead><tbody></tbody>`;
+    const body = tb.querySelector('tbody');
+    report.results.forEach((r, i)=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${i+1}</td>
+        <td>${r.name}</td>
+        <td style="font-weight:800;color:${r.ok?'var(--ok)':'var(--danger)'}">${r.ok?'PASS':'FAIL'}</td>
+        <td>${r.ms||''}</td>
+        <td><code>${(typeof r.meta==='object'? JSON.stringify(r.meta): (r.meta||'')).toString().slice(0,200)}</code></td>
+      `;
+      body.appendChild(tr);
+    });
+    host.appendChild(tb);
+    return;
+  }
+
+  // Fallback: show JSON for unknown shapes
+      const pre = document.createElement('pre');
+      pre.textContent = JSON.stringify(report, null, 2);
+      host.appendChild(pre);
+  };
+
 
             // Step 1
             $('#btnStep1Next').addEventListener('click', () => {
