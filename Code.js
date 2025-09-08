@@ -410,6 +410,8 @@ function getPublicBundle(eventIdOrSlug) {
 }
 
 // ---------- Events (list/create/update/default/archive) ----------
+
+// --- Helper: Lite event mapper ---
 function _eventToLite_(r) {
     return {
         eventId: r.eventId,
@@ -438,23 +440,42 @@ function _eventToLite_(r) {
     };
 }
 
+// --- Get all slugs (new helper if not present) ---
+function getAllEventSlugs() {
+    const s = getEventsSheet_();
+    return readTable_(s).map(r => (r.slug || '').trim()).filter(Boolean);
+}
+
+// --- Generate a unique slug for a name/date (new helper if not present) ---
+function generateUniqueSlug(name, date, allSlugs) {
+    // Basic normalization: slugify(name + date)
+    let base = eventSlug_(name, date);
+    let slug = base;
+    let i = 2;
+    while (allSlugs.includes(slug)) {
+        slug = `${base}-${i++}`;
+    }
+    return slug;
+}
+
+// --- List events: backfill slug with uniqueness ---
 function getEvents() {
     const s = getEventsSheet_();
     const rows = readTable_(s).filter(r => String(r.status || 'active') !== 'archived');
-    // Backfill slugs lazily if needed
-    Logger.log('getEvents raw rows:', JSON.stringify(rows));
-    rows.forEach((r,i) => Logger.log('Row %d: %s', i, JSON.stringify(r)));
-    rows.forEach(r => {
+    const usedSlugs = getAllEventSlugs();
+    rows.forEach((r, i) => {
         if (!r.slug) {
-            const slug = eventSlug_(r.name, r.startDate || r.date || '');
+            const slug = generateUniqueSlug(r.name, r.startDate || r.date || '', usedSlugs);
+            usedSlugs.push(slug);
             writeRowByKey_(s, 'eventId', r.eventId, Object.assign({}, r, { slug, updatedAt: nowISO() }));
         }
     });
     return rows.map(_eventToLite_);
 }
 
+// --- Create event: always get unique slug ---
 function createEvent(payload) {
-    logEvent_('info', 'createEvent_called', {payload});
+    logEvent_('info', 'createEvent_called', { payload });
     return _withLock(() => {
         _rateLimit_('createEvent', 3);
         const p = payload || {};
@@ -471,7 +492,8 @@ function createEvent(payload) {
         const type = p.type || 'event';
         const status = 'active';
 
-        const slug = eventSlug_(name, startDate);
+        const allSlugs = getAllEventSlugs();
+        const slug = generateUniqueSlug(name, startDate, allSlugs);
 
         // Idempotency: same slug within 60s resolves to existing
         const idemKey = `create:${slug}`;
@@ -482,7 +504,6 @@ function createEvent(payload) {
         });
         if (idemHit) return idemHit;
 
-        // Uniqueness: slug must be unique
         if (getEventBySlug_(slug)) makeError_(ERR.DUP_SLUG, `Duplicate slug "${slug}"`);
 
         const eventId = Utilities.getUuid();
@@ -540,6 +561,7 @@ function createEvent(payload) {
     });
 }
 
+// --- Verified create (unchanged) ---
 function createEventVerified(payload) {
     const ev = createEvent(payload);
     const tries = 7, sleepMs = 500;
@@ -551,6 +573,7 @@ function createEventVerified(payload) {
     return ev;
 }
 
+// --- Update: always recompute slug if name/date changes ---
 function updateEvent(eventId, patch) {
     return _withLock(() => {
         _rateLimit_('updateEvent', 2);
@@ -561,17 +584,17 @@ function updateEvent(eventId, patch) {
         const toWrite = { updatedAt: now };
         allowed.forEach(k => { if (patch && k in patch) toWrite[k] = patch[k]; });
 
-        // If name or date changes, recompute slug and enforce uniqueness
+        // If name or date changes, recompute slug with generateUniqueSlug (excluding this event's current slug)
         if (('name' in toWrite) || ('startDate' in toWrite)) {
             const nextName = 'name' in toWrite ? toWrite.name : e.name;
             const nextDate = 'startDate' in toWrite ? toWrite.startDate : (e.startDate || e.date || '');
-            const nextSlug = eventSlug_(nextName, nextDate);
+            let allSlugs = getAllEventSlugs().filter(s => s !== e.slug);
+            const nextSlug = generateUniqueSlug(nextName, nextDate, allSlugs);
             const clash = getEventBySlug_(nextSlug);
             if (clash && clash.eventId !== e.eventId) makeError_(ERR.DUP_SLUG, `Duplicate slug "${nextSlug}"`);
             toWrite.slug = nextSlug;
         }
 
-        // Flow changes do NOT auto-create/delete tabs here; verifyAll_ on boot creates needed ones.
         // Single-default invariant
         if ('isDefault' in toWrite) {
             setDefaultEvent(eventId, !!toWrite.isDefault);
@@ -585,6 +608,7 @@ function updateEvent(eventId, patch) {
     });
 }
 
+// --- Set default event (unchanged) ---
 function setDefaultEvent(eventId, isDefault) {
     return _withLock(() => {
         const s = getEventsSheet_();
@@ -602,7 +626,10 @@ function setDefaultEvent(eventId, isDefault) {
     });
 }
 
+// --- Archive (just a status change) ---
 function archiveEvent(eventId) { return updateEvent(eventId, { status: 'archived' }); }
+
+// --- Sheet opener (unchanged) ---
 function openSheetUrl(eventId) {
     if (eventId && !getEventById_(eventId)) makeError_(ERR.EVENT_NOT_FOUND, 'Event not found');
     return ss().getUrl();
