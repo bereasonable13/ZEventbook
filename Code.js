@@ -51,6 +51,16 @@ const ERR = Object.freeze({
     SCHEDULE_UNSUPPORTED_FLOW: 'SCHEDULE/UNSUPPORTED_FLOW',
 });
 
+const EVENTS_SCHEMA_V2 = [
+    'eventId', 'sid', 'slug', 'name', 'type', 'status',
+    'startDate', 'endDate',
+    'flow', 'weeks', 'elimType', 'seedMode',
+    'isDefault',
+    'publicUrl', 'displayUrl', 'adminUrl', 'formUrl',
+    'signupSheet', 'scheduleSheet', 'bracketSheet',
+    'createdAt', 'updatedAt'
+];
+
 // ---------- Utilities ----------
 function nowISO() { return new Date().toISOString(); }
 function shortId(uuid) { return String(uuid).split('-')[0]; }
@@ -173,76 +183,14 @@ function doGet(e) {
 try { getEventsSheet_(); verifyAll_(); } catch (_) { }
 
 // ---------- Events schema (V2.2) + migration/backfill ----------
-const EVENTS_SCHEMA_V2 = [
-    'eventId', 'sid', 'slug', 'name', 'type', 'status',
-    'startDate', 'endDate',
-    'flow', 'weeks', 'elimType', 'seedMode',
-    'isDefault',
-    'publicUrl', 'displayUrl', 'adminUrl', 'formUrl',
-    'signupSheet', 'scheduleSheet', 'bracketSheet',
-    'createdAt', 'updatedAt'
-];
-
-const EVENTS_SCHEMA_V1 = [
-    'eventId', 'name', 'date', 'flow', 'weeks', 'elimType', 'seedMode', 'isDefault',
-    'publicUrl', 'formUrl', 'signupSheet', 'scheduleSheet', 'bracketSheet',
-    'createdAt', 'updatedAt'
-];
-
 function getEventsSheet_() {
     const sheet = ss().getSheetByName(SH.EVENTS) || ss().insertSheet(SH.EVENTS);
     if (sheet.getLastRow() === 0) { sheet.appendRow(EVENTS_SCHEMA_V2); return sheet; }
 
-    const hdr = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    if (hdr.join() === EVENTS_SCHEMA_V2.join()) {
-        backfillSlugs_(); // ensure slugs populated for legacy rows
-        return sheet;
-    }
-
-    // v1 -> v2 migration
-    if (hdr.join() === EVENTS_SCHEMA_V1.join()) {
-        const rows = sheet.getLastRow() > 1
-            ? sheet.getRange(2, 1, sheet.getLastRow() - 1, sheet.getLastColumn()).getValues() : [];
-        sheet.clear(); sheet.appendRow(EVENTS_SCHEMA_V2);
-        const mapped = rows.map(r => {
-            const v1 = Object.fromEntries(EVENTS_SCHEMA_V1.map((k, i) => [k, r[i]]));
-            const sid = shortId(v1.eventId);
-            const name = v1.name || '';
-            const date = v1.date || '';
-            const slug = eventSlug_(name, date);
-            const publicUrl = v1.publicUrl || '';
-            const displayUrl = publicUrl ? String(publicUrl).replace('view=public', 'view=display') : '';
-            const adminUrl = publicUrl ? String(publicUrl).replace('view=public', 'view=admin') : '';
-            return [
-                v1.eventId, sid, slug, name, 'event', 'active',
-                v1.date || '', '',
-                v1.flow || FLOW.TOURNEY_ONLY, v1.weeks || 0, v1.elimType || ELIM.SINGLE, v1.seedMode || SEEDMODE.RANDOM,
-                String(v1.isDefault) === 'true',
-                publicUrl, displayUrl, adminUrl, v1.formUrl || '',
-                v1.signupSheet || '', v1.scheduleSheet || '', v1.bracketSheet || '',
-                v1.createdAt || nowISO(), v1.updatedAt || nowISO()
-            ];
-        });
-        if (mapped.length) sheet.getRange(2, 1, mapped.length, EVENTS_SCHEMA_V2.length).setValues(mapped);
-        return sheet;
-    }
-
-    // Unknown header -> reset to V2 and attempt salvage (best-effort)
-    const all = sheet.getDataRange().getValues();
-    sheet.clear(); sheet.appendRow(EVENTS_SCHEMA_V2);
-    if (all.length > 1) {
-        for (let i = 1; i < all.length; i++) {
-            const name = all[i][1] || '';
-            const date = all[i][2] || '';
-            const eventId = Utilities.getUuid();
-            const sid = shortId(eventId);
-            const slug = eventSlug_(name, date);
-            sheet.appendRow([eventId, sid, slug, name, 'event', 'active', date, '', FLOW.TOURNEY_ONLY, 0, ELIM.SINGLE, SEEDMODE.RANDOM, false, '', '', '', '', `${SH.SIGNUPS_PREFIX}${sid}`, '', `${SH.BRACKET_PREFIX}${sid}`, nowISO(), nowISO()]);
-        }
-    }
-    return sheet;
+   return sheet;
 }
 
+/*
 function backfillSlugs_() {
     const s = ss().getSheetByName(SH.EVENTS);
     if (!s || s.getLastRow() < 2) return;
@@ -261,6 +209,7 @@ function backfillSlugs_() {
         }
     }
 }
+*/
 
 // ---------- Table helpers ----------
 function readTable_(sheet) {
@@ -420,7 +369,8 @@ function _eventToLite_(r) {
         name: r.name || '(unnamed)',
         type: r.type || 'event',
         status: r.status || 'active',
-        date: r.startDate || r.date || '',
+        startDate: r.startDate || r.date || '',
+        endDate: r.endDate || '',
         flow: r.flow || '',
         weeks: r.weeks || null,
         elimType: r.elimType || '',
@@ -430,12 +380,10 @@ function _eventToLite_(r) {
         displayUrl: r.displayUrl || '',
         adminUrl: r.adminUrl || '',
         formUrl: r.formUrl || '',
-        counts: {
-            signups: (function () {
-                const s = r.signupSheet && ss().getSheetByName(r.signupSheet);
-                return s ? Math.max(0, s.getLastRow() - 1) : 0;
-            })()
-        },
+        signupSheet: r.signupSheet || '',
+        scheduleSheet: r.scheduleSheet || '',
+        bracketSheet: r.bracketSheet || '',
+        createdAt: r.createdAt,
         updatedAt: r.updatedAt
     };
 }
@@ -634,7 +582,6 @@ function openSheetUrl(eventId) {
     if (eventId && !getEventById_(eventId)) makeError_(ERR.EVENT_NOT_FOUND, 'Event not found');
     return ss().getUrl();
 }
-
 // ---------- Signup Form & Seeding ----------
 // UPDATED: keep the newly created linked "Form Responses …" sheet, normalize headers,
 // migrate any legacy signups tab into it, then rename to canonical signups_<sid>.
@@ -1174,7 +1121,7 @@ function runQuickChecks() {
     _qaAdd_(out, 'get_events_contract', () => {
         const rows = getEvents() || [];
         const keys = rows.length ? Object.keys(rows[0]).sort() : [];
-        const has = ['eventId', 'name', 'slug', 'date', 'flow', 'elimType', 'seedMode', 'isDefault', 'publicUrl', 'displayUrl', 'formUrl', 'counts', 'updatedAt'].every(k => keys.includes(k));
+        const has = ['eventId', 'sid', 'slug', 'name', 'type', 'status', 'startDate', 'endDate', 'flow', 'weeks', 'elimType', 'seedMode', 'isDefault', 'publicUrl', 'displayUrl', 'adminUrl', 'formUrl', 'signupSheet', 'scheduleSheet', 'bracketSheet', 'createdAt', 'updatedAt'].every(k => keys.includes(k));
         return { ok: has, meta: { count: rows.length, keys } };
     });
     _qaAdd_(out, 'status_ok', () => { const s = getStatus(); return { ok: !!s.ok, meta: s }; });
@@ -1414,9 +1361,7 @@ function selfHeal(opts) {
 
         const rowsBefore = readTable_(s);
         const missingBefore = rowsBefore.filter(r => !r.slug).length;
-        backfillSlugs_();
         const missingAfter = readTable_(s).filter(r => !r.slug).length;
-        actions.push({ step: 'slug_backfill', ok: missingAfter === 0, meta: { missingBefore, missingAfter } });
 
         verifyAll_();
         actions.push({ step: 'verify_tabs', ok: true });
@@ -1608,7 +1553,7 @@ function runQuickChecks() {
         _qaAdd_(out, 'verify_all_tabs', () => { verifyAll_(); return { ok: true }; }, { suite: 'quick' });
         _qaAdd_(out, 'get_events_contract', () => {
             const rows = getEvents() || []; const keys = rows.length ? Object.keys(rows[0]).sort() : [];
-            const has = ['eventId', 'name', 'slug', 'date', 'flow', 'elimType', 'seedMode', 'isDefault', 'publicUrl', 'displayUrl', 'formUrl', 'counts', 'updatedAt'].every(k => keys.includes(k));
+            const has = ['eventId', 'sid', 'slug', 'name', 'type', 'status', 'startDate', 'endDate', 'flow', 'weeks', 'elimType', 'seedMode', 'isDefault', 'publicUrl', 'displayUrl', 'adminUrl', 'formUrl', 'signupSheet', 'scheduleSheet', 'bracketSheet', 'createdAt', 'updatedAt'].every(k => keys.includes(k));
             return { ok: has, meta: { count: rows.length, keys } };
         }, { suite: 'quick' });
         _qaAdd_(out, 'status_ok', () => { const s = getStatus(); return { ok: !!s.ok, meta: s }; }, { suite: 'quick' });
@@ -1845,6 +1790,16 @@ function diagExportCsv(kind, suite, limit) {
         const s = (c == null) ? '' : String(c); return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
     }).join(','))).join('\n');
     return csv;
+}
+
+function cleanUpTabs() {
+    const keep = ['Sheet1', 'DiagResults', 'DiagSuites', 'Diagnostics', 'Events'];
+    const s = SpreadsheetApp.getActiveSpreadsheet();
+    s.getSheets().forEach(sh => {
+        if (!keep.includes(sh.getName())) {
+            s.deleteSheet(sh);
+        }
+    });
 }
 
 
