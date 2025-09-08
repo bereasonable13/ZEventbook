@@ -230,6 +230,8 @@
             };
             
 // --- tiny helpers (only define if missing) ---
+<script>
+// ===== Helper: percent + pass bar chart =====
 if (typeof pct === 'undefined') {
   window.pct = (n,d)=> d? Math.round((100*n)/d) : 0;
 }
@@ -249,7 +251,7 @@ if (typeof renderPassBar === 'undefined') {
   };
 }
 
-// --- UNIVERSAL DIAGNOSTIC RENDERER ---
+// ===== Universal Diagnostics Renderer =====
 window.renderDiagTable = function(report) {
   const host = document.getElementById('diagOut');
   if (!host) return;
@@ -366,10 +368,57 @@ window.renderDiagTable = function(report) {
   }
 
   // Fallback: show JSON for unknown shapes
-      const pre = document.createElement('pre');
-      pre.textContent = JSON.stringify(report, null, 2);
-      host.appendChild(pre);
-  };
+  const pre = document.createElement('pre');
+  pre.textContent = JSON.stringify(report, null, 2);
+  host.appendChild(pre);
+};
+
+// ===== History/Trend Diagnostics Renderer =====
+window.renderDiagHistory = function(history) {
+  const host = document.getElementById('diagHistory');
+  if (!host) return;
+  host.innerHTML = '<h4>Test History</h4>';
+  if (!Array.isArray(history) || !history.length) {
+    host.innerHTML += '<div class="hint">No history yet</div>';
+    return;
+  }
+  // Table of test runs
+  const tb = document.createElement('table');
+  tb.className = 'table';
+  tb.innerHTML = `<thead>
+    <tr><th>Date</th><th>Suites</th><th>Passed</th><th>Failed</th><th>OK?</th></tr>
+  </thead><tbody></tbody>`;
+  const body = tb.querySelector('tbody');
+  history.slice(-12).reverse().forEach(run=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${run.ts ? String(run.ts).replace('T',' ').slice(0,19) : ''}</td>
+      <td>${Array.isArray(run.results)? run.results.length : ''}</td>
+      <td style="color:var(--ok)">${run.totals && run.totals.passed || ''}</td>
+      <td style="color:var(--danger)">${run.totals && run.totals.failed || ''}</td>
+      <td style="font-weight:800;color:${run.ok?'var(--ok)':'var(--danger)'}">${run.ok?'PASS':'FAIL'}</td>
+    `;
+    body.appendChild(tr);
+  });
+  host.appendChild(tb);
+};
+
+// ===== Trend Sparkline Renderer =====
+window.renderPassTrend = function(history) {
+  const host = document.getElementById('diagTrend');
+  if (!host) return;
+  host.innerHTML = '';
+  if (!Array.isArray(history) || !history.length) return;
+  const pts = history.slice(-16).map(h=>h.totals && typeof h.totals.passed === 'number' ? h.totals.passed : 0);
+  const max = Math.max(...pts, 1);
+  const svg = [`<svg width="160" height="22" viewBox="0 0 160 22" role="img" aria-label="Pass Trend"><polyline fill="none" stroke="#27ae60" stroke-width="2" points="`];
+  pts.forEach((v,i)=> svg.push(`${10*i},${20-Math.round(16*v/max)}`));
+  svg.push(`" />`);
+  pts.forEach((v,i)=> svg.push(`<circle cx="${10*i}" cy="${20-Math.round(16*v/max)}" r="2" fill="#27ae60"/>`));
+  svg.push(`</svg>`);
+  host.innerHTML = svg.join('');
+};
+</script>
 
 
             // Step 1
