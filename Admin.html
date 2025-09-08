@@ -369,11 +369,15 @@
     </main>
 
     <script>
+
         // ---------- Utilities ----------
         const $ = (s, p = document) => p.querySelector(s);
         const $all = (s, p = document) => Array.from(p.querySelectorAll(s));
         const fmt = (x) => (x == null ? '' : String(x));
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => { loadEvents().then(() => {/* ready */ }); });
 
         // Promisified google.script.run
         function gs(fn, ...args) {
@@ -391,6 +395,7 @@
             t.className = 'toast ' + (ok ? 'ok' : 'danger');
             setTimeout(() => t.style.display = 'none', 2400);
         }
+
         function setBusy(on, message) {
             const ov = $('#busy');
             if (!ov) return;
@@ -399,6 +404,7 @@
             ov.style.display = on ? 'grid' : 'none';
             document.body.classList.toggle('is-busy', !!on);
         }
+
         function setQR(el, url) {
             if (!el) return;
             el.innerHTML = '';
@@ -524,22 +530,6 @@
             $('#aOpenTV').removeAttribute('href');
         }
 
-        async function createEventSmart(payload) {
-            // Try the verified path; if it doesn't exist (not deployed yet), fall back gracefully.
-            try {
-                return await gs('createEventVerified', payload);
-            } catch (e) {
-                // Only fall back if it's a “function not found” type error
-                const msg = (e && e.message) ? String(e.message) : String(e);
-                if (/createEventVerified/i.test(msg) || /not found/i.test(msg) || /is not a function/i.test(msg)) {
-                    console.warn('createEventVerified not available, falling back to createEvent:', msg);
-                    return await gs('createEvent', payload);
-                }
-                throw e; // real error — bubble up to the caller
-            }
-        }
-
-
         // ---------- Share / Links ----------
         const _refreshShareLinksRaw = () => {
             if (!STATE.current || !STATE.current.eventId) { STATE.links = null; return; }
@@ -610,14 +600,25 @@
 
             const item = {
                 eventId: mini.eventId,
-                name: mini.name || '',
-                slug: mini.slug || '',
                 sid: mini.sid || '',
-                date: mini.date || mini.startDate || '',
+                slug: mini.slug || '',
+                name: mini.name || '',
+                type: mini.type || '',
+                status: mini.status || '',
+                startDate: mini.startDate || '',
+                endDate: mini.endDate || '',
                 flow: mini.flow || '',
+                weeks: mini.weeks || '',
                 elimType: mini.elimType || '',
                 seedMode: mini.seedMode || '',
                 isDefault: false,
+                publicUrl: mini.publicUrl || '',
+                displayUrl: mini.displayUrl || '',
+                adminUrl: mini.adminUrl || '',
+                formUrl: mini.formUrl || '',
+                signupSheet: mini.signupSheet || '',
+                scheduleSheet: mini.scheduleSheet || '',
+                bracketSheet: mini.bracketSheet || '',
                 counts: { signups: 0 }
             };
             STATE.events.push(item);
@@ -689,6 +690,21 @@
         })();
 
         // ---------- Create flow ----------
+        async function createEventSmart(payload) {
+            // Try the verified path; if it doesn't exist (not deployed yet), fall back gracefully.
+            try {
+                return await gs('createEventVerified', payload);
+            } catch (e) {
+                // Only fall back if it's a “function not found” type error
+                const msg = (e && e.message) ? String(e.message) : String(e);
+                if (/createEventVerified/i.test(msg) || /not found/i.test(msg) || /is not a function/i.test(msg)) {
+                    console.warn('createEventVerified not available, falling back to createEvent:', msg);
+                    return await gs('createEvent', payload);
+                }
+                throw e; // real error — bubble up to the caller
+            }
+        }
+
         function weeksRequiredFor(flow) { return flow === 'SEASON_TOURNEY' || flow === 'SEASON_ONLY'; }
         function syncWeeksVisibility() {
             const show = weeksRequiredFor($('#evFlow').value);
@@ -708,32 +724,17 @@
         });
 
         $('#btnCreate').addEventListener('click', async () => {
-          
-            // Validate inputs
+            // 1. Validate inputs
             const flowVal = $('#evFlow').value;
-            const needWeeks = (flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY');
+            const needWeeks = flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY';
             if (!$('#evName').checkValidity() || !$('#evDate').checkValidity() || (needWeeks && !$('#evWeeks').checkValidity())) {
-                $('#evName').reportValidity(); $('#evDate').reportValidity(); $('#evWeeks').reportValidity();
+                $('#evName').reportValidity();
+                $('#evDate').reportValidity();
+                $('#evWeeks').reportValidity();
                 return;
             }
 
-            setBusy(true, "Creating event...");
-            try {
-              const payload = { ... };
-              toast("Calling createEvent");
-              const created = await gs('createEvent', payload);
-              optimisticAddEvent(created);
-              toast("Event created!!");
-              await reloadEventsEnsure(created.eventId);
-            } catch (err) {
-                toast("Failed: " + err.message);
-            } finally {
-                setBusy(false);
-            }
-          
-            
-
-            // Build payload
+            // 2. Build payload
             const payload = {
                 name: $('#evName').value.trim(),
                 startDate: $('#evDate').value,
@@ -741,44 +742,38 @@
                 weeks: needWeeks ? Number($('#evWeeks').value || 0) : 0,
                 elimType: $('#evElim').value,
                 seedMode: $('#evSeed').value
-                console.Logs('Event create payload:', payload);
-                gs('createEvent',payload)
-                  .then(...)
-                  .catch(...);
-
             };
+            console.log('Event create payload:', payload);
 
-            // UI: show progress, disable button
+            // 3. UI state
             const btn = $('#btnCreate');
             btn.disabled = true;
             setBusy(true, 'Creating event…');
+            toast('Creating event…');
 
+            // 4. Call backend and handle result
             try {
-                // Create (verified if available, else fallback)
                 const created = await createEventSmart(payload);
-
-                // Optimistic UI + success toast
                 optimisticAddEvent(created);
-                toast('Event created');
-
-                // Repoll until the new id is truly in the list, then select it
+                toast('Event created.  View Manage Events dropdown!');
                 await reloadEventsEnsure(created.eventId, { tries: 6, baseDelay: 300 });
-
-                // Warm links only after selection is stable
                 if (refreshShareLinks.flush) refreshShareLinks.flush();
                 gs('refreshPublicCache', created.eventId);
 
                 // Reset form
-                $('#evName').value = ''; $('#evDate').value = ''; $('#evWeeks').value = '';
-                $('#evElim').value = 'SINGLE'; $('#evSeed').value = 'RANDOM'; $('#evFlow').value = payload.flow;
-                (function sync() { const show = (flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY'); const weeks = $('#evWeeks'); weeks.style.display = show ? '' : 'none'; if (show) weeks.setAttribute('required', 'required'); else { weeks.removeAttribute('required'); weeks.value = ''; } })();
+                $('#evName').value = '';
+                $('#evDate').value = '';
+                $('#evWeeks').value = '';
+                $('#evElim').value = 'SINGLE';
+                $('#evSeed').value = 'RANDOM';
+                $('#evFlow').value = payload.flow;
+                syncWeeksVisibility();
 
                 document.getElementById('manageTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (err) {
                 console.error('Create failed:', err);
                 toast((err && err.message) || 'Create failed', false);
             } finally {
-                setBusy(false);
                 btn.disabled = false;
             }
         });
@@ -1039,11 +1034,6 @@
         document.getElementById('btnShowStatus').onclick = showStatusUI;
         document.getElementById('btnShowLogs').onclick = showLogsUI;
         document.getElementById('btnCopyReport').onclick = copyReportUI;
-
-        
-
-        // Initial load
-        document.addEventListener('DOMContentLoaded', () => { loadEvents().then(() => {/* ready */ }); });
     </script>
 </body>
 
