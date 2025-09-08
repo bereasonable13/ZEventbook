@@ -175,7 +175,7 @@
         URLQ.get('eventId') ||
         URLQ.get('event') ||
         URLQ.get('slug') ||
-        (SERVER_SLUG) || '');
+        SERVER_SLUG || '');
 
         let _poll = null;
         function startPoll() { if (_poll) return; _poll = setInterval(() => fetchBundle(), 30000); }
