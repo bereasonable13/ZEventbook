@@ -194,7 +194,7 @@
         URLQ.get('eventId') ||
         URLQ.get('event') ||
         URLQ.get('slug') ||
-        (SERVER_SLUG) || '');
+        SERVER_SLUG || '');
         const TVMODE = URLQ.get('tv') === '1';
         document.addEventListener('DOMContentLoaded', () => document.body.classList.toggle('is-tv', TVMODE));
 
