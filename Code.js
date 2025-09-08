@@ -1244,6 +1244,293 @@ function refreshPublicCache(eventId) { killCache_(eventId); return { ok: true };
 function getSchedule(eventId) { return [{ round: 1, match: 1, teamA: 'A', teamB: 'B', time: 'TBD', court: '1', status: 'scheduled' }]; }
 function fetchBracket(eventId) { return { type: 'single', rounds: 1, matches: [{ id: 'm1', a: 'A', b: 'B', score: null }] }; }
 
+// ---------- Diagnostics v3 (structured logs, trends, flakiness, perf, exports) ----------
+
+// Config & sheets
+function _diagConfig_() {
+  return {
+    RESULTS_SHEET: 'DiagResults',
+    SUITES_SHEET:  'DiagSuites',
+    MAX_TEST_ROWS: 5000,
+    MAX_SUITE_ROWS: 2000
+  };
+}
+function _diagSheets_() {
+  const cfg = _diagConfig_();
+  const tests  = ensureTab_(cfg.RESULTS_SHEET, ['ts','suite','test','ok','ms','type','env','error','meta']);
+  const suites = ensureTab_(cfg.SUITES_SHEET,  ['ts','suite','ok','ms','total','passed','failed','env','meta']);
+  return { tests, suites, cfg };
+}
+function _nowMs_(){ return new Date().getTime(); }
+function _percentile_(arr, p) {
+  const v=(arr||[]).filter(x=>typeof x==='number'&&isFinite(x)).sort((a,b)=>a-b);
+  if (!v.length) return 0;
+  const i = Math.min(v.length-1, Math.max(0, Math.floor((p/100)*(v.length-1))));
+  return v[i];
+}
+function _bucketErr_(meta){
+  try{
+    if (!meta) return '';
+    const m = typeof meta==='string'? meta : (meta.message || meta.code || '');
+    if (!m) return '';
+    const s = String(m).toLowerCase();
+    if (s.includes('rate')) return 'rate_limit';
+    if (s.includes('timeout')) return 'timeout';
+    if (s.includes('sheet')&&s.includes('missing')) return 'sheet_missing';
+    if (s.includes('dup') && s.includes('slug')) return 'duplicate_slug';
+    if (s.includes('not found')) return 'not_found';
+    return 'other';
+  }catch(_){ return ''; }
+}
+function _diagLogTest_(suite, test, ok, ms, type, env, meta) {
+  const {tests}=_diagSheets_();
+  const err = ok ? '' : _bucketErr_(meta);
+  tests.appendRow([nowISO(), String(suite||''), String(test||''), !!ok, Number(ms||0), String(type||'unit'), String(env||''), err, meta?JSON.stringify(meta):'']);
+}
+function _diagLogSuite_(suite, ok, ms, totals, env, meta) {
+  const {suites}=_diagSheets_();
+  const passed=(totals&&totals.passed)||0, failed=(totals&&totals.failed)||0;
+  const total = (totals&&totals.total) || (passed+failed);
+  suites.appendRow([nowISO(), String(suite||''), !!ok, Number(ms||0), total, passed, failed, String(env||''), meta?JSON.stringify(meta):'']);
+}
+function _diagPrune_() {
+  const {tests,suites,cfg}=_diagSheets_();
+  const lrT = tests.getLastRow(), lrS = suites.getLastRow();
+  if (lrT > cfg.MAX_TEST_ROWS) {
+    const cut = Math.max(2, lrT - cfg.MAX_TEST_ROWS + 1);
+    tests.deleteRows(2, cut-2);
+  }
+  if (lrS > cfg.MAX_SUITE_ROWS) {
+    const cut = Math.max(2, lrS - cfg.MAX_SUITE_ROWS + 1);
+    suites.deleteRows(2, cut-2);
+  }
+}
+
+// Timed test wrapper (drop-in for old _qaAdd_)
+function _qaAdd_(arr, name, fn, opts) {
+  const t0=_nowMs_();
+  let ok=false, meta=null;
+  const type=(opts&&opts.type)||'unit';
+  const env =(opts&&opts.env)||'default';
+  const suite=(opts&&opts.suite)||(arr && arr.__suite)||'(unspecified)';
+  try {
+    const res = fn();
+    ok   = (res && typeof res.ok==='boolean') ? res.ok : !!res;
+    meta = (res && res.meta) ? res.meta : res;
+  } catch (e) {
+    ok=false; meta=parseMaybeErr_(e);
+  }
+  const ms=_nowMs_()-t0;
+  arr.push({name, ok, ms, type, env, meta: meta||null});
+  logDiag_(name, ok, meta); // legacy one-liner kept
+  _diagLogTest_(suite, name, ok, ms, type, env, meta);
+}
+
+// Suite runner (consistent roll-up row)
+function _runSuite_(suiteName, runnerFn, env) {
+  const out=[]; out.__suite=suiteName;
+  const t0=_nowMs_();
+  const res=runnerFn(out);
+  const ms=_nowMs_()-t0;
+  const passed=out.filter(t=>t.ok).length;
+  const failed=out.length - passed;
+  const ok=(failed===0) && (!!res ? !!res.ok : true);
+  _diagLogSuite_(suiteName, ok, ms, {total:out.length,passed,failed}, env||'default', {steps:out});
+  _diagPrune_();
+  return { ok, results: out, ts: nowISO(), ms, totals: { total: out.length, passed, failed } };
+}
+
+// ---------------- Suites (existing bodies; just wrapped) ----------------
+function runQuickChecks() {
+  return _runSuite_('quick', function(out){
+    _qaAdd_(out,'schema_events_v2',()=>{ const sh=getEventsSheet_(); const hdr=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+      return { ok: hdr.join()===EVENTS_SCHEMA_V2.join(), meta:{header:hdr} }; }, {suite:'quick'});
+    _qaAdd_(out,'verify_all_tabs',()=>{ verifyAll_(); return {ok:true}; }, {suite:'quick'});
+    _qaAdd_(out,'get_events_contract',()=>{ const rows=getEvents()||[]; const keys=rows.length?Object.keys(rows[0]).sort():[];
+      const has=['eventId','name','slug','date','flow','elimType','seedMode','isDefault','publicUrl','displayUrl','formUrl','counts','updatedAt'].every(k=>keys.includes(k));
+      return {ok:has, meta:{count:rows.length, keys}}; }, {suite:'quick'});
+    _qaAdd_(out,'status_ok',()=>{ const s=getStatus(); return {ok:!!s.ok, meta:s}; }, {suite:'quick'});
+    return { ok: out.every(t=>t.ok) };
+  });
+}
+function runQaSuite() {
+  return _runSuite_('full', function(out){
+    const today=Utilities.formatDate(new Date(),'UTC','yyyy-MM-dd'); let ev=null;
+    _qaAdd_(out,'schema_events_v2',()=>{ const sh=getEventsSheet_(); const hdr=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0];
+      return { ok: hdr.join()===EVENTS_SCHEMA_V2.join(), meta:{header:hdr} }; }, {suite:'full'});
+    _qaAdd_(out,'create_event_tourney_only',()=>{ ev=createEvent({ name:`QA ${shortId(Utilities.getUuid())}`, startDate:today, flow:FLOW.TOURNEY_ONLY, elimType:ELIM.SINGLE, seedMode:SEEDMODE.RANDOM});
+      return { ok: !!(ev&&ev.eventId), meta:{ev} }; }, {suite:'full'});
+    _qaAdd_(out,'default_invariant_row_intact',()=>{ setDefaultEvent(ev.eventId,true);
+      const rows=readTable_(getEventsSheet_()); const defaults=rows.filter(r=>String(r.isDefault)==='true').map(r=>r.eventId);
+      const me=rows.find(r=>r.eventId===ev.eventId)||{}; const intact=['eventId','name','slug','flow','signupSheet'].every(k=>(me[k]||'')!=='');
+      const ok=defaults.length===1 && defaults[0]===ev.eventId && intact; return { ok, meta:{defaults,intact,row:me} }; }, {suite:'full'});
+    _qaAdd_(out,'verify_tabs_exist',()=>{ verifyAll_(); return {ok:true}; }, {suite:'full'});
+    _qaAdd_(out,'public_bundle_ok',()=>{ const b=getPublicBundle(ev.eventId);
+      return { ok: !!(b&&b.eventMeta&&b.eventMeta.eventId===ev.eventId), meta:{counts:b.counts,links:b.eventMeta.links} }; }, {suite:'full'});
+    _qaAdd_(out,'bracket_generate_single',()=>{ _seedDemoSignups_(ev.eventId,4);
+      const r=generateBrackets(ev.eventId,{elimType:ELIM.SINGLE, seedMode:SEEDMODE.RANDOM}); return { ok: !!(r&&r.ok), meta:r }; }, {suite:'full'});
+    _qaAdd_(out,'share_links_resolve',()=>{ const l=getShareLinks(ev.eventId); const ok=!!(l.publicUrl&&l.displayUrl);
+      return { ok, meta:{hasPublic:!!l.publicUrl, hasDisplay:!!l.displayUrl, sample:l.publicUrl} }; }, {suite:'full'});
+    _qaAdd_(out,'warm_caches',()=> warmCaches(true), {suite:'full'});
+    _qaAdd_(out,'schedule_generate_season',()=>{ const ev2=createEvent({ name:`QASzn ${shortId(Utilities.getUuid())}`, startDate:today, flow:FLOW.SEASON_ONLY, weeks:3, elimType:ELIM.SINGLE, seedMode:SEEDMODE.RANDOM });
+      generateSchedule(ev2.eventId,3); const me2=getEventById_(ev2.eventId); const sch=ss().getSheetByName(me2.scheduleSheet);
+      const ok=sch && sch.getLastRow()>=(1+3); archiveEvent(ev2.eventId); return { ok, meta:{sheet:me2.scheduleSheet, rows: sch?sch.getLastRow():0} }; }, {suite:'full'});
+    _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(ev.eventId); return {ok:true, meta:{eventId:ev.eventId}}; }, {suite:'full'});
+    return { ok: out.every(t=>t.ok) };
+  });
+}
+function runTestsCreateCard(){ return _runSuite_('create',function(out){
+  let ev=null;
+  _qaAdd_(out,'create_event_basic',()=>{ ev=_qaNewEvent_({ flow:FLOW.SEASON_TOURNEY, weeks:3, seedMode:SEEDMODE.RANDOM }); return { ok:!!ev.eventId, meta:ev }; }, {suite:'create'});
+  _qaAdd_(out,'row_intact_post_default',()=>{ setDefaultEvent(ev.eventId,true); const me=getEventById_(ev.eventId);
+    const intact=['eventId','name','slug','flow','signupSheet'].every(k=>!!(me&&me[k])); return { ok:intact, meta:me }; }, {suite:'create'});
+  _qaAdd_(out,'slug_uniqueness',()=>{ let pe=null; try{ createEvent({ name:ev.name, startDate:ev.startDate, flow:ev.flow }); }catch(e){ pe=parseMaybeErr_(e); }
+    return { ok: !!(pe&&pe.code===ERR.DUP_SLUG), meta:pe }; }, {suite:'create'});
+  _qaAdd_(out,'verify_tabs_created',()=>{ verifyAll_(); const me=getEventById_(ev.eventId); return { ok: !!(me.signupSheet && ss().getSheetByName(me.signupSheet)), meta:me }; }, {suite:'create'});
+  _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(ev.eventId); return {ok:true, meta:{eventId:ev.eventId}}; }, {suite:'create'});
+  return { ok: out.every(t=>t.ok) };
+});}
+function runTestsManageCard(){ return _runSuite_('manage',function(out){
+  const evA=_qaNewEvent_({ flow:FLOW.TOURNEY_ONLY }); const evB=_qaNewEvent_({ flow:FLOW.SEASON_ONLY, weeks:3 });
+  _qaAdd_(out,'get_events_list',()=>{ const rows=getEvents(); return { ok: rows.length>=2, meta:{count:rows.length} }; }, {suite:'manage'});
+  _qaAdd_(out,'single_default_invariant',()=>{ setDefaultEvent(evA.eventId,true); setDefaultEvent(evB.eventId,true);
+    const rows=readTable_(getEventsSheet_()); const defaults=rows.filter(r=>String(r.isDefault)==='true').map(r=>r.eventId);
+    return { ok: defaults.length===1 && defaults[0]===evB.eventId, meta:{defaults} }; }, {suite:'manage'});
+  _qaAdd_(out,'open_sheet_url',()=>{ const url=openSheetUrl(evA.eventId); return { ok:!!url, meta:{url} }; }, {suite:'manage'});
+  _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(evA.eventId); archiveEvent(evB.eventId); return {ok:true}; }, {suite:'manage'});
+  return { ok: out.every(t=>t.ok) };
+});}
+function runTestsSignupsCard(){ return _runSuite_('signups',function(out){
+  const ev=_qaNewEvent_({ flow:FLOW.TOURNEY_ONLY });
+  _qaAdd_(out,'form_build',()=>{ const r=buildSignupForm(ev.eventId,{email:true,phone:true,notes:true}); const me=getEventById_(ev.eventId);
+    return { ok: !!(r&&me.formUrl), meta:{formUrl:me.formUrl,res:r} }; }, {suite:'signups'});
+  _qaAdd_(out,'seed_column_idempotent',()=>{ ensureSeedColumn(ev.eventId); const me=getEventById_(ev.eventId);
+    const sh=ss().getSheetByName(me.signupSheet); const hdr=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0]; return { ok: hdr.includes('Seed'), meta:{headers:hdr} }; }, {suite:'signups'});
+  _qaAdd_(out,'signup_count_increments',()=>{ _seedDemoSignups_(ev.eventId,3); const n=getSignupCount(ev.eventId); return { ok:n>=3, meta:{count:n} }; }, {suite:'signups'});
+  _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(ev.eventId); return {ok:true}; }, {suite:'signups'});
+  return { ok: out.every(t=>t.ok) };
+});}
+function runTestsShareCard(){ return _runSuite_('share',function(out){
+  const ev=_qaNewEvent_({ flow:FLOW.TOURNEY_ONLY });
+  _qaAdd_(out,'share_links_present',()=>{ const links=getShareLinks(ev.eventId); const ok=!!(links.publicUrl&&links.displayUrl);
+    return { ok, meta:Object.assign({note: ok ? 'ok' : 'deploy web app for full links'}, links) }; }, {suite:'share'});
+  _qaAdd_(out,'qr_generates',()=>{ const links=getShareLinks(ev.eventId); const ok=(links.qrPublicB64 && links.qrPublicB64.length>64);
+    return { ok, meta:{qrLen:links.qrPublicB64?links.qrPublicB64.length:0} }; }, {suite:'share'});
+  _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(ev.eventId); return {ok:true}; }, {suite:'share'});
+  return { ok: out.every(t=>t.ok) };
+});}
+function runTestsScheduleCard(){ return _runSuite_('schedule',function(out){
+  const ev=_qaNewEvent_({ flow:FLOW.SEASON_ONLY, weeks:3 });
+  _qaAdd_(out,'generate_schedule_rows',()=>{ generateSchedule(ev.eventId,3); const me=getEventById_(ev.eventId);
+    const sh=ss().getSheetByName(me.scheduleSheet); return { ok: sh && sh.getLastRow()>=4, meta:{sheet:me.scheduleSheet, rows: sh?sh.getLastRow():0} }; }, {suite:'schedule'});
+  _qaAdd_(out,'record_result_and_standings',()=>{ const me=getEventById_(ev.eventId); const sch=ss().getSheetByName(me.scheduleSheet);
+    if (sch.getLastRow()>=2){ sch.getRange(2,4).setValue('Team A'); sch.getRange(2,5).setValue('Team B'); recordResult(ev.eventId,2,5,3);
+      const s=computeStandings(ev.eventId); const ok=Array.isArray(s)&&s.length>=2&&s[0].Team&&(s[0].W+s[0].L)>=1; return { ok, meta:{standings:s.slice(0,2)} }; }
+    return { ok:false, meta:{reason:'no schedule rows'} }; }, {suite:'schedule'});
+  _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(ev.eventId); return {ok:true}; }, {suite:'schedule'});
+  return { ok: out.every(t=>t.ok) };
+});}
+function runTestsBracketsCard(){ return _runSuite_('brackets',function(out){
+  const ev=_qaNewEvent_({ flow:FLOW.TOURNEY_ONLY, seedMode:SEEDMODE.SEEDED });
+  _qaAdd_(out,'seed_signups',()=>{ _seedDemoSignups_(ev.eventId,4); const me=getEventById_(ev.eventId);
+    const sh=ss().getSheetByName(me.signupSheet); const head=sh.getRange(1,1,1,sh.getLastColumn()).getValues()[0]; const seedIdx=head.indexOf('Seed');
+    if (seedIdx>=0){ const count=Math.max(0, sh.getLastRow()-1); if (count) sh.getRange(2,seedIdx+1,count,1).setValues(Array.from({length:count},(_,i)=>[i+1])); }
+    const n=getSignupCount(ev.eventId); return { ok:n>=4, meta:{count:n} }; }, {suite:'brackets'});
+  _qaAdd_(out,'generate_seeded_bracket',()=>{ const r=generateBrackets(ev.eventId,{elimType:ELIM.SINGLE, seedMode:SEEDMODE.SEEDED}); return { ok: !!(r&&r.ok), meta:r }; }, {suite:'brackets'});
+  _qaAdd_(out,'read_bracket_structure',()=>{ const me=getEventById_(ev.eventId); const b=readBracket_(me.bracketSheet);
+    const ok=b && Array.isArray(b.rounds) && b.rounds.length>=1; return { ok, meta:{rounds:b.rounds.length} }; }, {suite:'brackets'});
+  _qaAdd_(out,'random_mode_fallback',()=>{ const r=generateBrackets(ev.eventId,{elimType:ELIM.SINGLE, seedMode:SEEDMODE.RANDOM}); return { ok: !!(r&&r.ok), meta:r }; }, {suite:'brackets'});
+  _qaAdd_(out,'cleanup_archive',()=>{ archiveEvent(ev.eventId); return {ok:true}; }, {suite:'brackets'});
+  return { ok: out.every(t=>t.ok) };
+});}
+function runAllCardTests(){
+  const packs=[['create',runTestsCreateCard],['manage',runTestsManageCard],['signups',runTestsSignupsCard],['share',runTestsShareCard],['schedule',runTestsScheduleCard],['brackets',runTestsBracketsCard]];
+  const t0=_nowMs_(); const results=packs.map(([name,fn])=>{ try{ return Object.assign({name}, fn()); } catch(e){ return {name, ok:false, error:parseMaybeErr_(e), results:[]}; } });
+  const ms=_nowMs_()-t0; const ok=results.every(r=>r.ok);
+  const total=results.reduce((a,r)=>a+(r.results?r.results.length:0),0);
+  const passed=results.reduce((a,r)=>a+(r.results?r.results.filter(x=>x.ok).length:0),0);
+  const failed=total-passed;
+  _diagLogSuite_('allcards', ok, ms, {total,passed,failed}, 'default', {bundles:results.map(r=>({name:r.name, ok:r.ok, totals:r.totals||null}))});
+  _diagPrune_();
+  return { ok, results, ts: nowISO(), ms, totals: { total, passed, failed } };
+}
+
+// --------- History / Trends / Perf / Flaky / Export ----------
+function diagGetHistory(limit, suite) {
+  const {tests}= _diagSheets_(); const lim=Math.max(1,Math.min(Number(limit||200),1000));
+  const lr=tests.getLastRow(); if (lr<2) return {tests:[], totals:{total:0,passed:0,failed:0}, ts: nowISO()};
+  const vals=tests.getRange(Math.max(2, lr-lim+1),1,Math.min(lim, lr-1),9).getValues();
+  const rows=vals.map(r=>({ ts:r[0], suite:r[1], test:r[2], ok:String(r[3])==='true', ms:Number(r[4]||0), type:r[5]||'unit', env:r[6]||'', error:r[7]||'',
+                             meta:(function(){try{return JSON.parse(r[8]||'');}catch(_){return r[8];}})() }))
+                 .filter(x=>!suite || String(x.suite)===String(suite));
+  const total=rows.length, passed=rows.filter(x=>x.ok).length, failed=total-passed;
+  const byErr={}; rows.filter(x=>!x.ok).forEach(x=>{ byErr[x.error]= (byErr[x.error]||0)+1; });
+  return { tests:rows, totals:{total,passed,failed}, errors:byErr, ts: nowISO() };
+}
+function diagGetSuiteHistory(limit, suite) {
+  const {suites}= _diagSheets_(); const lim=Math.max(1,Math.min(Number(limit||200),1000));
+  const lr=suites.getLastRow(); if (lr<2) return {suites:[], ts:nowISO()};
+  const vals=suites.getRange(Math.max(2, lr-lim+1),1,Math.min(lim, lr-1),9).getValues();
+  const rows=vals.map(r=>({ ts:r[0], suite:r[1], ok:String(r[2])==='true', ms:Number(r[3]||0), total:Number(r[4]||0), passed:Number(r[5]||0), failed:Number(r[6]||0), env:r[7]||'',
+                             meta:(function(){try{return JSON.parse(r[8]||'');}catch(_){return r[8];}})()}))
+                 .filter(x=>!suite || String(x.suite)===String(suite));
+  return { suites: rows, ts: nowISO() };
+}
+function diagTrendSummary(days) {
+  const {suites}= _diagSheets_(); const lr=suites.getLastRow(); if (lr<2) return {points:[], ts:nowISO()};
+  const since = days ? new Date(Date.now()-Number(days)*24*3600*1000) : null;
+  const vals=suites.getRange(2,1,lr-1,9).getValues();
+  const rows=vals.map(r=>({ ts:new Date(r[0]), suite:r[1], total:Number(r[4]||0), passed:Number(r[5]||0) })).filter(x=>x.total>0);
+  const filtered = since ? rows.filter(x=>x.ts>=since) : rows;
+  const byDay={};
+  filtered.forEach(x=>{
+    const d = Utilities.formatDate(x.ts,'UTC','yyyy-MM-dd') + '|' + x.suite;
+    const cur = byDay[d] || { date: d.split('|')[0], suite: x.suite, total:0, passed:0 };
+    cur.total += x.total; cur.passed += x.passed; byDay[d]=cur;
+  });
+  const points = Object.values(byDay).map(x=>({ date:x.date, suite:x.suite, rate: x.total? (x.passed/x.total) : 0, total:x.total }));
+  points.sort((a,b)=> a.date.localeCompare(b.date));
+  return { points, ts: nowISO() };
+}
+function diagPerfSummary(days) {
+  const {tests}= _diagSheets_(); const lr=tests.getLastRow(); if (lr<2) return { stats:[], ts:nowISO() };
+  const vals=tests.getRange(2,1,lr-1,9).getValues().map(r=>({ ts:new Date(r[0]), suite:r[1], test:r[2], ok:String(r[3])==='true', ms:Number(r[4]||0) }));
+  const since= days ? new Date(Date.now()-Number(days)*24*3600*1000) : null;
+  const filtered = since ? vals.filter(v=>v.ts>=since) : vals;
+  const byKey={};
+  filtered.forEach(r=>{ const k=r.suite+'::'+r.test; (byKey[k]=byKey[k]||[]).push(r.ms); });
+  const stats=Object.entries(byKey).map(([k,arr])=>{ const [suite,test]=k.split('::'); return { suite, test, count:arr.length, p50:_percentile_(arr,50), p95:_percentile_(arr,95), max:_percentile_(arr,100) }; });
+  return { stats, ts: nowISO() };
+}
+function diagFlaky(limit, minRuns) {
+  const {tests}= _diagSheets_(); const lr=tests.getLastRow(); if (lr<2) return { flaky:[], ts:nowISO() };
+  const lim=Math.max(1,Math.min(Number(limit||2000),5000)); const need=Math.max(5, Number(minRuns||5));
+  const vals=tests.getRange(Math.max(2, lr-lim+1),1,Math.min(lim, lr-1),9).getValues()
+    .map(r=>({ suite:r[1], test:r[2], ok:String(r[3])==='true', ts:r[0] }));
+  const byKey={};
+  vals.forEach(v=>{ const k=v.suite+'::'+v.test; (byKey[k]=byKey[k]||[]).push(v.ok); });
+  const flaky = Object.entries(byKey).map(([k,arr])=>{
+    const [suite,test]=k.split('::'); const n=arr.length; const pass=arr.filter(Boolean).length; const fail=n-pass;
+    const rate = n? pass/n : 0; const flip = (function(a){let f=0; for(let i=1;i<a.length;i++) if(!!a[i]!==!!a[i-1]) f++; return f;})(arr);
+    return { suite, test, runs:n, pass, fail, passRate:rate, flips:flip };
+  }).filter(x=>x.runs>=need && x.pass>0 && x.fail>0)
+    .sort((a,b)=> (b.flips-a.flips) || (a.passRate-b.passRate));
+  return { flaky, ts: nowISO() };
+}
+function diagExportCsv(kind, suite, limit) {
+  // kind: 'tests'|'suites'
+  const {tests,suites}= _diagSheets_();
+  const sh = (kind==='suites') ? suites : tests;
+  const lr = sh.getLastRow(); if (lr<2) return '';
+  const lim = Math.max(1, Math.min(Number(limit||1000), 5000));
+  const vals=sh.getRange(1,1,Math.min(lr, lim+1), sh.getLastColumn()).getValues();
+  const hdr=vals.shift(); const rows = vals.filter(r => !suite || String(r[1])===String(suite));
+  const csv = [hdr.join(',')].concat(rows.map(r=>r.map(c=>{
+    const s=(c==null)?'':String(c); return s.includes(',')||s.includes('"') ? `"${s.replace(/"/g,'""')}"` : s;
+  }).join(','))).join('\n');
+  return csv;
+}
+
 // ---------- Exports ----------
 function getAppMeta() { return { title: APP_TITLE, build: BUILD_ID, ts: nowISO() }; }
 
