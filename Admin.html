@@ -667,7 +667,41 @@
             <p class="hint mt-1">If “Seeded” is chosen, ensure the Signups sheet has a contiguous 1..N “Seed” column.
             </p>
         </section>
+        
+        <button id="btnRunAllSuites" class="btn">Run All Suites</button>
 
+        <select id="histSuite" class="input input--select" style="max-width:180px">
+          <option value="">(All suites)</option>
+          <option>quick</option><option>full</option><option>create</option>
+          <option>manage</option><option>signups</option><option>share</option>
+          <option>schedule</option><option>brackets</option><option>allcards</option>
+        </select>
+        
+        <select id="histLimit" class="input input--select" style="max-width:120px">
+          <option value="50">Last 50</option>
+          <option value="200" selected>Last 200</option>
+          <option value="1000">Last 1000</option>
+        </select>
+        <button id="btnShowHistory" class="btn btn--ghost">History</button>
+        <button id="btnExportTests" class="btn btn--ghost">Export CSV</button>
+        
+        <select id="trendDays" class="input input--select" style="max-width:120px">
+          <option value="7" selected>Trend 7d</option>
+          <option value="30">Trend 30d</option>
+          <option value="">All</option>
+        </select>
+        <button id="btnShowTrends" class="btn btn--ghost">Trends</button>
+        
+        <select id="perfDays" class="input input--select" style="max-width:120px">
+          <option value="1">Perf 1d</option>
+          <option value="7" selected>Perf 7d</option>
+          <option value="30">Perf 30d</option>
+          <option value="">All</option>
+        </select>
+        <button id="btnShowPerf" class="btn btn--ghost">Perf</button>
+        
+        <button id="btnShowFlaky" class="btn btn--ghost">Flaky</button>
+        
     </main>
 
     <script>
