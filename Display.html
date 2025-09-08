@@ -5,18 +5,95 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
     <title>
-        <?= appTitle ?> · Admin
+        <?= appTitle ?> · Display
     </title>
     <?!= include('Styles'); ?>
     <style>
-        .badge--active {
-            background: var(--ink-700);
-            color: white;
+        /* TV-first layout; toggled by body.is-tv */
+        header.appbar {
+            display: none;
         }
 
-        .kpi {
-            font-size: 1.15rem;
-            font-weight: 600;
+        body:not(.is-tv) header.appbar {
+            display: block;
+        }
+
+        .board {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: 1fr;
+        }
+
+        @media (min-width: 980px) {
+            .board {
+                grid-template-columns: 1.2fr .8fr;
+            }
+        }
+
+        .panel {
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            background: var(--surface);
+        }
+
+        .panel h2 {
+            margin: 0 0 8px;
+            font-size: 1.25rem;
+        }
+
+        .big {
+            font-size: clamp(1.1rem, 2.2vw, 1.6rem);
+            line-height: 1.25;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            border-top: 1px solid var(--border);
+            padding: 8px 6px;
+            text-align: left;
+        }
+
+        .table th {
+            font-weight: 700;
+        }
+
+        .small {
+            color: var(--muted);
+            font-size: .95rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            font-size: .8rem
+        }
+
+        header.tvbar {
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+            justify-content: space-between;
+            margin: 8px 0 12px;
+        }
+
+        #evName {
+            font-weight: 900;
+            font-size: clamp(1.2rem, 3.2vw, 2rem);
+            letter-spacing: -.02em;
+        }
+
+        #meta {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
         }
     </style>
 </head>
@@ -24,397 +101,195 @@
 <body>
     <header class="appbar">
         <div class="appbar__title">
-            <?= appTitle ?> · Admin
+            <?= appTitle ?> · Display
         </div>
     </header>
 
     <main class="container">
 
-        <!-- ===================== CREATE EVENT (LEAN WIZARD) ===================== -->
-        <section class="card" id="eventWizard" aria-labelledby="wizTitle">
-            <h2 class="card__title" id="wizTitle">Create Event (Lean Wizard)</h2>
-
-            <!-- Stepper -->
-            <div class="row gap-sm" id="wizSteps" style="margin-bottom:.5rem;">
-                <span class="badge" data-step="1">1. Basics</span>
-                <span class="badge" data-step="2">2. Roster Source</span>
-                <span class="badge" data-step="3">3. Structure</span>
-                <span class="badge" data-step="4">4. Confirm</span>
+        <!-- Toast + Busy -->
+        <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
+        <div id="busy"
+            style="position:fixed; inset:0; display:none; place-items:center; z-index:3000; background:rgba(0,0,0,.45);">
+            <div class="card"
+                style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; gap:10px; align-items:center;">
+                <div style="font-size:1.6rem; display:flex; gap:8px;"><span>🏃‍♂️</span><span>🥎</span><span>🧶</span>
+                </div>
+                <div class="msg" style="font-weight:800;">Refreshing…</div>
             </div>
+        </div>
 
-            <!-- Step 1 -->
-            <div class="card card--sub" data-wiz-step="1">
-                <label class="label">Event Name</label>
-                <input id="wizName" class="input input--xl" placeholder="e.g., Southside Bocce Fall League" />
-
-                <label class="label">Start Date</label>
-                <input id="wizDate" class="input input--xl" type="date" />
-
-                <label class="label">Format</label>
-                <select id="wizFormat" class="select select--xl">
-                    <option value="league" selected>League (default)</option>
-                    <option value="tournament">Tournament</option>
-                    <option value="other">Party / Other</option>
-                </select>
-
-                <div class="row gap-sm" style="margin-top:.75rem;">
-                    <button class="btn btn--primary btn-xl" id="btnStep1Next">Next</button>
-                </div>
+        <!-- TV header -->
+        <header class="tvbar">
+            <div id="evName">Event</div>
+            <div id="meta" class="small">
+                <span id="evDate"></span>
+                <span>•</span>
+                <span id="evFlow"></span>
+                <span>•</span>
+                <span>Signups: <b id="evSignups">0</b></span>
+                <span>•</span>
+                <span id="lastUpdated"></span>
             </div>
+        </header>
 
-            <!-- Step 2 -->
-            <div class="card card--sub" data-wiz-step="2" hidden>
-                <div class="hint">Recommended:</div>
-                <label class="radio">
-                    <input type="radio" name="wizSource" value="signup" checked />
-                    <span><strong>Players sign up by scanning a QR code</strong> (recommended)</span>
-                </label>
+        <div class="board">
 
-                <details style="margin-top:.5rem;">
-                    <summary>Other options</summary>
-                    <div class="stack gap-sm" style="margin-top:.5rem;">
+            <!-- Standings -->
+            <section class="panel" id="standingsSec" style="display:none;">
+                <h2>Standings</h2>
+                <table class="table big" id="standingsTbl" aria-label="Standings">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Team</th>
+                            <th>W</th>
+                            <th>L</th>
+                            <th>Pct</th>
+                            <th>PF</th>
+                            <th>PA</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+                <div class="small">Order from server (Win% → point diff → PF)</div>
+            </section>
 
-                        <!-- Import option (CSV or Google Sheet URL) -->
-                        <label class="radio">
-                            <input type="radio" name="wizSource" value="import" />
-                            <span>Import a roster (CSV / Google Sheet URL)</span>
-                        </label>
-                        <div id="wizImportWrap" class="card card--sub" hidden>
-                            <label class="label">Paste CSV (one team/player per line)</label>
-                            <textarea id="wizImportCsv" class="input" rows="5"
-                                placeholder="Team A&#10;Team B&#10;Team C"></textarea>
+            <!-- Upcoming / Live -->
+            <section class="panel" id="upcomingSec" style="display:none;">
+                <h2>Upcoming & Live</h2>
+                <table class="table big" id="upcomingTbl" aria-label="Upcoming">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Court</th>
+                            <th>Match</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </section>
 
-                            <div class="hint" style="margin:.5rem 0">— or —</div>
+            <!-- Bracket (compact) -->
+            <section class="panel" id="bracketSec" style="display:none;">
+                <h2>Bracket</h2>
+                <div id="bracketWrap" class="big"></div>
+            </section>
 
-                            <label class="label">Google Sheet URL (first non-empty sheet/column)</label>
-                            <input id="wizImportSheetUrl" class="input"
-                                placeholder="https://docs.google.com/spreadsheets/d/…/edit#gid=0" />
-                            <div class="hint">We’ll read names from the first filled column. Ensure the web app’s
-                                account can open the Sheet.</div>
-                        </div>
-
-                        <!-- Manual option -->
-                        <label class="radio">
-                            <input type="radio" name="wizSource" value="manual" />
-                            <span>Enter teams/players manually</span>
-                        </label>
-                        <div id="wizManualWrap" class="card card--sub" hidden>
-                            <label class="label">Manual entries (one per line)</label>
-                            <textarea id="wizManualList" class="input" rows="5"
-                                placeholder="Team A&#10;Team B&#10;Team C"></textarea>
-                        </div>
-                    </div>
-                </details>
-
-                <div class="row gap-sm" style="margin-top:.75rem;">
-                    <button class="btn btn--ghost btn-xl" id="btnStep2Back">Back</button>
-                    <button class="btn btn--primary btn-xl" id="btnStep2Next">Next</button>
-                </div>
-            </div>
-
-            <!-- Step 3 -->
-            <div class="card card--sub" data-wiz-step="3" hidden>
-                <label class="radio">
-                    <input type="radio" name="wizStructure" value="schedule" checked />
-                    <span><strong>Auto-generate schedule</strong> (default)</span>
-                </label>
-
-                <label class="checkbox" style="margin-left:1.75rem;">
-                    <input type="checkbox" id="wizAddTourney" />
-                    <span>Add Tournament/Playoffs after schedule</span>
-                </label>
-
-                <details style="margin-top:.5rem;">
-                    <summary>Advanced: Roster only (no games)</summary>
-                    <div class="card card--sub" style="margin-top:.5rem;">
-                        <label class="radio">
-                            <input type="radio" name="wizStructure" value="roster-only" />
-                            <span>Roster only (RSVP / waitlist / clinic)</span>
-                        </label>
-                    </div>
-                </details>
-
-                <div class="row gap-sm" style="margin-top:.75rem;">
-                    <button class="btn btn--ghost btn-xl" id="btnStep3Back">Back</button>
-                    <button class="btn btn--primary btn-xl" id="btnStep3Next">Next</button>
-                </div>
-            </div>
-
-            <!-- Step 4 -->
-            <div class="card card--sub" data-wiz-step="4" hidden>
-                <div id="wizSummary" class="stack"></div>
-
-                <!-- Import preview (only shown when source = import) -->
-                <div id="wizImportPreview" class="card card--sub" style="margin-top:.5rem; display:none;">
-                    <div class="row" style="justify-content:space-between; align-items:center;">
-                        <h3 class="card__title" style="margin:0;">Import Preview</h3>
-                        <button class="btn btn--ghost" id="btnRecheckImport" type="button">Re-validate</button>
-                    </div>
-                    <div id="wizImportPreviewMsg" class="hint">Validating…</div>
-                    <div id="wizImportPreviewCount" class="kpi" style="margin-top:.25rem;"></div>
-                    <details style="margin-top:.25rem;">
-                        <summary>Show sample</summary>
-                        <ul id="wizImportPreviewList" class="list" style="margin:.5rem 0 0;"></ul>
-                    </details>
-                </div>
-
-                <div class="row gap-sm" style="margin-top:.75rem;">
-                    <button class="btn btn--ghost btn-xl" id="btnStep4Back">Back</button>
-                    <button class="btn btn--primary btn-xl" id="btnCreateEvent">Create Event</button>
-                </div>
-
-                <div id="wizResult" class="stack" style="margin-top:1rem;" hidden>
-                    <div class="kpi">Event Created</div>
-                    <div id="wizEventId" class="hint"></div>
-                    <div id="wizQrWrap" class="row gap-sm" style="align-items:flex-start;"></div>
-                </div>
-            </div>
-        </section>
-
+        </div>
     </main>
 
     <script>
-        (() => {
-            // --- State ---
-            const state = {
-                step: 1,
-                name: "",
-                dateISO: "",
-                format: "league",
-                source: "signup", // signup | import | manual
-                importCsv: "",
-                sheetUrl: "",
-                manualList: "",
-                structure: "schedule", // schedule | roster-only
-                addTourney: false
-            };
+        // ---------- Utilities ----------
+        const $ = (s, p = document) => p.querySelector(s);
+        function toast(msg, ok = true) { const t = $('#toast'); if (!t) return; t.textContent = msg; t.style.display = 'block'; t.className = 'toast ' + (ok ? 'ok' : 'danger'); setTimeout(() => t.style.display = 'none', 2000); }
+        function setBusy(on, message) { const b = $('#busy'); if (!b) return; const m = b.querySelector('.msg'); if (m && message) m.textContent = message; b.style.display = on ? 'grid' : 'none'; }
 
-            // --- DOM helpers ---
-            const $ = (s, r = document) => r.querySelector(s);
-            const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
-            const setStep = (n) => {
-                state.step = n;
-                $$('[data-wiz-step]').forEach(el => el.hidden = (+el.dataset.wizStep !== n));
-                $$('#wizSteps .badge').forEach(b => b.classList.toggle('badge--active', +b.dataset.step === n));
-            };
-            const toISO = (v) => {
-                try {
-                    if (!v) return "";
-                    const d = new Date(v + "T00:00:00");
-                    return isNaN(d.getTime()) ? "" : d.toISOString().slice(0, 10);
-                } catch { return ""; }
-            };
+        // ---------- Boot identity + tv mode ----------
+        const URLQ = new URLSearchParams(location.search);
+        const SERVER_SLUG = "<?= slug ?>";
+        const BOOT_ID = 
+        (window.eventId && String(window.eventId).trim()) || 
+        URLQ.get('eventId') ||
+        URLQ.get('event') ||
+        URLQ.get('slug') ||
+        (SERVER_SLUG) || '');
+        const TVMODE = URLQ.get('tv') === '1';
+        document.addEventListener('DOMContentLoaded', () => document.body.classList.toggle('is-tv', TVMODE));
 
-            // Helpers for import preview
-            function parseCsvClient(text) {
-                if (!text) return [];
-                return text.split(/\r?\n/).map(s => (s || '').trim()).filter(Boolean);
-            }
-            function dedupe(list) {
-                const seen = new Set(); const out = [];
-                for (const n of list) if (n && !seen.has(n)) { seen.add(n); out.push(n); }
-                return out;
-            }
+        let _poll = null;
+        function startPoll() { if (_poll) return; _poll = setInterval(fetchBundle, 20000); }
+        function stopPoll() { if (_poll) { clearInterval(_poll); _poll = null; } }
+        document.addEventListener('visibilitychange', () => { document.hidden ? stopPoll() : startPoll(); });
 
-            const summarize = () => {
-                const lines = [];
-                lines.push(`<div><strong>Name:</strong> ${state.name}</div>`);
-                lines.push(`<div><strong>Date:</strong> ${state.dateISO || "—"}</div>`);
-                lines.push(`<div><strong>Format:</strong> ${state.format}</div>`);
-                lines.push(`<div><strong>Roster Source:</strong> ${state.source}</div>`);
-                const struct = state.structure === 'roster-only'
-                    ? 'Roster only'
-                    : 'Schedule' + (state.addTourney ? ' + Tournament' : '');
-                lines.push(`<div><strong>Structure:</strong> ${struct}</div>`);
-                $('#wizSummary').innerHTML = lines.join('');
-            };
+        // ---------- Renderers ----------
+        function renderHeader(b) {
+            const meta = b?.eventMeta || {};
+            $('#evName').textContent = meta.name || 'Event';
+            $('#evDate').textContent = meta.date || '';
+            const flowMap = { SEASON_TOURNEY: 'Season → Tournament', SEASON_ONLY: 'Season only', TOURNEY_ONLY: 'Tournament only', REGISTRATION: 'Signups only' };
+            $('#evFlow').textContent = flowMap[meta.flow] || (meta.flow || '');
+            $('#evSignups').textContent = (b?.counts?.signups ?? 0);
+            $('#lastUpdated').textContent = b?.lastUpdated ? new Date(b.lastUpdated).toLocaleTimeString() : '';
+        }
 
-            // Step 1
-            $('#btnStep1Next').addEventListener('click', () => {
-                state.name = $('#wizName').value.trim();
-                state.dateISO = toISO($('#wizDate').value);
-                state.format = $('#wizFormat').value || 'league';
-                if (!state.name) { alert('Please enter an event name.'); return; }
-                setStep(2);
+        function renderStandings(list) {
+            const sec = $('#standingsSec'), tb = $('#standingsTbl tbody');
+            tb.innerHTML = '';
+            if (!Array.isArray(list) || !list.length) { sec.style.display = 'none'; return; }
+            // IMPORTANT: Keep server order
+            list.forEach(r => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${r.Rank ?? ''}</td><td>${r.Team ?? ''}</td><td>${r.W ?? 0}</td><td>${r.L ?? 0}</td>
+<td>${(r.Pct != null) ? (r.Pct * 100).toFixed(1) + '%' : ''}</td><td>${r.PointsFor ?? 0}</td><td>${r.PointsAgainst ?? 0}</td>`;
+                tb.appendChild(tr);
             });
+            sec.style.display = '';
+        }
 
-            // Source radios + conditional blocks
-            $$('input[name="wizSource"]').forEach(r => {
-                r.addEventListener('change', (e) => {
-                    const v = e.target.value;
-                    state.source = v;
-                    $('#wizImportWrap').hidden = v !== 'import';
-                    if ($('#wizManualWrap')) $('#wizManualWrap').hidden = v !== 'manual';
+        function renderUpcoming(rows) {
+            const sec = $('#upcomingSec'), tb = $('#upcomingTbl tbody'); tb.innerHTML = '';
+            if (!Array.isArray(rows) || !rows.length) { sec.style.display = 'none'; return; }
+            // Show non-final first; then most recent finals (few)
+            const nonFinal = rows.filter(r => String(r.Status || '').toLowerCase() !== 'final');
+            const finals = rows.filter(r => String(r.Status || '').toLowerCase() === 'final').slice(-4); // last few
+            const show = nonFinal.concat(finals);
+            if (!show.length) { sec.style.display = 'none'; return; }
+            show.forEach(r => {
+                const status = String(r.Status || '');
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${r.Time || ''}</td><td>${r.Court || ''}</td><td>${r['Team A'] || ''} vs ${r['Team B'] || ''}</td>
+<td>${status.toLowerCase() === 'final' ? '<span class="badge">final</span>' : status}</td>`;
+                tb.appendChild(tr);
+            });
+            sec.style.display = '';
+        }
+
+        function renderBracket(br) {
+            const sec = $('#bracketSec'), wrap = $('#bracketWrap'); wrap.innerHTML = '';
+            const rounds = br?.rounds || [];
+            if (!rounds.length) { sec.style.display = 'none'; return; }
+            // Compact list per round
+            rounds.forEach(r => {
+                const div = document.createElement('div');
+                div.style.marginBottom = '12px';
+                const title = document.createElement('div'); title.style.fontWeight = '800'; title.textContent = r.name;
+                div.appendChild(title);
+                (r.matches || []).forEach(m => {
+                    const line = document.createElement('div');
+                    const a = m.slots?.find(s => s.slot === 1), b = m.slots?.find(s => s.slot === 2);
+                    const tA = a ? (a.team || `Seed ${a.seed || ''}`) : '—';
+                    const tB = b ? (b.team || `Seed ${b.seed || ''}`) : '—';
+                    const scA = a?.score || '', scB = b?.score || '';
+                    const st = a?.status || b?.status || '';
+                    line.textContent = `M${m.match}: ${tA} ${scA ? `(${scA})` : ''} vs ${tB} ${scB ? `(${scB})` : ''} ${st ? `· ${st}` : ''}`;
+                    div.appendChild(line);
                 });
+                wrap.appendChild(div);
             });
+            sec.style.display = '';
+        }
 
-            $('#btnStep2Back').addEventListener('click', () => setStep(1));
-            $('#btnStep2Next').addEventListener('click', () => {
-                if (state.source === 'import') {
-                    state.importCsv = ($('#wizImportCsv')?.value || '').trim();
-                    state.sheetUrl = ($('#wizImportSheetUrl')?.value || '').trim();
-                    if (!state.importCsv && !state.sheetUrl) {
-                        if (!confirm('No CSV or Sheet URL provided. Continue anyway?')) return;
-                    }
-                }
-                if (state.source === 'manual') {
-                    state.manualList = ($('#wizManualList')?.value || '').trim();
-                }
-                setStep(3);
-            });
+        function renderBundle(b) {
+            renderHeader(b);
+            renderStandings(b?.standings || []);
+            renderUpcoming(b?.schedule || []);
+            renderBracket(b?.bracket || { rounds: [] });
+        }
 
-            // Structure
-            $$('input[name="wizStructure"]').forEach(r => {
-                r.addEventListener('change', (e) => {
-                    state.structure = e.target.value;
-                    if (state.structure === 'roster-only') {
-                        $('#wizAddTourney').checked = false;
-                        $('#wizAddTourney').disabled = true;
-                    } else {
-                        $('#wizAddTourney').disabled = false;
-                    }
-                });
-            });
-            $('#wizAddTourney').addEventListener('change', (e) => {
-                state.addTourney = !!e.target.checked;
-            });
+        // ---------- Data fetch ----------
+        function fetchBundle(id = BOOT_ID) {
+            if (!id) { toast('No event specified', false); return; }
+            setBusy(true, 'Refreshing…');
+            google.script.run
+                .withSuccessHandler(b => { try { renderBundle(b); } finally { setBusy(false); } })
+                .withFailureHandler(err => { console.error(err); toast('Failed to refresh', false); setBusy(false); })
+                .getPublicBundle(id);
+        }
 
-            $('#btnStep3Back').addEventListener('click', () => setStep(2));
-            $('#btnStep3Next').addEventListener('click', () => {
-                summarize();
-                setStep(4);
-                runImportPreview(); // kicks off preview if source = 'import'
-            });
-            $('#btnStep4Back').addEventListener('click', () => setStep(3));
-
-            // Import preview (Step 4)
-            async function runImportPreview() {
-                const wrap = $('#wizImportPreview');
-                const msg = $('#wizImportPreviewMsg');
-                const cnt = $('#wizImportPreviewCount');
-                const ul = $('#wizImportPreviewList');
-
-                if (state.source !== 'import') { wrap.style.display = 'none'; return; }
-                wrap.style.display = '';
-                msg.textContent = 'Validating…';
-                cnt.textContent = '';
-                ul.innerHTML = '';
-
-                let combined = parseCsvClient(state.importCsv);
-
-                if (state.sheetUrl && window.google?.script?.run?.ingestSheet) {
-                    try {
-                        const sheetRes = await new Promise((resolve, reject) => {
-                            google.script.run.withSuccessHandler(resolve).withFailureHandler(reject).ingestSheet(state.sheetUrl);
-                        });
-                        if (sheetRes && sheetRes.ok && Array.isArray(sheetRes.teams)) {
-                            combined = combined.concat(sheetRes.teams);
-                        } else {
-                            const err = (sheetRes && sheetRes.error) || 'Unknown error reading Sheet.';
-                            msg.textContent = 'Sheet warning: ' + err + ' (CSV will still be used if provided)';
-                        }
-                    } catch (e) {
-                        msg.textContent = 'Sheet error: ' + (e && e.message ? e.message : e);
-                    }
-                }
-
-                const finalList = dedupe(combined.map(s => String(s || '').trim()).filter(Boolean));
-                const n = finalList.length;
-
-                if (n === 0) {
-                    cnt.textContent = '0 names detected';
-                    if (!state.importCsv && !state.sheetUrl) {
-                        msg.textContent = 'Provide CSV lines and/or a Google Sheet URL to import.';
-                    } else {
-                        msg.textContent = 'Nothing found. Check CSV lines and/or the Sheet’s first column.';
-                    }
-                    return;
-                }
-
-                msg.textContent = 'Looks good.';
-                cnt.textContent = `${n} name${n === 1 ? '' : 's'} will be imported`;
-
-                const sample = finalList.slice(0, 10);
-                ul.innerHTML = '';
-                for (const name of sample) {
-                    const li = document.createElement('li');
-                    li.textContent = name;
-                    ul.appendChild(li);
-                }
-            }
-
-            $('#btnRecheckImport')?.addEventListener('click', runImportPreview);
-
-            // Create Event
-            $('#btnCreateEvent').addEventListener('click', () => {
-                const btn = $('#btnCreateEvent');
-                btn.disabled = true;
-
-                // Map UI -> server payload (aligns with your Code.gs createEvent)
-                const payload = {
-                    name: state.name,
-                    startDate: state.dateISO, // Code.gs expects startDate/date
-                    flow: (state.structure === 'roster-only') ? 'REGISTRATION'
-                        : (state.addTourney ? 'SEASON_TOURNEY' : 'SEASON_ONLY'),
-                    elimType: 'SINGLE', // default; user can adjust later in Admin
-                    seedMode: 'RANDOM', // default; can be changed
-                    source: state.source // signup | import | manual
-                };
-
-                if (state.source === 'import') {
-                    if (state.importCsv) payload.importCsv = state.importCsv;
-                    if (state.sheetUrl) payload.sheetUrl = state.sheetUrl;
-                }
-                if (state.source === 'manual' && state.manualList) {
-                    payload.importCsv = state.manualList; // reuse server importer path if desired
-                    payload.source = 'import';
-                }
-
-                const done = (res) => {
-                    btn.disabled = false;
-                    if (!res || !res.eventId) { alert('CreateEvent returned no eventId.'); return; }
-                    $('#wizResult').hidden = false;
-                    $('#wizEventId').textContent = `Event ID: ${res.eventId}`;
-
-                    if (window.google?.script?.run?.getShareQr) {
-                        google.script.run
-                            .withSuccessHandler(({ url, qrB64 } = {}) => {
-                                const wrap = $('#wizQrWrap');
-                                wrap.innerHTML = '';
-                                if (qrB64) {
-                                    const img = document.createElement('img');
-                                    img.alt = 'Public QR';
-                                    img.src = `data:image/png;base64,${qrB64}`;
-                                    img.style.maxWidth = '160px';
-                                    wrap.appendChild(img);
-                                }
-                                if (url) {
-                                    const a = document.createElement('a');
-                                    a.href = url; a.target = '_blank'; a.rel = 'noopener';
-                                    a.textContent = 'Open Public Page';
-                                    a.className = 'btn btn--ghost';
-                                    wrap.appendChild(a);
-                                }
-                            })
-                            .withFailureHandler(err => { console.error(err); })
-                            .getShareQr(res.eventId);
-                    }
-                };
-
-                if (window.google?.script?.run?.createEvent) {
-                    google.script.run.withSuccessHandler(done).withFailureHandler(e => {
-                        console.error(e); alert('Failed to create event. Check Logs.');
-                        btn.disabled = false;
-                    }).createEvent(payload);
-                } else {
-                    console.log('Mock createEvent payload:', payload);
-                    done({ eventId: 'TEST-EVENT-ID' });
-                }
-            });
-
-            // Init
-            setStep(1);
-        })();
+        // ---------- Boot ----------
+        document.addEventListener('DOMContentLoaded', () => { if (BOOT_ID) { fetchBundle(); startPoll(); } else { toast('No event specified', false); } });
     </script>
 </body>
 
