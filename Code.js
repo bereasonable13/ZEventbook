@@ -142,42 +142,60 @@ function logDiag_(name, ok, meta) {
 }
 
 // ---------- Routing ----------
-function doGet(e) {
-    const p = (e && e.parameter) || {};
-    const viewKey = String(p.view || p.mode || '').toLowerCase();
+function doGet (e) {
+  const p = (e && e.parameter) || {}
+  const viewKey = String(p.view || p.mode || '').toLowerCase()
 
-    // JSON status endpoint
-    if (viewKey === 'status') {
-        const res = ContentService.createTextOutput(JSON.stringify(getStatus()))
-            .setMimeType(ContentService.MimeType.JSON);
-        return res;
-    }
+  // JSON status endpoint
+  if (viewKey === 'status') {
+    return ContentService.createTextOutput(
+      JSON.stringify(getStatus())
+    ).setMimeType(ContentService.MimeType.JSON)
+  }
 
-    const templateFile =
-        viewKey === 'admin' || p.admin === '1' ? 'Admin' :
-            viewKey === 'display' || p.display === '1' ? 'Display' :
-                viewKey === 'poster' || p.poster === '1' ? 'Poster' :
-/* default */ 'Public';
+  // Choose template
+  const templateFile =
+    viewKey === 'admin' || p.admin === '1'
+      ? 'Admin'
+      : viewKey === 'display' || p.display === '1'
+      ? 'Display'
+      : viewKey === 'poster' || p.poster === '1'
+      ? 'Poster'
+      : /* default */ 'Public'
 
-    // Warm caches defensively (ignore failure)
-    try { warmCaches(false); } catch (_) { }
+  // Warm caches defensively (ignore failure)
+  try {
+    warmCaches(false)
+  } catch (_) {}
 
-    const t = HtmlService.createTemplateFromFile(templateFile);
-    t.appTitle = APP_TITLE;
-    // Support either eventId or slug
-    const slug = p.slug || '';
-    let eventId = p.eventId || p.event || '';
-    if (!eventId && slug) {
-        const found = getEventBySlug_(slug);
-        eventId = found ? found.eventId : '';
-    }
-    t.eventId = eventId;
-    t.tv = String(p.tv || '') === '1';
-    return t.evaluate()
-        .setTitle(APP_TITLE)
-        .addMetaTag('viewport', 'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover')
-        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  // Prepare template context
+  const t = HtmlService.createTemplateFromFile(templateFile)
+  t.appTitle = APP_TITLE
+
+  // Support either eventId or slug
+  const slug = String(p.slug || '').trim()
+  let eventId = String(p.eventId || p.event || '').trim()
+
+  if (!eventId && slug) {
+    const found = getEventBySlug_(slug)
+    if (found) eventId = found.eventId
+  }
+
+  // Expose to template (IMPORTANT: slug must exist in the context)
+  t.eventId = eventId
+  t.slug = slug // ✅ fixes "slug is not defined"
+  t.tv = String(p.tv || '') === '1'
+
+  return t
+    .evaluate()
+    .setTitle(APP_TITLE)
+    .addMetaTag(
+      'viewport',
+      'width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover'
+    )
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
 }
+
 
 // Touch Events sheet at load
 try { getEventsSheet_(); verifyAll_(); } catch (_) { }
@@ -1032,25 +1050,6 @@ function dismissOnboarding() {
     return { ok: true };
 }
 
-// ---------- QA hooks ----------
-function qaSmoke() {
-    const start = Date.now(), steps = []; function tick(name) { steps.push({ name, t: Date.now() - start }); }
-    try {
-        const ev = createEvent({ name: `QA ${Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd HH:mm:ss')}`, startDate: Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd'), flow: FLOW.TOURNEY_ONLY, elimType: ELIM.SINGLE, seedMode: SEEDMODE.RANDOM });
-        tick('createEvent');
-        _seedDemoSignups_(ev.eventId, 4); tick('seedSignups');
-        generateBrackets(ev.eventId, { elimType: ELIM.SINGLE, seedMode: SEEDMODE.RANDOM }); tick('generateBrackets');
-        const bundle = getPublicBundle(ev.eventId); tick('getPublicBundle');
-        archiveEvent(ev.eventId); tick('archive');
-        logEvent_('info', 'qaSmoke ok', { eventId: ev.eventId, steps });
-        return { ok: true, eventId: ev.eventId, steps, bundle: { hasBracket: (bundle.bracket?.rounds || []).length > 0, counts: bundle.counts } };
-    } catch (e) {
-        const pe = parseMaybeErr_(e);
-        logEvent_('error', 'qaSmoke fail', { error: pe });
-        return { ok: false, error: pe, steps: [] };
-    }
-}
-
 function _seedDemoSignups_(eventId, n) {
     const e = getEventById_(eventId);
     if (!e) makeError_(ERR.EVENT_NOT_FOUND, 'Event not found');
@@ -1083,6 +1082,7 @@ function refreshPublicCache(eventId) { killCache_(eventId); return { ok: true };
 function getSchedule(eventId) { return [{ round: 1, match: 1, teamA: 'A', teamB: 'B', time: 'TBD', court: '1', status: 'scheduled' }]; }
 function fetchBracket(eventId) { return { type: 'single', rounds: 1, matches: [{ id: 'm1', a: 'A', b: 'B', score: null }] }; }
 
+/*
 // ---------- Diagnostics & QA (Unified) ----------
 
 // Tiny helper to capture + log each test result consistently
@@ -1191,161 +1191,17 @@ function runQaSuite() {
     return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
 }
 
-// ---- Per-card suites ----
-function _qaNewEvent_(opts) {
-    const today = Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd');
-    const ev = createEvent(Object.assign({
-        name: `QA ${shortId(Utilities.getUuid())}`,
-        startDate: today,
-        flow: FLOW.TOURNEY_ONLY,
-        elimType: ELIM.SINGLE,
-        seedMode: SEEDMODE.RANDOM
-    }, opts || {}));
-    verifyAll_();
-    return ev;
-}
+*/
 
-function runTestsCreateCard() {
-    const out = []; let ev = null;
-    _qaAdd_(out, 'create_event_basic', () => {
-        ev = _qaNewEvent_({ flow: FLOW.SEASON_TOURNEY, weeks: 3, seedMode: SEEDMODE.RANDOM });
-        return { ok: !!ev.eventId, meta: ev };
-    });
-    _qaAdd_(out, 'row_intact_post_default', () => {
-        setDefaultEvent(ev.eventId, true);
-        const me = getEventById_(ev.eventId);
-        const intact = ['eventId', 'name', 'slug', 'flow', 'signupSheet'].every(k => !!(me && me[k]));
-        return { ok: intact, meta: me };
-    });
-    _qaAdd_(out, 'slug_uniqueness', () => {
-        let pe = null; try { createEvent({ name: ev.name, startDate: ev.startDate, flow: ev.flow }); } catch (e) { pe = parseMaybeErr_(e); }
-        return { ok: !!(pe && pe.code === ERR.DUP_SLUG), meta: pe };
-    });
-    _qaAdd_(out, 'verify_tabs_created', () => { verifyAll_(); const me = getEventById_(ev.eventId); return { ok: !!(me.signupSheet && ss().getSheetByName(me.signupSheet)), meta: me }; });
-    _qaAdd_(out, 'cleanup_archive', () => { archiveEvent(ev.eventId); return { ok: true, meta: { eventId: ev.eventId } }; });
-    return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
-}
-
-function runTestsManageCard() {
-    const out = []; const evA = _qaNewEvent_({ flow: FLOW.TOURNEY_ONLY }); const evB = _qaNewEvent_({ flow: FLOW.SEASON_ONLY, weeks: 3 });
-    _qaAdd_(out, 'get_events_list', () => { const rows = getEvents(); return { ok: rows.length >= 2, meta: { count: rows.length } }; });
-    _qaAdd_(out, 'single_default_invariant', () => {
-        setDefaultEvent(evA.eventId, true);
-        setDefaultEvent(evB.eventId, true);
-        const rows = readTable_(getEventsSheet_());
-        const defaults = rows.filter(r => String(r.isDefault) === 'true').map(r => r.eventId);
-        return { ok: defaults.length === 1 && defaults[0] === evB.eventId, meta: { defaults } };
-    });
-    _qaAdd_(out, 'open_sheet_url', () => { const url = openSheetUrl(evA.eventId); return { ok: !!url, meta: { url } }; });
-    _qaAdd_(out, 'cleanup_archive', () => { archiveEvent(evA.eventId); archiveEvent(evB.eventId); return { ok: true }; });
-    return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
-}
-
-function runTestsSignupsCard() {
-    const out = []; const ev = _qaNewEvent_({ flow: FLOW.TOURNEY_ONLY });
-    _qaAdd_(out, 'form_build', () => {
-        const res = buildSignupForm(ev.eventId, { email: true, phone: true, notes: true });
-        const me = getEventById_(ev.eventId);
-        return { ok: !!(res && me.formUrl), meta: { formUrl: me.formUrl, res } };
-    });
-    _qaAdd_(out, 'seed_column_idempotent', () => {
-        ensureSeedColumn(ev.eventId);
-        const me = getEventById_(ev.eventId);
-        const sh = ss().getSheetByName(me.signupSheet);
-        const hdr = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-        return { ok: hdr.includes('Seed'), meta: { headers: hdr } };
-    });
-    _qaAdd_(out, 'signup_count_increments', () => { _seedDemoSignups_(ev.eventId, 3); const n = getSignupCount(ev.eventId); return { ok: n >= 3, meta: { count: n } }; });
-    _qaAdd_(out, 'cleanup_archive', () => { archiveEvent(ev.eventId); return { ok: true }; });
-    return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
-}
-
-function runTestsShareCard() {
-    const out = []; const ev = _qaNewEvent_({ flow: FLOW.TOURNEY_ONLY });
-    _qaAdd_(out, 'share_links_present', () => {
-        const links = getShareLinks(ev.eventId);
-        const ok = !!(links.publicUrl && links.displayUrl);
-        return { ok, meta: Object.assign({ note: ok ? 'ok' : 'deploy web app for full links' }, links) };
-    });
-    _qaAdd_(out, 'qr_generates', () => {
-        const links = getShareLinks(ev.eventId);
-        const ok = (links.qrPublicB64 && links.qrPublicB64.length > 64);
-        return { ok, meta: { qrLen: links.qrPublicB64 ? links.qrPublicB64.length : 0 } };
-    });
-    _qaAdd_(out, 'cleanup_archive', () => { archiveEvent(ev.eventId); return { ok: true }; });
-    return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
-}
-
-function runTestsScheduleCard() {
-    const out = []; const ev = _qaNewEvent_({ flow: FLOW.SEASON_ONLY, weeks: 3 });
-    _qaAdd_(out, 'generate_schedule_rows', () => {
-        generateSchedule(ev.eventId, 3);
-        const me = getEventById_(ev.eventId);
-        const sh = ss().getSheetByName(me.scheduleSheet);
-        return { ok: sh && sh.getLastRow() >= 4, meta: { sheet: me.scheduleSheet, rows: sh ? sh.getLastRow() : 0 } };
-    });
-    _qaAdd_(out, 'record_result_and_standings', () => {
-        const me = getEventById_(ev.eventId);
-        const sch = ss().getSheetByName(me.scheduleSheet);
-        if (sch.getLastRow() >= 2) {
-            sch.getRange(2, 4).setValue('Team A'); // Team A
-            sch.getRange(2, 5).setValue('Team B'); // Team B
-            recordResult(ev.eventId, 2, 5, 3);
-            const s = computeStandings(ev.eventId);
-            const ok = Array.isArray(s) && s.length >= 2 && s[0].Team && (s[0].W + s[0].L) >= 1;
-            return { ok, meta: { standings: s.slice(0, 2) } };
-        }
-        return { ok: false, meta: { reason: 'no schedule rows' } };
-    });
-    _qaAdd_(out, 'cleanup_archive', () => { archiveEvent(ev.eventId); return { ok: true }; });
-    return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
-}
-
-function runTestsBracketsCard() {
-    const out = []; const ev = _qaNewEvent_({ flow: FLOW.TOURNEY_ONLY, seedMode: SEEDMODE.SEEDED });
-    _qaAdd_(out, 'seed_signups', () => {
-        _seedDemoSignups_(ev.eventId, 4);
-        const me = getEventById_(ev.eventId);
-        const sh = ss().getSheetByName(me.signupSheet);
-        const head = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-        const seedIdx = head.indexOf('Seed');
-        if (seedIdx >= 0) {
-            const count = Math.max(0, sh.getLastRow() - 1);
-            if (count) sh.getRange(2, seedIdx + 1, count, 1).setValues(Array.from({ length: count }, (_, i) => [i + 1]));
-        }
-        const n = getSignupCount(ev.eventId);
-        return { ok: n >= 4, meta: { count: n } };
-    });
-    _qaAdd_(out, 'generate_seeded_bracket', () => {
-        const r = generateBrackets(ev.eventId, { elimType: ELIM.SINGLE, seedMode: SEEDMODE.SEEDED });
-        return { ok: !!(r && r.ok), meta: r };
-    });
-    _qaAdd_(out, 'read_bracket_structure', () => {
-        const me = getEventById_(ev.eventId);
-        const b = readBracket_(me.bracketSheet);
-        const ok = b && Array.isArray(b.rounds) && b.rounds.length >= 1;
-        return { ok, meta: { rounds: b.rounds.length } };
-    });
-    _qaAdd_(out, 'random_mode_fallback', () => {
-        const r = generateBrackets(ev.eventId, { elimType: ELIM.SINGLE, seedMode: SEEDMODE.RANDOM });
-        return { ok: !!(r && r.ok), meta: r };
-    });
-    _qaAdd_(out, 'cleanup_archive', () => { archiveEvent(ev.eventId); return { ok: true }; });
-    return { ok: out.every(t => t.ok), results: out, ts: nowISO() };
-}
-
-function runAllCardTests() {
-    const packs = [
-        ['create', runTestsCreateCard],
-        ['manage', runTestsManageCard],
-        ['signups', runTestsSignupsCard],
-        ['share', runTestsShareCard],
-        ['schedule', runTestsScheduleCard],
-        ['brackets', runTestsBracketsCard],
-    ];
-    const results = packs.map(([name, fn]) => { try { const r = fn(); return { name, ok: r.ok, results: r.results }; } catch (e) { return { name, ok: false, error: parseMaybeErr_(e) }; } });
-    const ok = results.every(r => r.ok);
-    return { ok, results, ts: nowISO() };
+// ---------- Diagnostics v3 (structured logs, trends, flakiness, perf, exports) ----------
+// Config & sheets
+function _diagConfig_() {
+    return {
+        RESULTS_SHEET: 'DiagResults',
+        SUITES_SHEET: 'DiagSuites',
+        MAX_TEST_ROWS: 5000,
+        MAX_SUITE_ROWS: 2000
+    };
 }
 
 // ---- Self-heal (safe) & Hard Reset (power tool) ----
@@ -1419,6 +1275,7 @@ function selfHeal(opts) {
     });
 }
 
+
 function hardResetEventsSheet() {
     return _withLock(() => {
         _rateLimit_('hardResetEvents', 2);
@@ -1447,17 +1304,6 @@ function getLogs(limit) {
     return vals.map(r => ({ ts: r[0], level: r[1], msg: r[2], json: (function () { try { return JSON.parse(r[3] || '{}'); } catch (_) { return r[3]; } })() }));
 }
 
-// ---------- Diagnostics v3 (structured logs, trends, flakiness, perf, exports) ----------
-
-// Config & sheets
-function _diagConfig_() {
-    return {
-        RESULTS_SHEET: 'DiagResults',
-        SUITES_SHEET: 'DiagSuites',
-        MAX_TEST_ROWS: 5000,
-        MAX_SUITE_ROWS: 2000
-    };
-}
 function _diagSheets_() {
     const cfg = _diagConfig_();
     const tests = ensureTab_(cfg.RESULTS_SHEET, ['ts', 'suite', 'test', 'ok', 'ms', 'type', 'env', 'error', 'meta']);
@@ -1509,6 +1355,25 @@ function _diagPrune_() {
     }
 }
 
+// ---------- QA hooks ----------
+function qaSmoke() {
+    const start = Date.now(), steps = []; function tick(name) { steps.push({ name, t: Date.now() - start }); }
+    try {
+        const ev = createEvent({ name: `QA ${Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd HH:mm:ss')}`, startDate: Utilities.formatDate(new Date(), 'UTC', 'yyyy-MM-dd'), flow: FLOW.TOURNEY_ONLY, elimType: ELIM.SINGLE, seedMode: SEEDMODE.RANDOM });
+        tick('createEvent');
+        _seedDemoSignups_(ev.eventId, 4); tick('seedSignups');
+        generateBrackets(ev.eventId, { elimType: ELIM.SINGLE, seedMode: SEEDMODE.RANDOM }); tick('generateBrackets');
+        const bundle = getPublicBundle(ev.eventId); tick('getPublicBundle');
+        archiveEvent(ev.eventId); tick('archive');
+        logEvent_('info', 'qaSmoke ok', { eventId: ev.eventId, steps });
+        return { ok: true, eventId: ev.eventId, steps, bundle: { hasBracket: (bundle.bracket?.rounds || []).length > 0, counts: bundle.counts } };
+    } catch (e) {
+        const pe = parseMaybeErr_(e);
+        logEvent_('error', 'qaSmoke fail', { error: pe });
+        return { ok: false, error: pe, steps: [] };
+    }
+}
+
 // Timed test wrapper (drop-in for old _qaAdd_)
 function _qaAdd_(arr, name, fn, opts) {
     const t0 = _nowMs_();
@@ -1544,6 +1409,8 @@ function _runSuite_(suiteName, runnerFn, env) {
 }
 
 // ---------------- Suites (existing bodies; just wrapped) ----------------
+
+
 function runQuickChecks() {
     return _runSuite_('quick', function (out) {
         _qaAdd_(out, 'schema_events_v2', () => {
@@ -1700,6 +1567,23 @@ function runTestsBracketsCard() {
         return { ok: out.every(t => t.ok) };
     });
 }
+
+/*
+function runAllCardTests() {
+    const packs = [
+        ['create', runTestsCreateCard],
+        ['manage', runTestsManageCard],
+        ['signups', runTestsSignupsCard],
+        ['share', runTestsShareCard],
+        ['schedule', runTestsScheduleCard],
+        ['brackets', runTestsBracketsCard],
+    ];
+    const results = packs.map(([name, fn]) => { try { const r = fn(); return { name, ok: r.ok, results: r.results }; } catch (e) { return { name, ok: false, error: parseMaybeErr_(e) }; } });
+    const ok = results.every(r => r.ok);
+    return { ok, results, ts: nowISO() };
+}
+*/
+
 function runAllCardTests() {
     const packs = [['create', runTestsCreateCard], ['manage', runTestsManageCard], ['signups', runTestsSignupsCard], ['share', runTestsShareCard], ['schedule', runTestsScheduleCard], ['brackets', runTestsBracketsCard]];
     const t0 = _nowMs_(); const results = packs.map(([name, fn]) => { try { return Object.assign({ name }, fn()); } catch (e) { return { name, ok: false, error: parseMaybeErr_(e), results: [] }; } });
