@@ -38,7 +38,7 @@
             display: none;
             place-items: center;
             z-index: 4000;
-            background: rgba(0, 0, 0, .55);
+            background: rgba(0, 0, 0, .55)
         }
 
         #busy .card {
@@ -56,25 +56,25 @@
             font-size: 1.6rem;
             line-height: 1;
             display: flex;
-            gap: 8px;
+            gap: 8px
         }
 
         #busy .msg {
             font-weight: 900;
-            font-size: 1.2rem;
+            font-size: 1.2rem
         }
 
-        /* Sticky CTA (mobile helpers live in Styles.html; only admin-specific rules here) */
+        /* Sticky CTA */
         #stickyCta.hidden {
-            display: none !important;
+            display: none !important
         }
 
         body.is-busy #stickyCta {
-            display: none !important;
+            display: none !important
         }
 
         #stickyCta .btn {
-            min-height: 56px;
+            min-height: 56px
         }
 
         #ctaRow2 .btn {
@@ -91,15 +91,11 @@
     </header>
 
     <main class="container">
-
         <!-- Busy overlay -->
         <div id="busy" aria-live="polite">
             <div class="card">
-                <div class="spinner">
-                    <span class="mascot" data-kind="runner">🏃‍♂️</span>
-                    <span class="mascot" data-kind="pitcher">🥎</span>
-                    <span class="mascot" data-kind="bocce">🧶</span>
-                </div>
+                <div class="spinner"><span class="mascot" data-kind="runner">🏃‍♂️</span><span class="mascot"
+                        data-kind="pitcher">🥎</span><span class="mascot" data-kind="bocce">🧶</span></div>
                 <div class="msg">Working…</div>
             </div>
         </div>
@@ -110,12 +106,10 @@
         <!-- CREATE EVENT -->
         <section class="card" aria-labelledby="createTitle">
             <h2 class="card__title" id="createTitle">Create Event</h2>
-
             <form id="createForm" class="grid grid--compact" novalidate>
                 <input id="evName" class="input" placeholder="Event name (e.g., Fall Weeklies)" autocomplete="off"
                     required />
                 <input id="evDate" class="input" type="date" required />
-
                 <div class="row">
                     <label class="sr-only" for="evFlow">Flow</label>
                     <select id="evFlow" class="input" title="Flow" aria-describedby="flowHint">
@@ -137,7 +131,7 @@
                     </select>
 
                     <button id="btnFlowHelp" class="btn btn--icon" type="button" popovertarget="popFlowHelp"
-                    aria-label="Flow help">?</button>
+                        aria-label="Flow help">?</button>
 
                     <label class="sr-only" for="evElim">Elimination</label>
                     <select id="evElim" class="input" title="Elimination">
@@ -178,7 +172,6 @@
         <!-- MANAGE EVENT -->
         <section class="card" aria-labelledby="manageTitle">
             <h2 class="card__title" id="manageTitle">Manage Event</h2>
-
             <div class="row row--justify">
                 <label class="sr-only" for="chooseEvent">Choose Event</label>
                 <select id="chooseEvent" class="input input--select"
@@ -186,12 +179,9 @@
                 <button id="btnRefreshEvents" class="btn btn--ghost btn--icon" title="Refresh"
                     aria-label="Refresh">↻</button>
             </div>
-            <p id="emptyTip" class="hint mt-1" style="display:none;">
-                No events yet — create one above to populate this menu.
-            </p>
-
+            <p id="emptyTip" class="hint mt-1" style="display:none;">No events yet — create one above to populate this
+                menu.</p>
             <div id="eventMeta" class="mt-2"><!-- Filled by renderCurrent() --></div>
-
             <div class="actions">
                 <button id="btnSetDefault" class="btn">Set Default</button>
                 <button id="btnOpenPublic" class="btn">Open Public</button>
@@ -239,9 +229,7 @@
                 <div>
                     <div id="qrForm" class="qr muted" title="Signup form QR"></div>
                     <div class="section-caption hint">Signup Form QR</div>
-                    <div class="row">
-                        <button id="btnCopyForm" class="btn btn--ghost">Copy Form Link</button>
-                    </div>
+                    <div class="row"><button id="btnCopyForm" class="btn btn--ghost">Copy Form Link</button></div>
                     <div id="formUrl" class="hint" style="margin-top:6px;"></div>
                 </div>
             </div>
@@ -281,7 +269,6 @@
                     <option value="RANDOM">Random</option>
                     <option value="SEEDED">Seeded</option>
                 </select>
-
                 <button id="btnGenBrackets" class="btn">Generate / Reset</button>
                 <button id="btnRefreshView" class="btn btn--icon" title="Refresh" aria-label="Refresh">↻</button>
                 <span id="brktStatus" class="hint"></span>
@@ -290,121 +277,73 @@
             </p>
         </section>
 
-        <!--DIAGNOSTICS -->
+        <!-- DIAGNOSTICS -->
         <section class="card" aria-labelledby="diagTitle">
-        <h2 class="card__title" id="diagTitle">Diagnostics</h2>
-        <div class="row">
-            <select id="diagSuite" class="input input--select" style="max-width:260px">
-                <option value="quick">Quick Checks</option>
-                <option value="full">Full QA Suite</option>
-                <option value="create">Create Card</option>
-                <option value="manage">Manage Card</option>
-                <option value="signups">Signups Card</option>
-                <option value="share">Share Card</option>
-                <option value="schedule">Schedule Card</option>
-                <option value="brackets">Brackets Card</option>
-                <option value="allcards">All Card Suites</option>
-            </select>
-            <button id="btnRunSuite" class="btn btn--ok">Run</button>
-            <button id="btnSelfHeal" class="btn">Self-Heal</button>
-            <button id="btnHardReset" class="btn btn--danger">Hard Reset Events</button>
-            <button id="btnShowStatus" class="btn btn--ghost">Status</button>
-            <button id="btnShowLogs" class="btn btn--ghost">Logs</button>
-            <button id="btnCopyReport" class="btn btn--ghost">Copy JSON</button>
-            <button id="btnShowTrend" class="btn btn--ghost">Show Trend</button>
-        </div>        
-        <div id="diagOut" class="mt-2 scroll-x">
-            
-            <button id="btnExportTests" class="btn btn--ghost">Export CSV</button>
+            <h2 class="card__title" id="diagTitle">Diagnostics</h2>
+            <div class="row">
+                <select id="diagSuite" class="input input--select" style="max-width:260px">
+                    <option value="quick">Quick Checks</option>
+                    <option value="full">Full QA Suite</option>
+                    <option value="create">Create Card</option>
+                    <option value="manage">Manage Card</option>
+                    <option value="signups">Signups Card</option>
+                    <option value="share">Share Card</option>
+                    <option value="schedule">Schedule Card</option>
+                    <option value="brackets">Brackets Card</option>
+                    <option value="allcards">All Card Suites</option>
+                </select>
+                <button id="btnRunSuite" class="btn btn--ok">Run</button>
+                <button id="btnSelfHeal" class="btn">Self-Heal</button>
+                <button id="btnHardReset" class="btn btn--danger">Hard Reset Events</button>
+                <button id="btnShowStatus" class="btn btn--ghost">Status</button>
+                <button id="btnShowLogs" class="btn btn--ghost">Logs</button>
+                <button id="btnCopyReport" class="btn btn--ghost">Copy JSON</button>
+            </div>
 
-            <button id="btnRunAllSuites" class="btn">Run All Suites</button>
-            <table class="table" id="diagTable" aria-live="polite"><tbody></tbody></table>
+            <div id="diagOut" class="mt-2 scroll-x">
+                <button id="btnExportTests" class="btn btn--ghost">Export CSV</button>
+                <button id="btnRunAllSuites" class="btn">Run All Suites</button>
+                <table class="table" id="diagTable" aria-live="polite">
+                    <tbody></tbody>
+                </table>
+            </div>
+        </section>
 
-        <select id="histSuite" class="input input--select" style="max-width:180px">
-          <option value="">(All suites)</option>
-          <option>quick</option><option>full</option><option>create</option>
-          <option>manage</option><option>signups</option><option>share</option>
-          <option>schedule</option><option>brackets</option><option>allcards</option>
-        </div diaHis>
-        </div>        
-        <div id="diag History" class="mt-2 scroll-x">
-            <button id="btnShowHistory" class="btn btn--ghost">History</button>
-            <table class="table" id="diagTable" aria-live="polite"><tbody></tbody></table>
+        <!-- STICKY CTA (mobile) -->
+        <div id="stickyCta" class="sticky-cta mobile-only hidden" role="group" aria-label="Quick actions">
+            <button id="ctaOpenTV" class="btn btn--ghost btn-block">Open TV</button>
+            <button id="ctaForm" class="btn btn--primary btn-block">Create Form</button>
+            <div id="ctaRow2" class="row" style="margin-top:8px;">
+                <button id="ctaSchedule" class="btn btn-block">Generate Schedule</button>
+                <button id="ctaBracket" class="btn btn--ok btn-block">Generate Bracket</button>
+            </div>
         </div>
-
-        <select id="histLimit" class="input input--select" style="max-width:120px">
-          <option value="50">Last 50</option>
-          <option value="200" selected>Last 200</option>
-          <option value="1000">Last 1000</option>
-        </select>
-
-        div id="Diag Trend"></div>        
-        <select id="trendDays" class="input input--select" style="max-width:120px">
-          <option value="7" selected>Trend 7d</option>
-          <option value="30">Trend 30d</option>
-          <option value="">All</option>
-        </select>
-
-        <button id="btnShowTrends" class="btn btn--ghost">Trends</button>        
-        <select id="perfDays" class="input input--select" style="max-width:120px">
-          <option value="1">Perf 1d</option>
-          <option value="7" selected>Perf 7d</option>
-          <option value="30">Perf 30d</option>
-          <option value="">All</option>
-        </select>
-        <button id="btnShowPerf" class="btn btn--ghost">Perf</button>        
-        <button id="btnShowFlaky" class="btn btn--ghost">Flaky</button>
-      </section>
-
-      <!-- STICKY CTA (mobile) -->
-      <div id="stickyCta" class="sticky-cta mobile-only hidden" role="group" aria-label="Quick actions">
-          <button id="ctaOpenTV" class="btn btn--ghost btn-block">Open TV</button>
-          <button id="ctaForm" class="btn btn--primary btn-block">Create Form</button>
-          <div id="ctaRow2" class="row" style="margin-top:8px;">
-              <button id="ctaSchedule" class="btn btn-block">Generate Schedule</button>
-              <button id="ctaBracket" class="btn btn--ok btn-block">Generate Bracket</button>
-          </div>
-      </div>
-
     </main>
 
     <script>
-
-        // ---------- Utilities ----------
+        /* ---------- Utilities ---------- */
         const $ = (s, p = document) => p.querySelector(s);
         const $all = (s, p = document) => Array.from(p.querySelectorAll(s));
         const fmt = (x) => (x == null ? '' : String(x));
         const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        // Initial load
-        document.addEventListener('DOMContentLoaded', () => { loadEvents().then(() => {/* ready */ }); });
-
-        // Promisified google.script.run
         function gs(fn, ...args) {
             return new Promise((resolve, reject) => {
-                google.script.run
-                    .withSuccessHandler(resolve)
-                    .withFailureHandler(reject)[fn](...args);
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
             });
         }
-
         function toast(msg, ok = true) {
-            const t = $('#toast');
-            t.textContent = msg;
-            t.style.display = 'block';
+            const t = $('#toast'); if (!t) return;
+            t.textContent = msg; t.style.display = 'block';
             t.className = 'toast ' + (ok ? 'ok' : 'danger');
             setTimeout(() => t.style.display = 'none', 2400);
         }
-
         function setBusy(on, message) {
-            const ov = $('#busy');
-            if (!ov) return;
-            const msg = ov.querySelector('.msg');
-            if (msg) msg.textContent = message || 'Working…';
+            const ov = $('#busy'); if (!ov) return;
+            const msg = ov.querySelector('.msg'); if (msg && message) msg.textContent = message;
             ov.style.display = on ? 'grid' : 'none';
             document.body.classList.toggle('is-busy', !!on);
         }
-
         function setQR(el, url) {
             if (!el) return;
             el.innerHTML = '';
@@ -417,51 +356,49 @@
         }
         const copyText = async (txt) => { try { await navigator.clipboard.writeText(txt); return true; } catch { return false; } };
 
-        // Debounce with flush
         function debounceWithFlush(fn, wait = 220) {
             let t = null, lastArgs = null;
-            const wrapped = (...args) => {
-                lastArgs = args;
-                if (t) clearTimeout(t);
-                t = setTimeout(() => { t = null; fn(...(lastArgs || [])); }, wait);
-            };
+            const wrapped = (...args) => { lastArgs = args; if (t) clearTimeout(t); t = setTimeout(() => { t = null; fn(...(lastArgs || [])); }, wait); };
             wrapped.flush = () => { if (t) { clearTimeout(t); t = null; fn(...(lastArgs || [])); } };
             return wrapped;
         }
 
-        const STATE = { events: [], current: null, loading: false, links: null };
-        let _loadVer = 0; // bump per load to ignore stale responses
+        /* ---------- Boot identity ---------- */
+        const URLQ = new URLSearchParams(location.search);
+        const SERVER_SLUG = "<?= slug ?>";
+        const BOOT_ID =
+            (window.eventId && String(window.eventId).trim()) ||
+            URLQ.get('eventId') ||
+            URLQ.get('event') ||
+            URLQ.get('slug') ||
+            SERVER_SLUG || '';
 
-        // ---------- Load & Render ----------
+        /* ---------- State ---------- */
+        const STATE = { events: [], current: null, loading: false, links: null };
+        let _loadVer = 0;
+
+        /* ---------- Load & Render ---------- */
         async function loadEvents(preselectId) {
             const myVer = ++_loadVer;
-            if (STATE.loading) return; // single-flight
+            if (STATE.loading) return;
             STATE.loading = true;
             setBusy(true, 'Loading events…');
             const sel = $('#chooseEvent');
             const tip = $('#emptyTip');
-
             try {
                 const rows = await gs('getEvents');
-                if (myVer !== _loadVer) return; // stale response ignore
-
+                if (myVer !== _loadVer) return;
                 STATE.events = rows || [];
                 sel.innerHTML = '';
 
                 if (!STATE.events.length) {
                     const o = document.createElement('option');
-                    o.disabled = true;
-                    o.textContent = '— No events —';
-                    sel.appendChild(o);
-                    sel.disabled = true;
-                    tip.style.display = 'block';
-                    setCurrent(null);
-                    return;
+                    o.disabled = true; o.textContent = '— No events —';
+                    sel.appendChild(o); sel.disabled = true; tip.style.display = 'block';
+                    setCurrent(null); return;
                 }
 
-                tip.style.display = 'none';
-                sel.disabled = false;
-
+                tip.style.display = 'none'; sel.disabled = false;
                 STATE.events.forEach(e => {
                     const o = document.createElement('option');
                     o.value = e.eventId;
@@ -475,9 +412,8 @@
                 let chosen = null;
                 if (preselectId) chosen = STATE.events.find(e => e.eventId === preselectId);
                 if (!chosen) chosen = STATE.events.find(e => e.isDefault) || STATE.events[0] || null;
-
                 if (chosen) { sel.value = chosen.eventId; setCurrent(chosen.eventId, true); }
-                else { setCurrent(null); }
+                else setCurrent(null);
             } catch (err) {
                 console.error('getEvents failed:', err);
                 toast(err?.message || 'Failed to load events', false);
@@ -504,10 +440,8 @@
 
             if (!e) {
                 meta.innerHTML = '<div class="empty">No event selected.</div>';
-                setQR($('#qrPublic'), '');
-                setQR($('#qrForm'), '');
-                publicUrlEl.textContent = '';
-                formUrlEl.textContent = '';
+                setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
+                publicUrlEl.textContent = ''; formUrlEl.textContent = '';
                 $('#seedTools').style.display = 'none';
                 $('#aOpenTV').removeAttribute('href');
                 return;
@@ -516,38 +450,32 @@
             const dateStr = e.date || '';
             const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
             meta.innerHTML = `
-              <div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
-              <div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
-              <div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
-              `;
+<div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
+<div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
+<div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
+`;
 
             $('#seedTools').style.display = (e.seedMode === 'SEEDED') ? 'flex' : 'none';
-
-            setQR($('#qrPublic'), '');
-            setQR($('#qrForm'), '');
-            publicUrlEl.textContent = '';
-            formUrlEl.textContent = '';
+            setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
+            publicUrlEl.textContent = ''; formUrlEl.textContent = '';
             $('#aOpenTV').removeAttribute('href');
         }
 
-        // ---------- Share / Links ----------
+        /* ---------- Share / Links ---------- */
         const _refreshShareLinksRaw = () => {
             if (!STATE.current || !STATE.current.eventId) { STATE.links = null; return; }
-            // Do not steal the busy overlay if a list load is in progress
             if (!STATE.loading) setBusy(true, 'Preparing links…');
             gs('getShareLinks', STATE.current.eventId)
                 .then(links => {
                     STATE.links = links || {};
                     const publicUrlEl = $('#publicUrl');
                     const formUrlEl = $('#formUrl');
-
                     setQR($('#qrPublic'), links.publicUrl || '');
                     setQR($('#qrForm'), links.formUrl || '');
                     publicUrlEl.textContent = links.publicUrl || '';
                     formUrlEl.textContent = links.formUrl || '';
 
-                    const tv = $('#aOpenTV');
-                    if (tv) tv.href = links.displayUrl || '#';
+                    const tv = $('#aOpenTV'); if (tv) tv.href = links.displayUrl || '#';
 
                     $('#btnCopyPublic').onclick = async () => toast((await copyText(links.publicUrl || '')) ? 'Public link copied' : 'Copy failed', !!links.publicUrl);
                     $('#btnCopyDisplay').onclick = async () => toast((await copyText(links.displayUrl || '')) ? 'Display link copied' : 'Copy failed', !!links.displayUrl);
@@ -561,8 +489,7 @@
                             const title = (STATE.current?.name || 'Event') + ' · NextUp';
                             const text = 'Join or follow this event:';
                             if (navigator.share) {
-                                try { await navigator.share({ title, text, url }); }
-                                catch { /* user canceled */ }
+                                try { await navigator.share({ title, text, url }); } catch { /* canceled */ }
                             } else {
                                 toast((await copyText(url)) ? 'Public link copied' : 'Share not supported', !!url);
                             }
@@ -574,8 +501,8 @@
         };
         const refreshShareLinks = debounceWithFlush(_refreshShareLinksRaw, 220);
 
-        // ---------- Selection helpers ----------
-        function selectEvent(created.id) {
+        /* ---------- Selection helpers ---------- */
+        function selectEvent(id) {
             const sel = document.getElementById('chooseEvent');
             if (sel) sel.value = id;
             setCurrent(id, true);
@@ -587,7 +514,6 @@
                 if (STATE.events.some(e => e.eventId === newId)) { selectEvent(newId); return true; }
                 await sleep(baseDelay * Math.pow(1.6, i));
             }
-            // fallback: ensure a visible option exists
             optimisticAddEvent({ eventId: newId });
             selectEvent(newId);
             return false;
@@ -599,27 +525,16 @@
             if (exists) { selectEvent(mini.eventId); return; }
 
             const item = {
-                eventId: mini.eventId,
-                sid: mini.sid || '',
-                slug: mini.slug || '',
-                name: mini.name || '',
-                type: mini.type || '',
-                status: mini.status || '',
-                startDate: mini.startDate || '',
-                endDate: mini.endDate || '',
-                flow: mini.flow || '',
-                weeks: mini.weeks || '',
-                elimType: mini.elimType || '',
-                seedMode: mini.seedMode || '',
+                eventId: mini.eventId, sid: mini.sid || '', slug: mini.slug || '',
+                name: mini.name || '', type: mini.type || '', status: mini.status || '',
+                startDate: mini.startDate || '', endDate: mini.endDate || '',
+                flow: mini.flow || '', weeks: mini.weeks || '',
+                elimType: mini.elimType || '', seedMode: mini.seedMode || '',
                 isDefault: false,
-                publicUrl: mini.publicUrl || '',
-                displayUrl: mini.displayUrl || '',
-                adminUrl: mini.adminUrl || '',
-                formUrl: mini.formUrl || '',
-                signupSheet: mini.signupSheet || '',
-                scheduleSheet: mini.scheduleSheet || '',
-                bracketSheet: mini.bracketSheet || '',
-                counts: { signups: 0 }
+                publicUrl: mini.publicUrl || '', displayUrl: mini.displayUrl || '',
+                adminUrl: mini.adminUrl || '', formUrl: mini.formUrl || '',
+                signupSheet: mini.signupSheet || '', scheduleSheet: mini.scheduleSheet || '',
+                bracketSheet: mini.bracketSheet || '', counts: { signups: 0 }
             };
             STATE.events.push(item);
 
@@ -629,9 +544,9 @@
                 if (tip) tip.style.display = 'none';
                 sel.disabled = false;
                 const o = document.createElement('option');
-                const rawName = ((item.name && item.name.trim()) ? (item.name.trim() : ''; 
-                const label = rawName && rawName !==  '(unnamed)' ? rawName : (item.slug) || item.sid || 'unnamed');
-                 o.value = item.eventId;
+                const rawName = (item.name && item.name.trim()) ? item.name.trim() : '';
+                const label = rawName && rawName !== '(unnamed)' ? rawName : (item.slug || item.sid || 'unnamed');
+                o.value = item.eventId;
                 o.textContent = `${label}${item.date ? ' (' + item.date + ')' : ''}`;
                 o.title = `${label}${item.date ? ' • ' + item.date : ''}`;
                 sel.appendChild(o);
@@ -640,12 +555,11 @@
             setCurrent(item.eventId, true);
         }
 
-        // ---------- Sticky CTA wiring ----------
+        /* ---------- Sticky CTA ---------- */
         function updateStickyCta() {
             const bar = document.getElementById('stickyCta');
             if (!bar) return;
-            const e = STATE.current;
-            const has = !!e;
+            const e = STATE.current, has = !!e;
             bar.classList.toggle('hidden', !has);
             if (!has) return;
 
@@ -668,260 +582,48 @@
             const flow = e.flow;
             const showSched = flow === 'SEASON_ONLY' || flow === 'SEASON_TOURNEY';
             const showBrkt = flow === 'SEASON_TOURNEY' || flow === 'TOURNEY_ONLY';
-
             if (row2) row2.style.display = (showSched || showBrkt) ? '' : 'none';
             if (bSched) bSched.style.display = showSched ? '' : 'none';
             if (bBrkt) bBrkt.style.display = showBrkt ? '' : 'none';
-
             if (bSched) bSched.onclick = () => document.getElementById('btnGenSchedule')?.click();
             if (bBrkt) bBrkt.onclick = () => document.getElementById('btnGenBrackets')?.click();
         }
 
-        // Hide CTA on software keyboard open (mobile)
+        /* Hide CTA on mobile keyboard */
         (function watchViewport() {
             if (!window.visualViewport) return;
             const baseH = window.visualViewport.height;
             window.visualViewport.addEventListener('resize', () => {
-                const bar = document.getElementById('stickyCta');
-                if (!bar) return;
+                const bar = document.getElementById('stickyCta'); if (!bar) return;
                 const shrink = baseH - window.visualViewport.height;
                 bar.classList.toggle('hidden', shrink > 120);
             });
         })();
 
-        // ---------- Create flow ----------
+        /* ---------- Create flow ---------- */
         async function createEventSmart(payload) {
-            // Try the verified path; if it doesn't exist (not deployed yet), fall back gracefully.
-            try {
-                return await gs('createEventVerified', payload);
-            } catch (e) {
-                // Only fall back if it's a “function not found” type error
+            try { return await gs('createEventVerified', payload); }
+            catch (e) {
                 const msg = (e && e.message) ? String(e.message) : String(e);
                 if (/createEventVerified/i.test(msg) || /not found/i.test(msg) || /is not a function/i.test(msg)) {
-                    console.warn('createEventVerified not available, falling back to createEvent:', msg);
+                    console.warn('createEventVerified not available, falling back:', msg);
                     return await gs('createEvent', payload);
                 }
-                throw e; // real error — bubble up to the caller
+                throw e;
             }
         }
-
         function weeksRequiredFor(flow) { return flow === 'SEASON_TOURNEY' || flow === 'SEASON_ONLY'; }
         function syncWeeksVisibility() {
             const show = weeksRequiredFor($('#evFlow').value);
             const weeks = $('#evWeeks');
             weeks.style.display = show ? '' : 'none';
-            if (show) { weeks.setAttribute('required', 'required'); }
+            if (show) weeks.setAttribute('required', 'required');
             else { weeks.removeAttribute('required'); weeks.value = ''; }
         }
-        $('#evFlow').addEventListener('change', syncWeeksVisibility);
-        syncWeeksVisibility();
 
-        // Handlers
-        document.addEventListener('change', (ev) => {
-            if (ev.target && ev.target.id === 'chooseEvent') {
-                setCurrent(ev.target.value);
-            }
-        });
-
-        $('#btnCreate').addEventListener('click', async () => {
-            // 1. Validate inputs
-            const flowVal = $('#evFlow').value;
-            const needWeeks = flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY';
-            if (!$('#evName').checkValidity() || !$('#evDate').checkValidity() || (needWeeks && !$('#evWeeks').checkValidity())) {
-                $('#evName').reportValidity();
-                $('#evDate').reportValidity();
-                $('#evWeeks').reportValidity();
-                return;
-            }
-
-            // 2. Build payload
-            const payload = {
-                name: $('#evName').value.trim(),
-                startDate: $('#evDate').value,
-                flow: flowVal,
-                weeks: needWeeks ? Number($('#evWeeks').value || 0) : 0,
-                elimType: $('#evElim').value,
-                seedMode: $('#evSeed').value
-            };
-            console.log('Event create payload:', payload);
-
-            // 3. UI state
-            const btn = $('#btnCreate');
-            btn.disabled = true;
-            setBusy(true, 'Creating event…');
-            toast('Creating event…');
-
-            // 4. Call backend and handle result
-            try {
-                const created = await createEventSmart(payload);
-                optimisticAddEvent(created);
-                toast('Event created.  View Manage Events dropdown!');
-                await reloadEventsEnsure(created.eventId, { tries: 6, baseDelay: 300 });
-                if (refreshShareLinks.flush) refreshShareLinks.flush();
-                gs('refreshPublicCache', created.eventId);
-
-                // Reset form
-                $('#evName').value = '';
-                $('#evDate').value = '';
-                $('#evWeeks').value = '';
-                $('#evElim').value = 'SINGLE';
-                $('#evSeed').value = 'RANDOM';
-                $('#evFlow').value = payload.flow;
-                syncWeeksVisibility();
-
-                document.getElementById('manageTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } catch (err) {
-                console.error('Create failed:', err);
-                toast((err && err.message) || 'Create failed', false);
-            } finally {
-                btn.disabled = false;
-            }
-        });
-
-
-        // Refresh list (debounced, disabled while loading)
-        $('#btnRefreshEvents').addEventListener('click', async (e) => {
-            const btn = e.currentTarget;
-            if (STATE.loading) return;
-            btn.disabled = true;
-            try { await loadEvents(STATE.current?.eventId); }
-            catch (err) { console.error(err); toast(err?.message || 'Refresh failed', false); }
-            finally { btn.disabled = false; }
-        });
-
-        // Default
-        $('#btnSetDefault').addEventListener('click', async () => {
-            if (!STATE.current) return;
-            const id = STATE.current.eventId;
-            setBusy(true, 'Setting default…');
-            try {
-                await gs('setDefaultEvent', id, true);
-                toast('Default updated');
-                await loadEvents(id);
-            } catch (err) {
-                toast(err?.message || 'Failed to set default', false);
-            } finally { setBusy(false); }
-        });
-
-        // Openers (canonical URLs)
-        $('#btnOpenPublic').addEventListener('click', () => {
-            if (!STATE.current) return;
-            setBusy(true, 'Opening…');
-            gs('getShareLinks', STATE.current.eventId)
-                .then(links => { const url = links && links.publicUrl; if (url) window.open(url, '_blank'); else toast('No public link yet', false); })
-                .catch(() => toast('Failed to open public page', false))
-                .finally(() => setBusy(false));
-        });
-
-        $('#btnOpenSheets').addEventListener('click', () => {
-            if (!STATE.current) return;
-            setBusy(true, 'Opening Sheets…');
-            gs('openSheetUrl', STATE.current.eventId)
-                .then(url => { if (url) window.open(url, '_blank'); else toast('Sheet not found', false); })
-                .catch(err => toast(err?.message || 'Open Sheets failed', false))
-                .finally(() => setBusy(false));
-        });
-
-        // Signup Form creation
-        $('#btnCreateForm').addEventListener('click', async () => {
-            if (!STATE.current) return;
-            const opts = { email: $('#optEmail').checked, phone: $('#optPhone').checked, notes: $('#optNotes').checked };
-            setBusy(true, 'Creating form…');
-            try {
-                await gs('buildSignupForm', STATE.current.eventId, opts);
-                toast('Signup form ready');
-                await loadEvents(STATE.current.eventId);
-                refreshShareLinks.flush?.();
-                updateStickyCta();
-            } catch (err) {
-                toast(err?.message || 'Form creation failed', false);
-            } finally { setBusy(false); }
-        });
-
-        // Seed column ensure
-        $('#btnAddSeedCol').addEventListener('click', async () => {
-            if (!STATE.current) return;
-            setBusy(true, 'Ensuring seed column…');
-            try {
-                await gs('ensureSeedColumn', STATE.current.eventId);
-                toast('Seed column ensured');
-            } catch (err) {
-                toast(err?.message || 'Failed to add Seed column', false);
-            } finally { setBusy(false); }
-        });
-
-        // Schedule scaffold
-        $('#btnGenSchedule').addEventListener('click', async () => {
-            if (!STATE.current) return;
-            const w = Number($('#weeksEdit').value || STATE.current.weeks || 0);
-            if (!w) { toast('Pick number of weeks', false); return; }
-            setBusy(true, 'Generating schedule…');
-            try {
-                await gs('generateSchedule', STATE.current.eventId, w);
-                toast('Schedule scaffold generated');
-                gs('refreshPublicCache', STATE.current.eventId);
-            } catch (err) {
-                toast(err?.message || 'Failed to generate schedule', false);
-            } finally { setBusy(false); }
-        });
-
-        // Brackets
-        $('#elimTypeEdit').addEventListener('change', () => $('#brktStatus').textContent = '');
-        $('#seedModeEdit').addEventListener('change', () => $('#brktStatus').textContent = '');
-
-        $('#btnGenBrackets').addEventListener('click', async () => {
-            if (!STATE.current) return;
-            const opts = { elimType: $('#elimTypeEdit').value, seedMode: $('#seedModeEdit').value };
-            setBusy(true, 'Generating bracket…');
-            try {
-                const res = await gs('generateBrackets', STATE.current.eventId, opts);
-                if (res && res.ok) {
-                    toast('Bracket generated');
-                    $('#brktStatus').textContent = `Mode: ${opts.elimType} · Seeding: ${opts.seedMode}`;
-                    gs('refreshPublicCache', STATE.current.eventId);
-                } else if (res && res.reason === 'missing_seeds') {
-                    if (confirm('Seeds are missing. Open Sheets to add 1..N seeds? (Cancel to generate Random)')) {
-                        $('#btnOpenSheets').click();
-                    } else {
-                        const r2 = await gs('generateBrackets', STATE.current.eventId, { elimType: opts.elimType, seedMode: 'RANDOM' });
-                        if (r2 && r2.ok) {
-                            toast('Bracket generated (Random)');
-                            $('#seedModeEdit').value = 'RANDOM';
-                            $('#brktStatus').textContent = `Mode: ${opts.elimType} · Seeding: RANDOM`;
-                            gs('refreshPublicCache', STATE.current.eventId);
-                        } else {
-                            toast('Failed to generate bracket', false);
-                        }
-                    }
-                } else {
-                    toast('Failed to generate bracket', false);
-                }
-            } catch (err) {
-                toast(err?.message || 'Bracket generation failed', false);
-            } finally { setBusy(false); }
-        });
-
-        // Refresh public cache
-        $('#btnRefreshView').addEventListener('click', () => {
-            if (!STATE.current) return;
-            setBusy(true, 'Refreshing…');
-            gs('refreshPublicCache', STATE.current.eventId)
-                .then(() => toast('Public cache refreshed'))
-                .catch(() => toast('Refresh failed', false))
-                .finally(() => setBusy(false));
-        });
-
-        // Keep signup count tile fresh
-        setInterval(() => {
-            if (!STATE.current) return;
-            gs('getSignupCount', STATE.current.eventId)
-                .then(n => { if (typeof n === 'number') $('#signupCountTile').textContent = n; })
-                .catch(() => { /* ignore */ });
-        }, 15000);
-
+        /* ---------- Diagnostics table renderer ---------- */
         function renderDiagTable(report) {
-            const tb = document.querySelector('#diagTable tbody');
-            tb.innerHTML = '';
+            const tb = document.querySelector('#diagTable tbody'); tb.innerHTML = '';
             if (!report) return;
             if (Array.isArray(report.results)) {
                 for (const r of report.results) {
@@ -943,10 +645,45 @@
             }
         }
 
+        /* ---------- Button handlers ---------- */
+        async function onCreateClick() {
+            const flowVal = $('#evFlow').value;
+            const needWeeks = flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY';
+            if (!$('#evName').checkValidity() || !$('#evDate').checkValidity() || (needWeeks && !$('#evWeeks').checkValidity())) {
+                $('#evName').reportValidity(); $('#evDate').reportValidity(); $('#evWeeks').reportValidity(); return;
+            }
+            const payload = {
+                name: $('#evName').value.trim(),
+                startDate: $('#evDate').value,
+                flow: flowVal,
+                weeks: needWeeks ? Number($('#evWeeks').value || 0) : 0,
+                elimType: $('#evElim').value,
+                seedMode: $('#evSeed').value
+            };
+            const btn = $('#btnCreate');
+            btn.disabled = true; setBusy(true, 'Creating event…'); toast('Creating event…');
+            try {
+                const created = await createEventSmart(payload);
+                optimisticAddEvent(created);
+                toast('Event created. View Manage Events dropdown!');
+                await reloadEventsEnsure(created.eventId, { tries: 6, baseDelay: 300 });
+                if (refreshShareLinks.flush) refreshShareLinks.flush();
+                gs('refreshPublicCache', created.eventId);
+                // reset
+                $('#evName').value = ''; $('#evDate').value = ''; $('#evWeeks').value = '';
+                $('#evElim').value = 'SINGLE'; $('#evSeed').value = 'RANDOM'; $('#evFlow').value = payload.flow;
+                syncWeeksVisibility();
+                document.getElementById('manageTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+                console.error('Create failed:', err);
+                toast((err && err.message) || 'Create failed', false);
+            } finally { btn.disabled = false; setBusy(false); }
+        }
+
         async function runSelectedSuite() {
-            const sel = document.getElementById('diagSuite').value;
             setBusy(true, 'Running…');
             try {
+                const sel = document.getElementById('diagSuite').value;
                 let rep = null;
                 if (sel === 'quick') rep = await gs('runQuickChecks');
                 else if (sel === 'full') rep = await gs('runQaSuite');
@@ -957,26 +694,22 @@
                 else if (sel === 'schedule') rep = await gs('runTestsScheduleCard');
                 else if (sel === 'brackets') rep = await gs('runTestsBracketsCard');
                 else if (sel === 'allcards') rep = await gs('runAllCardTests');
-                renderDiagTable(rep);
-                window.__lastDiagReport = rep;
+                renderDiagTable(rep); window.__lastDiagReport = rep;
                 toast(rep.ok ? 'Suite PASS' : 'Suite ATTENTION', rep.ok);
-            } catch (e) {
-                console.error(e); toast('Suite failed', false);
-            } finally { setBusy(false); }
+            } catch (e) { console.error(e); toast('Suite failed', false); }
+            finally { setBusy(false); }
         }
 
         async function runSelfHealUI() {
             setBusy(true, 'Self-healing…');
             try {
                 const rep = await gs('selfHeal');
-                renderDiagTable(rep);
-                window.__lastDiagReport = rep;
+                renderDiagTable(rep); window.__lastDiagReport = rep;
                 toast(rep.ok ? 'Self-heal: OK' : 'Self-heal: ATTENTION', rep.ok);
                 await loadEvents(STATE.current?.eventId);
                 if (STATE.current && refreshShareLinks.flush) refreshShareLinks.flush();
-            } catch (e) {
-                console.error(e); toast('Self-heal failed', false);
-            } finally { setBusy(false); }
+            } catch (e) { console.error(e); toast('Self-heal failed', false); }
+            finally { setBusy(false); }
         }
 
         async function runHardResetUI() {
@@ -984,56 +717,178 @@
             setBusy(true, 'Hard reset…');
             try {
                 const rep = await gs('hardResetEventsSheet');
-                renderDiagTable(rep);
-                window.__lastDiagReport = rep;
+                renderDiagTable(rep); window.__lastDiagReport = rep;
                 toast('Events sheet reset', true);
-                await loadEvents(); // fresh list
-            } catch (e) {
-                console.error(e); toast('Hard reset failed', false);
-            } finally { setBusy(false); }
+                await loadEvents();
+            } catch (e) { console.error(e); toast('Hard reset failed', false); }
+            finally { setBusy(false); }
         }
 
         async function showStatusUI() {
             setBusy(true, 'Status…');
-            try {
-                const s = await gs('getStatus');
-                renderDiagTable(s);
-                window.__lastDiagReport = s;
-            } catch (e) {
-                console.error(e); toast('Status failed', false);
-            } finally { setBusy(false); }
+            try { const s = await gs('getStatus'); renderDiagTable(s); window.__lastDiagReport = s; }
+            catch (e) { console.error(e); toast('Status failed', false); }
+            finally { setBusy(false); }
         }
 
         async function showLogsUI() {
             setBusy(true, 'Logs…');
             try {
                 const rows = await gs('getLogs', 100);
-                const tb = document.querySelector('#diagTable tbody');
-                tb.innerHTML = '';
+                const tb = document.querySelector('#diagTable tbody'); tb.innerHTML = '';
                 for (const r of rows) {
                     const tr = document.createElement('tr');
                     tr.innerHTML = `<td>${r.ts}</td><td>${r.level}</td><td>${r.msg}</td><td>${typeof r.json === 'object' ? JSON.stringify(r.json) : r.json || ''}</td>`;
                     tb.appendChild(tr);
                 }
                 window.__lastDiagReport = rows;
-            } catch (e) {
-                console.error(e); toast('Logs failed', false);
-            } finally { setBusy(false); }
+            } catch (e) { console.error(e); toast('Logs failed', false); }
+            finally { setBusy(false); }
         }
-
         function copyReportUI() {
             const data = window.__lastDiagReport || { info: 'No report yet' };
             const txt = JSON.stringify(data, null, 2);
             copyText(txt).then(ok => toast(ok ? 'Report copied' : 'Copy failed', ok));
         }
 
-        // Wire up buttons
-        document.getElementById('btnRunSuite').onclick = runSelectedSuite;
-        document.getElementById('btnSelfHeal').onclick = runSelfHealUI;
-        document.getElementById('btnHardReset').onclick = runHardResetUI;
-        document.getElementById('btnShowStatus').onclick = showStatusUI;
-        document.getElementById('btnShowLogs').onclick = showLogsUI;
-        document.getElementById('btnCopyReport').onclick = copyReportUI;
+        /* ---------- Global event wiring (ONE place) ---------- */
+        document.addEventListener('DOMContentLoaded', () => {
+            // helper
+            const on = (id, type, fn) => {
+                const el = document.getElementById(id);
+                if (!el) { console.warn(`[bind] missing #${id}`); return; }
+                el.addEventListener(type, fn);
+            };
+
+            // initial state + visibility
+            syncWeeksVisibility();
+            loadEvents().then(() => {/* ready */ });
+
+            // Create card
+            on('btnCreate', 'click', onCreateClick);
+            on('btnFlowHelp', 'click', () => document.getElementById('btnFlowHelp')?.togglePopover?.());
+            document.addEventListener('change', (ev) => { if (ev.target && ev.target.id === 'chooseEvent') setCurrent(ev.target.value); });
+
+            // Manage card
+            on('btnRefreshEvents', 'click', async (e) => {
+                const btn = e.currentTarget; if (STATE.loading) return;
+                btn.disabled = true;
+                try { await loadEvents(STATE.current?.eventId); }
+                catch (err) { console.error(err); toast(err?.message || 'Refresh failed', false); }
+                finally { btn.disabled = false; }
+            });
+            on('btnSetDefault', 'click', async () => {
+                if (!STATE.current) return;
+                setBusy(true, 'Setting default…');
+                try { await gs('setDefaultEvent', STATE.current.eventId, true); toast('Default updated'); await loadEvents(STATE.current.eventId); }
+                catch (err) { toast(err?.message || 'Failed to set default', false); }
+                finally { setBusy(false); }
+            });
+            on('btnOpenPublic', 'click', () => {
+                if (!STATE.current) return;
+                setBusy(true, 'Opening…');
+                gs('getShareLinks', STATE.current.eventId)
+                    .then(links => { const url = links && links.publicUrl; if (url) window.open(url, '_blank'); else toast('No public link yet', false); })
+                    .catch(() => toast('Failed to open public page', false))
+                    .finally(() => setBusy(false));
+            });
+            on('btnOpenSheets', 'click', () => {
+                if (!STATE.current) return;
+                setBusy(true, 'Opening Sheets…');
+                gs('openSheetUrl', STATE.current.eventId)
+                    .then(url => { if (url) window.open(url, '_blank'); else toast('Sheet not found', false); })
+                    .catch(err => toast(err?.message || 'Open Sheets failed', false))
+                    .finally(() => setBusy(false));
+            });
+
+            // Signups
+            on('btnCreateForm', 'click', async () => {
+                if (!STATE.current) return;
+                const opts = { email: $('#optEmail').checked, phone: $('#optPhone').checked, notes: $('#optNotes').checked };
+                setBusy(true, 'Creating form…');
+                try {
+                    await gs('buildSignupForm', STATE.current.eventId, opts);
+                    toast('Signup form ready'); await loadEvents(STATE.current.eventId);
+                    refreshShareLinks.flush?.(); updateStickyCta();
+                } catch (err) { toast(err?.message || 'Form creation failed', false); }
+                finally { setBusy(false); }
+            });
+            on('btnAddSeedCol', 'click', async () => {
+                if (!STATE.current) return;
+                setBusy(true, 'Ensuring seed column…');
+                try { await gs('ensureSeedColumn', STATE.current.eventId); toast('Seed column ensured'); }
+                catch (err) { toast(err?.message || 'Failed to add Seed column', false); }
+                finally { setBusy(false); }
+            });
+
+            // Schedule
+            on('btnGenSchedule', 'click', async () => {
+                if (!STATE.current) return;
+                const w = Number($('#weeksEdit').value || STATE.current.weeks || 0);
+                if (!w) { toast('Pick number of weeks', false); return; }
+                setBusy(true, 'Generating schedule…');
+                try { await gs('generateSchedule', STATE.current.eventId, w); toast('Schedule scaffold generated'); gs('refreshPublicCache', STATE.current.eventId); }
+                catch (err) { toast(err?.message || 'Failed to generate schedule', false); }
+                finally { setBusy(false); }
+            });
+
+            // Brackets
+            on('elimTypeEdit', 'change', () => $('#brktStatus').textContent = '');
+            on('seedModeEdit', 'change', () => $('#brktStatus').textContent = '');
+            on('btnGenBrackets', 'click', async () => {
+                if (!STATE.current) return;
+                const opts = { elimType: $('#elimTypeEdit').value, seedMode: $('#seedModeEdit').value };
+                setBusy(true, 'Generating bracket…');
+                try {
+                    const res = await gs('generateBrackets', STATE.current.eventId, opts);
+                    if (res && res.ok) {
+                        toast('Bracket generated'); $('#brktStatus').textContent = `Mode: ${opts.elimType} · Seeding: ${opts.seedMode}`;
+                        gs('refreshPublicCache', STATE.current.eventId);
+                    } else if (res && res.reason === 'missing_seeds') {
+                        if (confirm('Seeds are missing. Open Sheets to add 1..N seeds? (Cancel to generate Random)')) {
+                            $('#btnOpenSheets').click();
+                        } else {
+                            const r2 = await gs('generateBrackets', STATE.current.eventId, { elimType: opts.elimType, seedMode: 'RANDOM' });
+                            if (r2 && r2.ok) {
+                                toast('Bracket generated (Random)');
+                                $('#seedModeEdit').value = 'RANDOM';
+                                $('#brktStatus').textContent = `Mode: ${opts.elimType} · Seeding: RANDOM`;
+                                gs('refreshPublicCache', STATE.current.eventId);
+                            } else {
+                                toast('Failed to generate bracket', false);
+                            }
+                        }
+                    } else {
+                        toast('Failed to generate bracket', false);
+                    }
+                } catch (err) { toast(err?.message || 'Bracket generation failed', false); }
+                finally { setBusy(false); }
+            });
+            on('btnRefreshView', 'click', () => {
+                if (!STATE.current) return;
+                setBusy(true, 'Refreshing…');
+                gs('refreshPublicCache', STATE.current.eventId)
+                    .then(() => toast('Public cache refreshed'))
+                    .catch(() => toast('Refresh failed', false))
+                    .finally(() => setBusy(false));
+            });
+
+            // Diagnostics
+            on('btnRunSuite', 'click', runSelectedSuite);
+            on('btnSelfHeal', 'click', runSelfHealUI);
+            on('btnHardReset', 'click', runHardResetUI);
+            on('btnShowStatus', 'click', showStatusUI);
+            on('btnShowLogs', 'click', showLogsUI);
+            on('btnCopyReport', 'click', copyReportUI);
+
+            // Keep signup count fresh
+            setInterval(() => {
+                if (!STATE.current) return;
+                gs('getSignupCount', STATE.current.eventId)
+                    .then(n => { if (typeof n === 'number') $('#signupCountTile').textContent = n; })
+                    .catch(() => { });
+            }, 15000);
+        });
     </script>
 </body>
 
