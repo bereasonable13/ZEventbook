@@ -919,12 +919,13 @@ function seedPositions_(size) {
 // ---------- Share + QR ----------
 function getShareLinks(eventId, opts) {
     const e = getEventById_(eventId);
-    if (!e) makeError_(ERR.EVENT_NOT_FOUND, 'Event not found');
+    // Never throw from this helper; UI should keep working even if nothing is set yet.
+    if (!e) return { publicUrl: '', displayUrl: '', posterUrl: '', formUrl: '', qrPublicB64: '', qrFormB64: '' };
 
     const base = safeGetUrl_();
     const utm = (opts && opts.utm) ? opts.utm : null;
     function withUtm(url) {
-        if (!utm) return url;
+        if (!utm || !url) return url;
         const u = new URL(url);
         if (utm.campaign) u.searchParams.set('utm_campaign', utm.campaign);
         if (utm.source) u.searchParams.set('utm_source', utm.source);
