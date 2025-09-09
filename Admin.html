@@ -402,7 +402,7 @@
                 STATE.events.forEach(e => {
                     const o = document.createElement('option');
                     o.value = e.eventId;
-                    const dateStr = e.date || '';
+                    const dateStr = e.startDate || e.date || '';
                     const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
                     o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}${e.isDefault ? ' ★' : ''}`;
                     o.title = `${label}${dateStr ? ' • ' + dateStr : ''}`;
@@ -447,13 +447,13 @@
                 return;
             }
 
-            const dateStr = e.date || '';
+            const dateStr = e.startDate || e.date || '';
             const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
             meta.innerHTML = `
-<div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
-<div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
-<div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
-`;
+                <div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
+                <div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
+                <div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
+                `;
 
             $('#seedTools').style.display = (e.seedMode === 'SEEDED') ? 'flex' : 'none';
             setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
@@ -475,7 +475,7 @@
                     publicUrlEl.textContent = links.publicUrl || '';
                     formUrlEl.textContent = links.formUrl || '';
 
-                    const tv = $('#aOpenTV'); if (tv) tv.href = links.displayUrl || '#';
+                    const tv = $('#aOpenTV'); if (tv) { if (links.displayUrl) tv.href = links.displayUrl; else tv.removeAttribute('href'); }
 
                     $('#btnCopyPublic').onclick = async () => toast((await copyText(links.publicUrl || '')) ? 'Public link copied' : 'Copy failed', !!links.publicUrl);
                     $('#btnCopyDisplay').onclick = async () => toast((await copyText(links.displayUrl || '')) ? 'Display link copied' : 'Copy failed', !!links.displayUrl);
@@ -546,9 +546,10 @@
                 const o = document.createElement('option');
                 const rawName = (item.name && item.name.trim()) ? item.name.trim() : '';
                 const label = rawName && rawName !== '(unnamed)' ? rawName : (item.slug || item.sid || 'unnamed');
+                const dateStr = item.startDate || '';
                 o.value = item.eventId;
-                o.textContent = `${label}${item.date ? ' (' + item.date + ')' : ''}`;
-                o.title = `${label}${item.date ? ' • ' + item.date : ''}`;
+                o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}`;
+                o.title = `${label}${dateStr ? ' • ' + dateStr : ''}`;
                 sel.appendChild(o);
                 sel.value = item.eventId;
             }
@@ -766,10 +767,13 @@
 
             // Create card
             on('btnCreate', 'click', onCreateClick);
-            on('btnFlowHelp', 'click', () => document.getElementById('btnFlowHelp')?.togglePopover?.());
-            document.addEventListener('change', (ev) => { if (ev.target && ev.target.id === 'chooseEvent') setCurrent(ev.target.value); });
+            // FIX: Toggle the actual popover element, not the button
+            on('btnFlowHelp', 'click', () => document.getElementById('popFlowHelp')?.togglePopover?.());
+            // Live weeks visibility when Flow changes
+            on('evFlow', 'change', syncWeeksVisibility);
 
             // Manage card
+            on('chooseEvent', 'change', (ev) => setCurrent(ev.currentTarget.value));
             on('btnRefreshEvents', 'click', async (e) => {
                 const btn = e.currentTarget; if (STATE.loading) return;
                 btn.disabled = true;
