@@ -15,9 +15,9 @@
 // ---------- Constants ----------
 const SH = Object.freeze({
     EVENTS: 'Events',
-    SIGNUPS_PREFIX: 'signups_',
-    SCHED_PREFIX: 'schedule_',
-    BRACKET_PREFIX: 'bracket_',
+    SIGNUPS_PREFIX: 'Signups',
+    SCHED_PREFIX: 'Schedule',
+    BRACKET_PREFIX: 'Bracket',
     LOGS: 'Logs',
     DIAG: 'Diagnostics',
 });
@@ -437,10 +437,13 @@ function getEvents() {
         }
     });
     return rows.map(_eventToLite_);
+    console.log("this is coming from code getEvents")
 }
 
 // --- Create event: always get unique slug ---
 function createEvent(payload) {
+    CacheService.getUserCache().remove('events:list');
+    PropertiesService.getScriptProperties().setProperty('eventsVersion', String(Date.now()));
     logEvent_('info', 'createEvent_called', { payload });
     return _withLock(() => {
         _rateLimit_('createEvent', 3);
@@ -520,6 +523,7 @@ function createEvent(payload) {
             killCache_(eventId);
             logEvent_('info', 'createEvent', { eventId, slug, name, flow });
             return row;
+            console.log("this is coming from code createEvent")
         } catch (err) {
             createdTabs.forEach(n => { const sh = ss().getSheetByName(n); if (sh) ss().deleteSheet(sh); });
             throw err;
@@ -537,6 +541,7 @@ function createEventVerified(payload) {
         Utilities.sleep(sleepMs);
     }
     return ev;
+    console.log("this is coming from code createEventVerified")
 }
 
 // --- Update: always recompute slug if name/date changes ---
@@ -549,6 +554,7 @@ function updateEvent(eventId, patch) {
         const now = nowISO();
         const toWrite = { updatedAt: now };
         allowed.forEach(k => { if (patch && k in patch) toWrite[k] = patch[k]; });
+        console.log("this is coming from code updateEvent 1 of 4")
 
         // If name or date changes, recompute slug with generateUniqueSlug (excluding this event's current slug)
         if (('name' in toWrite) || ('startDate' in toWrite)) {
@@ -559,18 +565,21 @@ function updateEvent(eventId, patch) {
             const clash = getEventBySlug_(nextSlug);
             if (clash && clash.eventId !== e.eventId) makeError_(ERR.DUP_SLUG, `Duplicate slug "${nextSlug}"`);
             toWrite.slug = nextSlug;
+            console.log("this is coming from code updateEvent 1 of 2")
         }
 
         // Single-default invariant
         if ('isDefault' in toWrite) {
             setDefaultEvent(eventId, !!toWrite.isDefault);
             delete toWrite.isDefault;
+            console.log("this is coming from code updateEvent 1 of 3")
         }
 
         writeRowByKey_(getEventsSheet_(), 'eventId', eventId, Object.assign({}, e, toWrite));
         killCache_(eventId);
         logEvent_('info', 'updateEvent', { eventId, patch: toWrite });
         return getEventById_(eventId);
+        console.log("this is coming from code updateEvent 1 of 4")
     });
 }
 
@@ -585,10 +594,12 @@ function setDefaultEvent(eventId, isDefault) {
                 isDefault: r.eventId === eventId ? (isDefault === undefined ? true : !!isDefault) : false,
                 updatedAt: nowISO()
             });
+            console.log("this is coming from code setDefaultEvent 1 of 2")
         });
         killCache_(eventId);
         logEvent_('info', 'setDefaultEvent', { eventId });
         return { ok: true };
+        console.log("this is coming from code setDefaultEvent 2 of 2")
     });
 }
 
@@ -921,6 +932,7 @@ function getShareLinks(eventId, opts) {
     const e = getEventById_(eventId);
     // Never throw from this helper; UI should keep working even if nothing is set yet.
     if (!e) return { publicUrl: '', displayUrl: '', posterUrl: '', formUrl: '', qrPublicB64: '', qrFormB64: '' };
+    console.log("this is coming from code getShareLinks 1 of 3")
 
     const base = safeGetUrl_();
     const utm = (opts && opts.utm) ? opts.utm : null;
@@ -932,6 +944,7 @@ function getShareLinks(eventId, opts) {
         if (utm.medium) u.searchParams.set('utm_medium', utm.medium);
         return u.toString();
     }
+    console.log("this is coming from code getShareLinks 2 of 3")
 
     const publicUrl = e.publicUrl || (base ? `${base}?view=public&eventId=${encodeURIComponent(e.eventId)}&slug=${encodeURIComponent(e.slug || '')}` : '');
     const displayUrl = e.displayUrl || (base ? `${base}?view=display&eventId=${encodeURIComponent(e.eventId)}&tv=1&slug=${encodeURIComponent(e.slug || '')}` : '');
@@ -948,12 +961,14 @@ function getShareLinks(eventId, opts) {
         formUrl: withUtm(formUrl),
         qrPublicB64, qrFormB64
     };
+    console.log("this is coming from code getShareLinks 3 of 3")
 }
 
 // Simple shim used by some clients
 function getShareQr(eventId) {
     const links = getShareLinks(eventId);
     return { url: links.publicUrl, qrB64: links.qrPublicB64 };
+    console.log("this is coming from code getShareQr")
 }
 
 function _qrToB64_(url) {
@@ -961,6 +976,7 @@ function _qrToB64_(url) {
     const res = UrlFetchApp.fetch(endpoint, { muteHttpExceptions: true });
     if (res.getResponseCode() !== 200) return '';
     return Utilities.base64Encode(res.getBlob().getBytes());
+    console.log("this is coming from code _qrToB64_")
 }
 
 // ---------- Admin PIN (kept) ----------
