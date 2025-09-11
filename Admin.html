@@ -94,8 +94,11 @@
         <!-- Busy overlay -->
         <div id="busy" aria-live="polite">
             <div class="card">
-                <div class="spinner"><span class="mascot" data-kind="runner">🏃‍♂️</span><span class="mascot"
-                        data-kind="pitcher">🥎</span><span class="mascot" data-kind="bocce">🧶</span></div>
+                <div class="spinner">
+                    <span class="mascot" data-kind="runner">🏃‍♂️</span>
+                    <span class="mascot" data-kind="pitcher">🥎</span>
+                    <span class="mascot" data-kind="bocce">🧶</span>
+                </div>
                 <div class="msg">Working…</div>
             </div>
         </div>
@@ -321,30 +324,46 @@
     </main>
 
     <script>
+        /* ---------- Logging helper (breadcrumb) ---------- */
+        function logFn(fn, tag) {
+            const msg = "this is coming from " + fn + (tag ? " → " + tag : "");
+            console.log(msg);
+        }
+
         /* ---------- Utilities ---------- */
         const $ = (s, p = document) => p.querySelector(s);
         const $all = (s, p = document) => Array.from(p.querySelectorAll(s));
         const fmt = (x) => (x == null ? '' : String(x));
-        const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+        const sleep = (ms) => new Promise(r => { logFn("sleep", "" + ms + "ms"); setTimeout(r, ms); });
 
         function gs(fn, ...args) {
+            logFn("gs", fn + "(" + JSON.stringify(args).slice(0, 200) + (args.length > 0 ? " …" : "") + ")");
             return new Promise((resolve, reject) => {
-                google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fn](...args);
+                google.script.run
+                    .withSuccessHandler((res) => { logFn("gs", fn + " success"); resolve(res); })
+                    .withFailureHandler((err) => { logFn("gs", fn + " fail: " + (err && err.message || err)); reject(err); })
+                [fn](...args);
             });
         }
+
         function toast(msg, ok = true) {
+            logFn("toast", (ok ? "ok" : "danger") + " → " + msg);
             const t = $('#toast'); if (!t) return;
             t.textContent = msg; t.style.display = 'block';
             t.className = 'toast ' + (ok ? 'ok' : 'danger');
-            setTimeout(() => t.style.display = 'none', 2400);
+            setTimeout(() => { logFn("toast", "hide"); t.style.display = 'none'; }, 2400);
         }
+
         function setBusy(on, message) {
+            logFn("setBusy", (on ? "on" : "off") + (message ? " → " + message : ""));
             const ov = $('#busy'); if (!ov) return;
             const msg = ov.querySelector('.msg'); if (msg && message) msg.textContent = message;
             ov.style.display = on ? 'grid' : 'none';
             document.body.classList.toggle('is-busy', !!on);
         }
+
         function setQR(el, url) {
+            logFn("setQR", (el ? "#" + (el.id || "no-id") : "null") + " → " + (url || "(empty)"));
             if (!el) return;
             el.innerHTML = '';
             if (!url) { el.classList.add('muted'); el.title = 'No link yet'; return; }
@@ -354,12 +373,21 @@
             img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(url);
             el.appendChild(img);
         }
-        const copyText = async (txt) => { try { await navigator.clipboard.writeText(txt); return true; } catch { return false; } };
+
+        const copyText = async (txt) => {
+            logFn("copyText", (txt || "").slice(0, 64));
+            try { await navigator.clipboard.writeText(txt); return true; } catch { return false; }
+        };
 
         function debounceWithFlush(fn, wait = 220) {
+            logFn("debounceWithFlush", "wait " + wait);
             let t = null, lastArgs = null;
-            const wrapped = (...args) => { lastArgs = args; if (t) clearTimeout(t); t = setTimeout(() => { t = null; fn(...(lastArgs || [])); }, wait); };
-            wrapped.flush = () => { if (t) { clearTimeout(t); t = null; fn(...(lastArgs || [])); } };
+            const wrapped = (...args) => {
+                lastArgs = args;
+                if (t) clearTimeout(t);
+                t = setTimeout(() => { t = null; logFn("debounceWithFlush", "flush"); fn(...(lastArgs || [])); }, wait);
+            };
+            wrapped.flush = () => { if (t) { clearTimeout(t); t = null; logFn("debounceWithFlush", "manual flush"); fn(...(lastArgs || [])); } };
             return wrapped;
         }
 
@@ -368,77 +396,139 @@
         const SERVER_SLUG = "<?= slug ?>";
         const BOOT_ID =
             (window.eventId && String(window.eventId).trim()) ||
-            URLQ.get('eventId') ||
-            URLQ.get('event') ||
-            URLQ.get('slug') ||
+            URLQ.get('eventId') || URLQ.get('event') || URLQ.get('slug') ||
             SERVER_SLUG || '';
+        logFn("BOOT_ID", BOOT_ID || "(none)");
 
         /* ---------- State ---------- */
         const STATE = { events: [], current: null, loading: false, links: null };
         let _loadVer = 0;
 
         /* ---------- Load & Render ---------- */
+        // --- helpers (add once, near top with other utils) ---
+        function normEvent(raw) {
+            if (!raw || typeof raw !== 'object') return null;
+            const id = raw.eventId || raw.id || raw.sid || '';
+            const name = (raw.name && raw.name.trim()) ? raw.name.trim() : '';
+            const dateISO = raw.startDate || raw.dateISO || raw.date || '';
+            const isDefault = !!raw.isDefault;
+            const publicUrl = raw.publicUrl || raw.public || '';
+            const displayUrl = raw.displayUrl || raw.display || '';
+            const formUrl = raw.formUrl || '';
+            return {
+                eventId: id, name, startDate: dateISO, isDefault,
+                publicUrl, displayUrl, formUrl, slug: raw.slug || raw.sid || '',
+                flow: raw.flow || '', weeks: raw.weeks || 0, elimType: raw.elimType || '', seedMode: raw.seedMode || '',
+                counts: raw.counts || { signups: 0 }, _raw: raw
+            };
+        }
+
+        // one at a time + stale guard
+        let __loadEventsInflight = 0;
+
+        // --- REPLACE your entire loadEvents with this ---
         async function loadEvents(preselectId) {
-            const myVer = ++_loadVer;
+            logFrom("loadEvents", "entry" + (preselectId ? " → preselect " + preselectId : ""));
             if (STATE.loading) return;
             STATE.loading = true;
-            setBusy(true, 'Loading events…');
-            const sel = $('#chooseEvent');
-            const tip = $('#emptyTip');
-            try {
-                const rows = await gs('getEvents');
-                if (myVer !== _loadVer) return;
-                STATE.events = rows || [];
-                sel.innerHTML = '';
+            const myKey = ++__loadEventsInflight;
 
-                if (!STATE.events.length) {
-                    const o = document.createElement('option');
-                    o.disabled = true; o.textContent = '— No events —';
-                    sel.appendChild(o); sel.disabled = true; tip.style.display = 'block';
-                    setCurrent(null); return;
+            setBusy(true, "Loading events…");
+            const sel = $("#chooseEvent");
+            const tip = $("#emptyTip");
+
+            // try getEventsSafe() first, fallback to getEvents()
+            async function fetchEvents() {
+                try { return await gs("getEventsSafe"); }
+                catch { return await gs("getEvents"); }
+            }
+
+            try {
+                const res = await fetchEvents();
+                if (myKey !== __loadEventsInflight) return; // stale response
+
+                // Accept both shapes: array or {ok,items}
+                const rawList = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
+                logFrom("loadEvents", "rows " + rawList.length);
+
+                const items = rawList.map(normEvent).filter(Boolean);
+                STATE.events = items;
+
+                if (sel) sel.innerHTML = "";
+
+                if (!items.length) {
+                    if (sel) {
+                        const o = document.createElement("option");
+                        o.disabled = true; o.textContent = "— No events —";
+                        sel.appendChild(o);
+                        sel.disabled = true;
+                    }
+                    if (tip) tip.style.display = "block";
+                    setCurrent(null);
+                    logFrom("loadEvents", "no events");
+                    return;
                 }
 
-                tip.style.display = 'none'; sel.disabled = false;
-                STATE.events.forEach(e => {
-                    const o = document.createElement('option');
-                    o.value = e.eventId;
-                    const dateStr = e.startDate || e.date || '';
-                    const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
-                    o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}${e.isDefault ? ' ★' : ''}`;
-                    o.title = `${label}${dateStr ? ' • ' + dateStr : ''}`;
-                    sel.appendChild(o);
-                });
+                if (tip) tip.style.display = "none";
+                if (sel) sel.disabled = false;
 
+                // build options
+                for (const e of items) {
+                    const o = document.createElement("option");
+                    o.value = e.eventId;
+                    const label = e.name || e.slug || "(untitled event)";
+                    const dateStr = e.startDate ? " (" + e.startDate + ")" : "";
+                    o.textContent = label + dateStr + (e.isDefault ? " ★" : "");
+                    o.title = label + (e.startDate ? " • " + e.startDate : "");
+                    sel && sel.appendChild(o);
+                }
+
+                // choose current
                 let chosen = null;
-                if (preselectId) chosen = STATE.events.find(e => e.eventId === preselectId);
-                if (!chosen) chosen = STATE.events.find(e => e.isDefault) || STATE.events[0] || null;
-                if (chosen) { sel.value = chosen.eventId; setCurrent(chosen.eventId, true); }
-                else setCurrent(null);
+                if (preselectId) chosen = items.find(e => e.eventId === preselectId);
+                if (!chosen) chosen = items.find(e => e.isDefault) || items[0];
+
+                if (chosen) {
+                    if (sel) sel.value = chosen.eventId;
+                    try { persistEventId(chosen.eventId, chosen.slug); } catch { }
+                    setCurrent(chosen.eventId, true);
+                } else {
+                    setCurrent(null);
+                }
+
             } catch (err) {
-                console.error('getEvents failed:', err);
-                toast(err?.message || 'Failed to load events', false);
-                sel.innerHTML = '<option disabled>(load failed)</option>';
+                console.error(err);
+                logFrom("loadEvents", "getEvents* failed: " + (err?.message || err));
+                toast(err?.message || "Failed to load events", false);
+                if (sel) sel.innerHTML = "<option disabled>(load failed)</option>";
                 setCurrent(null);
             } finally {
-                if (myVer === _loadVer) { STATE.loading = false; setBusy(false); }
+                if (myKey === __loadEventsInflight) { /* ok */ }
+                STATE.loading = false;
+                setBusy(false);
+                logFrom("loadEvents", "finally exit");
             }
         }
 
         function setCurrent(eventId, immediate = false) {
+            logFn("setCurrent", "entry → " + eventId + (immediate ? " (immediate)" : ""));
             STATE.current = STATE.events.find(e => e.eventId === eventId) || null;
+            logFn("setCurrent", "STATE.current " + (STATE.current ? (STATE.current.name || STATE.current.slug || STATE.current.eventId) : "(null)"));
             renderCurrent();
             updateStickyCta();
             refreshShareLinks();
-            if (immediate && refreshShareLinks.flush) refreshShareLinks.flush();
+            if (immediate && refreshShareLinks.flush) { logFn("setCurrent", "flush share links"); refreshShareLinks.flush(); }
         }
 
         function renderCurrent() {
+            logFn("renderCurrent", "entry");
             const e = STATE.current;
             const meta = $('#eventMeta');
             const publicUrlEl = $('#publicUrl');
             const formUrlEl = $('#formUrl');
 
             if (!e) {
+                logFn("renderCurrent", "no event selected");
                 meta.innerHTML = '<div class="empty">No event selected.</div>';
                 setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
                 publicUrlEl.textContent = ''; formUrlEl.textContent = '';
@@ -449,11 +539,13 @@
 
             const dateStr = e.startDate || e.date || '';
             const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
+            logFn("renderCurrent", "draw " + label);
+
             meta.innerHTML = `
-                <div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
-                <div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
-                <div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
-                `;
+              <div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
+              <div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
+              <div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
+              `;
 
             $('#seedTools').style.display = (e.seedMode === 'SEEDED') ? 'flex' : 'none';
             setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
@@ -463,66 +555,78 @@
 
         /* ---------- Share / Links ---------- */
         const _refreshShareLinksRaw = () => {
-            if (!STATE.current || !STATE.current.eventId) { STATE.links = null; return; }
-            if (!STATE.loading) setBusy(true, 'Preparing links…');
-            gs('getShareLinks', STATE.current.eventId)
-                .then(links => {
-                    STATE.links = links || {};
-                    const publicUrlEl = $('#publicUrl');
-                    const formUrlEl = $('#formUrl');
-                    setQR($('#qrPublic'), links.publicUrl || '');
-                    setQR($('#qrForm'), links.formUrl || '');
-                    publicUrlEl.textContent = links.publicUrl || '';
-                    formUrlEl.textContent = links.formUrl || '';
+            logFrom("_refreshShareLinksRaw", "entry");
+            if (!STATE.current || !STATE.current.eventId) {
+                logFrom("_refreshShareLinksRaw", "no current");
+                STATE.links = null;
+                return;
+            }
 
-                    const tv = $('#aOpenTV'); if (tv) { if (links.displayUrl) tv.href = links.displayUrl; else tv.removeAttribute('href'); }
+            // Local fallback first (so user sees something even if server fetch fails)
+            const local = {
+                publicUrl: STATE.current.publicUrl || "",
+                displayUrl: STATE.current.displayUrl || "",
+                formUrl: STATE.current.formUrl || "",
+                posterUrl: STATE.current.posterUrl || ""
+            };
 
-                    $('#btnCopyPublic').onclick = async () => toast((await copyText(links.publicUrl || '')) ? 'Public link copied' : 'Copy failed', !!links.publicUrl);
-                    $('#btnCopyDisplay').onclick = async () => toast((await copyText(links.displayUrl || '')) ? 'Display link copied' : 'Copy failed', !!links.displayUrl);
-                    $('#btnCopyPoster').onclick = async () => toast((await copyText(links.posterUrl || '')) ? 'Poster link copied' : 'Copy failed', !!links.posterUrl);
-                    $('#btnCopyForm').onclick = async () => toast((await copyText(links.formUrl || '')) ? 'Form link copied' : 'Copy failed', !!links.formUrl);
+            const apply = (links) => {
+                const L = links || local;
+                STATE.links = L;
 
-                    const shareBtn = $('#btnShare');
-                    if (shareBtn) {
-                        shareBtn.onclick = async () => {
-                            const url = links.publicUrl || '';
-                            const title = (STATE.current?.name || 'Event') + ' · NextUp';
-                            const text = 'Join or follow this event:';
-                            if (navigator.share) {
-                                try { await navigator.share({ title, text, url }); } catch { /* canceled */ }
-                            } else {
-                                toast((await copyText(url)) ? 'Public link copied' : 'Share not supported', !!url);
-                            }
-                        };
-                    }
+                setQR($("#qrPublic"), L.publicUrl || "");
+                setQR($("#qrForm"), L.formUrl || "");
+
+                const publicUrlEl = $("#publicUrl");
+                const formUrlEl = $("#formUrl");
+                if (publicUrlEl) publicUrlEl.textContent = L.publicUrl || "";
+                if (formUrlEl) formUrlEl.textContent = L.formUrl || "";
+
+                const tv = $("#aOpenTV");
+                if (tv) { if (L.displayUrl) tv.href = L.displayUrl; else tv.removeAttribute("href"); }
+            };
+
+            // show local immediately (no spinner delay)
+            apply(local);
+
+            // Try server for fresher/shortened links; if it fails, keep local without toasting red
+            if (!STATE.loading) setBusy(true, "Preparing links…");
+            gs("getShareLinks", STATE.current.eventId)
+                .then(links => { apply(links || local); })
+                .catch(err => {
+                    logFrom("_refreshShareLinksRaw", "catch " + (err?.message || err));
+                    // no toast("danger") here; we already applied local links
                 })
-                .catch(err => { console.error(err); toast('Link prep failed', false); })
-                .finally(() => { if (!STATE.loading) setBusy(false); });
+                .finally(() => { if (!STATE.loading) setBusy(false); logFrom("_refreshShareLinksRaw", "finally"); });
         };
-        const refreshShareLinks = debounceWithFlush(_refreshShareLinksRaw, 220);
 
         /* ---------- Selection helpers ---------- */
         function selectEvent(id) {
+            logFn("selectEvent", "entry → " + id);
             const sel = document.getElementById('chooseEvent');
             if (sel) sel.value = id;
             setCurrent(id, true);
         }
 
         async function reloadEventsEnsure(newId, { tries = 3, baseDelay = 240 } = {}) {
+            logFn("reloadEventsEnsure", "entry → " + newId);
             for (let i = 0; i < tries; i++) {
+                logFn("reloadEventsEnsure", "try " + (i + 1) + "/" + tries);
                 await loadEvents(newId);
-                if (STATE.events.some(e => e.eventId === newId)) { selectEvent(newId); return true; }
+                if (STATE.events.some(e => e.eventId === newId)) { logFn("reloadEventsEnsure", "found, select"); selectEvent(newId); return true; }
                 await sleep(baseDelay * Math.pow(1.6, i));
             }
+            logFn("reloadEventsEnsure", "optimistic add");
             optimisticAddEvent({ eventId: newId });
             selectEvent(newId);
             return false;
         }
 
         function optimisticAddEvent(mini) {
-            if (!mini || !mini.eventId) return;
+            logFn("optimisticAddEvent", "entry → " + JSON.stringify(mini));
+            if (!mini || !mini.eventId) { logFn("optimisticAddEvent", "no mini/eventId"); return; }
             const exists = STATE.events.some(e => e.eventId === mini.eventId);
-            if (exists) { selectEvent(mini.eventId); return; }
+            if (exists) { logFn("optimisticAddEvent", "exists, select"); selectEvent(mini.eventId); return; }
 
             const item = {
                 eventId: mini.eventId, sid: mini.sid || '', slug: mini.slug || '',
@@ -537,6 +641,7 @@
                 bracketSheet: mini.bracketSheet || '', counts: { signups: 0 }
             };
             STATE.events.push(item);
+            logFn("optimisticAddEvent", "pushed → " + item.eventId);
 
             const sel = document.getElementById('chooseEvent');
             const tip = document.getElementById('emptyTip');
@@ -545,7 +650,7 @@
                 sel.disabled = false;
                 const o = document.createElement('option');
                 const rawName = (item.name && item.name.trim()) ? item.name.trim() : '';
-                const label = rawName && rawName !== '(unnamed)' ? rawName : (item.slug || item.sid || 'unnamed');
+                const label = rawName || item.slug || item.sid || "(untitled event)"
                 const dateStr = item.startDate || '';
                 o.value = item.eventId;
                 o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}`;
@@ -558,11 +663,12 @@
 
         /* ---------- Sticky CTA ---------- */
         function updateStickyCta() {
+            logFn("updateStickyCta", "entry");
             const bar = document.getElementById('stickyCta');
-            if (!bar) return;
+            if (!bar) { logFn("updateStickyCta", "no bar"); return; }
             const e = STATE.current, has = !!e;
             bar.classList.toggle('hidden', !has);
-            if (!has) return;
+            if (!has) { logFn("updateStickyCta", "hidden (no current)"); return; }
 
             const bTV = document.getElementById('ctaOpenTV');
             const bForm = document.getElementById('ctaForm');
@@ -570,51 +676,59 @@
             const bBrkt = document.getElementById('ctaBracket');
             const row2 = document.getElementById('ctaRow2');
 
-            if (bTV) bTV.onclick = () => document.getElementById('aOpenTV')?.click();
+            if (bTV) bTV.onclick = () => { logFn("ctaOpenTV", "click"); document.getElementById('aOpenTV')?.click(); };
 
             const hasForm = !!(e.formUrl && String(e.formUrl).trim());
             if (bForm) {
                 bForm.textContent = hasForm ? 'Open Form' : 'Create Form';
                 bForm.classList.toggle('btn--primary', !hasForm);
                 bForm.classList.toggle('btn--ghost', hasForm);
-                bForm.onclick = () => { hasForm ? window.open(e.formUrl, '_blank') : document.getElementById('btnCreateForm')?.click(); };
+                bForm.onclick = () => {
+                    logFn("ctaForm", "click");
+                    hasForm ? window.open(e.formUrl, '_blank') : document.getElementById('btnCreateForm')?.click();
+                };
             }
 
             const flow = e.flow;
             const showSched = flow === 'SEASON_ONLY' || flow === 'SEASON_TOURNEY';
             const showBrkt = flow === 'SEASON_TOURNEY' || flow === 'TOURNEY_ONLY';
             if (row2) row2.style.display = (showSched || showBrkt) ? '' : 'none';
-            if (bSched) bSched.style.display = showSched ? '' : 'none';
-            if (bBrkt) bBrkt.style.display = showBrkt ? '' : 'none';
-            if (bSched) bSched.onclick = () => document.getElementById('btnGenSchedule')?.click();
-            if (bBrkt) bBrkt.onclick = () => document.getElementById('btnGenBrackets')?.click();
+            if (bSched) { bSched.style.display = showSched ? '' : 'none'; bSched.onclick = () => { logFn("ctaSchedule", "click"); document.getElementById('btnGenSchedule')?.click(); }; }
+            if (bBrkt) { bBrkt.style.display = showBrkt ? '' : 'none'; bBrkt.onclick = () => { logFn("ctaBracket", "click"); document.getElementById('btnGenBrackets')?.click(); }; }
         }
 
         /* Hide CTA on mobile keyboard */
         (function watchViewport() {
+            logFn("watchViewport", "init");
             if (!window.visualViewport) return;
             const baseH = window.visualViewport.height;
             window.visualViewport.addEventListener('resize', () => {
                 const bar = document.getElementById('stickyCta'); if (!bar) return;
                 const shrink = baseH - window.visualViewport.height;
                 bar.classList.toggle('hidden', shrink > 120);
+                logFn("watchViewport", "resize → shrink " + shrink);
             });
         })();
 
         /* ---------- Create flow ---------- */
         async function createEventSmart(payload) {
-            try { return await gs('createEventVerified', payload); }
-            catch (e) {
+            logFn("createEventSmart", "entry");
+            try {
+                return await gs('createEventVerified', payload);
+            } catch (e) {
                 const msg = (e && e.message) ? String(e.message) : String(e);
                 if (/createEventVerified/i.test(msg) || /not found/i.test(msg) || /is not a function/i.test(msg)) {
                     console.warn('createEventVerified not available, falling back:', msg);
+                    logFn("createEventSmart", "fallback to createEvent");
                     return await gs('createEvent', payload);
                 }
+                logFn("createEventSmart", "rethrow " + msg);
                 throw e;
             }
         }
-        function weeksRequiredFor(flow) { return flow === 'SEASON_TOURNEY' || flow === 'SEASON_ONLY'; }
+        function weeksRequiredFor(flow) { const r = (flow === 'SEASON_TOURNEY' || flow === 'SEASON_ONLY'); logFn("weeksRequiredFor", flow + " → " + r); return r; }
         function syncWeeksVisibility() {
+            logFn("syncWeeksVisibility", "entry");
             const show = weeksRequiredFor($('#evFlow').value);
             const weeks = $('#evWeeks');
             weeks.style.display = show ? '' : 'none';
@@ -624,8 +738,9 @@
 
         /* ---------- Diagnostics table renderer ---------- */
         function renderDiagTable(report) {
+            logFn("renderDiagTable", "entry");
             const tb = document.querySelector('#diagTable tbody'); tb.innerHTML = '';
-            if (!report) return;
+            if (!report) { logFn("renderDiagTable", "no report"); return; }
             if (Array.isArray(report.results)) {
                 for (const r of report.results) {
                     const tr = document.createElement('tr');
@@ -648,9 +763,13 @@
 
         /* ---------- Button handlers ---------- */
         async function onCreateClick() {
+            logFn("onCreateClick", "entry");
+
             const flowVal = $('#evFlow').value;
             const needWeeks = flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY';
+
             if (!$('#evName').checkValidity() || !$('#evDate').checkValidity() || (needWeeks && !$('#evWeeks').checkValidity())) {
+                logFn("onCreateClick", "invalid inputs");
                 $('#evName').reportValidity(); $('#evDate').reportValidity(); $('#evWeeks').reportValidity(); return;
             }
             const payload = {
@@ -661,14 +780,17 @@
                 elimType: $('#evElim').value,
                 seedMode: $('#evSeed').value
             };
+            logFn("onCreateClick", "payload " + JSON.stringify(payload));
+
             const btn = $('#btnCreate');
             btn.disabled = true; setBusy(true, 'Creating event…'); toast('Creating event…');
             try {
                 const created = await createEventSmart(payload);
+                logFn("onCreateClick", "created " + JSON.stringify(created));
                 optimisticAddEvent(created);
                 toast('Event created. View Manage Events dropdown!');
                 await reloadEventsEnsure(created.eventId, { tries: 6, baseDelay: 300 });
-                if (refreshShareLinks.flush) refreshShareLinks.flush();
+                if (refreshShareLinks.flush) { logFn("onCreateClick", "flush share links"); refreshShareLinks.flush(); }
                 gs('refreshPublicCache', created.eventId);
                 // reset
                 $('#evName').value = ''; $('#evDate').value = ''; $('#evWeeks').value = '';
@@ -676,12 +798,17 @@
                 syncWeeksVisibility();
                 document.getElementById('manageTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (err) {
+                logFn("onCreateClick", "catch " + (err && err.message || err));
                 console.error('Create failed:', err);
                 toast((err && err.message) || 'Create failed', false);
-            } finally { btn.disabled = false; setBusy(false); }
+            } finally {
+                btn.disabled = false; setBusy(false);
+                logFn("onCreateClick", "finally exit");
+            }
         }
 
         async function runSelectedSuite() {
+            logFn("runSelectedSuite", "entry");
             setBusy(true, 'Running…');
             try {
                 const sel = document.getElementById('diagSuite').value;
@@ -697,42 +824,46 @@
                 else if (sel === 'allcards') rep = await gs('runAllCardTests');
                 renderDiagTable(rep); window.__lastDiagReport = rep;
                 toast(rep.ok ? 'Suite PASS' : 'Suite ATTENTION', rep.ok);
-            } catch (e) { console.error(e); toast('Suite failed', false); }
-            finally { setBusy(false); }
+            } catch (e) { logFn("runSelectedSuite", "catch " + (e?.message || e)); console.error(e); toast('Suite failed', false); }
+            finally { setBusy(false); logFn("runSelectedSuite", "finally exit"); }
         }
 
         async function runSelfHealUI() {
+            logFn("runSelfHealUI", "entry");
             setBusy(true, 'Self-healing…');
             try {
                 const rep = await gs('selfHeal');
                 renderDiagTable(rep); window.__lastDiagReport = rep;
                 toast(rep.ok ? 'Self-heal: OK' : 'Self-heal: ATTENTION', rep.ok);
                 await loadEvents(STATE.current?.eventId);
-                if (STATE.current && refreshShareLinks.flush) refreshShareLinks.flush();
-            } catch (e) { console.error(e); toast('Self-heal failed', false); }
-            finally { setBusy(false); }
+                if (STATE.current && refreshShareLinks.flush) { logFn("runSelfHealUI", "flush share links"); refreshShareLinks.flush(); }
+            } catch (e) { logFn("runSelfHealUI", "catch " + (e?.message || e)); console.error(e); toast('Self-heal failed', false); }
+            finally { setBusy(false); logFn("runSelfHealUI", "finally exit"); }
         }
 
         async function runHardResetUI() {
-            if (!confirm('This will back up the current Events sheet and create a fresh one.\nProceed?')) return;
+            logFn("runHardResetUI", "entry");
+            if (!confirm('This will back up the current Events sheet and create a fresh one.\nProceed?')) { logFn("runHardResetUI", "cancel"); return; }
             setBusy(true, 'Hard reset…');
             try {
                 const rep = await gs('hardResetEventsSheet');
                 renderDiagTable(rep); window.__lastDiagReport = rep;
                 toast('Events sheet reset', true);
                 await loadEvents();
-            } catch (e) { console.error(e); toast('Hard reset failed', false); }
-            finally { setBusy(false); }
+            } catch (e) { logFn("runHardResetUI", "catch " + (e?.message || e)); console.error(e); toast('Hard reset failed', false); }
+            finally { setBusy(false); logFn("runHardResetUI", "finally exit"); }
         }
 
         async function showStatusUI() {
+            logFn("showStatusUI", "entry");
             setBusy(true, 'Status…');
             try { const s = await gs('getStatus'); renderDiagTable(s); window.__lastDiagReport = s; }
-            catch (e) { console.error(e); toast('Status failed', false); }
-            finally { setBusy(false); }
+            catch (e) { logFn("showStatusUI", "catch " + (e?.message || e)); console.error(e); toast('Status failed', false); }
+            finally { setBusy(false); logFn("showStatusUI", "finally exit"); }
         }
 
         async function showLogsUI() {
+            logFn("showLogsUI", "entry");
             setBusy(true, 'Logs…');
             try {
                 const rows = await gs('getLogs', 100);
@@ -743,45 +874,51 @@
                     tb.appendChild(tr);
                 }
                 window.__lastDiagReport = rows;
-            } catch (e) { console.error(e); toast('Logs failed', false); }
-            finally { setBusy(false); }
+            } catch (e) { logFn("showLogsUI", "catch " + (e?.message || e)); console.error(e); toast('Logs failed', false); }
+            finally { setBusy(false); logFn("showLogsUI", "finally exit"); }
         }
+
         function copyReportUI() {
+            logFn("copyReportUI", "entry");
             const data = window.__lastDiagReport || { info: 'No report yet' };
             const txt = JSON.stringify(data, null, 2);
-            copyText(txt).then(ok => toast(ok ? 'Report copied' : 'Copy failed', ok));
+            copyText(txt).then(ok => { logFn("copyReportUI", "copied? " + ok); toast(ok ? 'Report copied' : 'Copy failed', ok); });
         }
 
         /* ---------- Global event wiring (ONE place) ---------- */
         document.addEventListener('DOMContentLoaded', () => {
+            logFn("DOMContentLoaded", "bind handlers");
             // helper
             const on = (id, type, fn) => {
                 const el = document.getElementById(id);
-                if (!el) { console.warn(`[bind] missing #${id}`); return; }
+                if (!el) { console.warn(`[bind] missing #${id}`); logFn("bind", "missing #" + id); return; }
                 el.addEventListener(type, fn);
+                logFn("bind", "ok #" + id + " → " + type);
             };
 
             // initial state + visibility
             syncWeeksVisibility();
-            loadEvents().then(() => {/* ready */ });
+            loadEvents().then(() => { logFn("DOMContentLoaded", "loadEvents ready"); });
 
             // Create card
             on('btnCreate', 'click', onCreateClick);
             // FIX: Toggle the actual popover element, not the button
-            on('btnFlowHelp', 'click', () => document.getElementById('popFlowHelp')?.togglePopover?.());
+            on('btnFlowHelp', 'click', () => { logFn("btnFlowHelp", "toggle popover"); document.getElementById('popFlowHelp')?.togglePopover?.(); });
             // Live weeks visibility when Flow changes
             on('evFlow', 'change', syncWeeksVisibility);
 
             // Manage card
-            on('chooseEvent', 'change', (ev) => setCurrent(ev.currentTarget.value));
+            on('chooseEvent', 'change', (ev) => { logFn("chooseEvent", "change " + ev.currentTarget.value); setCurrent(ev.currentTarget.value); });
             on('btnRefreshEvents', 'click', async (e) => {
-                const btn = e.currentTarget; if (STATE.loading) return;
+                logFn("btnRefreshEvents", "click");
+                const btn = e.currentTarget; if (STATE.loading) { logFn("btnRefreshEvents", "loading → bail"); return; }
                 btn.disabled = true;
                 try { await loadEvents(STATE.current?.eventId); }
                 catch (err) { console.error(err); toast(err?.message || 'Refresh failed', false); }
                 finally { btn.disabled = false; }
             });
             on('btnSetDefault', 'click', async () => {
+                logFn("btnSetDefault", "click");
                 if (!STATE.current) return;
                 setBusy(true, 'Setting default…');
                 try { await gs('setDefaultEvent', STATE.current.eventId, true); toast('Default updated'); await loadEvents(STATE.current.eventId); }
@@ -789,6 +926,7 @@
                 finally { setBusy(false); }
             });
             on('btnOpenPublic', 'click', () => {
+                logFn("btnOpenPublic", "click");
                 if (!STATE.current) return;
                 setBusy(true, 'Opening…');
                 gs('getShareLinks', STATE.current.eventId)
@@ -797,6 +935,7 @@
                     .finally(() => setBusy(false));
             });
             on('btnOpenSheets', 'click', () => {
+                logFn("btnOpenSheets", "click");
                 if (!STATE.current) return;
                 setBusy(true, 'Opening Sheets…');
                 gs('openSheetUrl', STATE.current.eventId)
@@ -807,6 +946,7 @@
 
             // Signups
             on('btnCreateForm', 'click', async () => {
+                logFn("btnCreateForm", "click");
                 if (!STATE.current) return;
                 const opts = { email: $('#optEmail').checked, phone: $('#optPhone').checked, notes: $('#optNotes').checked };
                 setBusy(true, 'Creating form…');
@@ -818,6 +958,7 @@
                 finally { setBusy(false); }
             });
             on('btnAddSeedCol', 'click', async () => {
+                logFn("btnAddSeedCol", "click");
                 if (!STATE.current) return;
                 setBusy(true, 'Ensuring seed column…');
                 try { await gs('ensureSeedColumn', STATE.current.eventId); toast('Seed column ensured'); }
@@ -827,6 +968,7 @@
 
             // Schedule
             on('btnGenSchedule', 'click', async () => {
+                logFn("btnGenSchedule", "click");
                 if (!STATE.current) return;
                 const w = Number($('#weeksEdit').value || STATE.current.weeks || 0);
                 if (!w) { toast('Pick number of weeks', false); return; }
@@ -837,9 +979,10 @@
             });
 
             // Brackets
-            on('elimTypeEdit', 'change', () => $('#brktStatus').textContent = '');
-            on('seedModeEdit', 'change', () => $('#brktStatus').textContent = '');
+            on('elimTypeEdit', 'change', () => { logFn("elimTypeEdit", "change"); $('#brktStatus').textContent = ''; });
+            on('seedModeEdit', 'change', () => { logFn("seedModeEdit", "change"); $('#brktStatus').textContent = ''; });
             on('btnGenBrackets', 'click', async () => {
+                logFn("btnGenBrackets", "click");
                 if (!STATE.current) return;
                 const opts = { elimType: $('#elimTypeEdit').value, seedMode: $('#seedModeEdit').value };
                 setBusy(true, 'Generating bracket…');
@@ -869,6 +1012,7 @@
                 finally { setBusy(false); }
             });
             on('btnRefreshView', 'click', () => {
+                logFn("btnRefreshView", "click");
                 if (!STATE.current) return;
                 setBusy(true, 'Refreshing…');
                 gs('refreshPublicCache', STATE.current.eventId)
@@ -887,10 +1031,11 @@
 
             // Keep signup count fresh
             setInterval(() => {
+                logFn("signupCountInterval", "tick");
                 if (!STATE.current) return;
                 gs('getSignupCount', STATE.current.eventId)
                     .then(n => { if (typeof n === 'number') $('#signupCountTile').textContent = n; })
-                    .catch(() => { });
+                    .catch(() => { /* ignore */ });
             }, 15000);
         });
     </script>
