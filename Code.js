@@ -972,12 +972,18 @@ function getShareQr(eventId) {
 }
 
 function _qrToB64_(url) {
-    const endpoint = 'https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=' + encodeURIComponent(url);
+  const safeUrl = encodeURIComponent(url);
+  const endpoint = `https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=${safeUrl}`;
+  try {
     const res = UrlFetchApp.fetch(endpoint, { muteHttpExceptions: true });
     if (res.getResponseCode() !== 200) return '';
     return Utilities.base64Encode(res.getBlob().getBytes());
-    console.log("this is coming from code _qrToB64_")
+  } catch (e) {
+    logEvent_('error', 'QR generation failed', { url, error: String(e) });
+    return '';
+  }
 }
+
 
 // ---------- Admin PIN (kept) ----------
 function getPinStatus() {
