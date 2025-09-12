@@ -1,63 +1,59 @@
-Navigated to https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=admin
-1620:42:03.814 XHR finished loading: POST "<URL>".
-20:40:02.378 userCodeAppPanel:5 this is coming from BOOT_ID → (none)
-20:40:02.379 userCodeAppPanel:5 this is coming from debounceWithFlush → wait 220
-20:40:02.379 userCodeAppPanel:5 this is coming from watchViewport → init
-20:40:02.445 userCodeAppPanel:5 this is coming from DOMContentLoaded → bind handlers
-20:40:02.446 userCodeAppPanel:5 this is coming from syncWeeksVisibility → entry
-20:40:02.446 userCodeAppPanel:5 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
-20:40:02.446 userCodeAppPanel:5 this is coming from loadEvents → entry
-20:40:02.447 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:40:02.447 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnCreate → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnFlowHelp → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #evFlow → change
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #chooseEvent → change
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnRefreshEvents → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnSetDefault → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnOpenPublic → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnOpenSheets → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnCreateForm → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnAddSeedCol → click
-20:40:02.450 userCodeAppPanel:5 this is coming from bind → ok #btnGenSchedule → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #elimTypeEdit → change
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #seedModeEdit → change
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnGenBrackets → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnRefreshView → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnRunSuite → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnSelfHeal → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnHardReset → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnShowStatus → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnShowLogs → click
-20:40:02.451 userCodeAppPanel:5 this is coming from bind → ok #btnCopyReport → click
-20:40:02.484 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:40:17.836 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:40:18.954 userCodeAppPanel:5 this is coming from watchViewport → resize → shrink 0
-20:40:18.981 userCodeAppPanel:5 this is coming from watchViewport → resize → shrink -38
-20:40:19.007 userCodeAppPanel:5 this is coming from watchViewport → resize → shrink -18
-20:40:21.397 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:40:21.397 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:40:21.397 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:40:21.397 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:40:21.397 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:40:21.397 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:40:21.397 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:40:21.397 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:40:21.397 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:40:21.398 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:40:21.398 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:40:21.398 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:40:21.398 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:40:21.398 userCodeAppPanel:5 this is coming from setBusy → off
-20:40:21.398 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:40:21.398 userCodeAppPanel:5 this is coming from DOMContentLoaded → loadEvents ready
-20:40:21.622 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:40:21.622 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:40:21.622 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:40:32.459 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:40:47.430 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:41:00.492 3710275545-mae_html_user_bin_i18n_mae_html_user.js:324 dropping postMessage.. deserialize threw error.
-20:41:00.662 3710275545-mae_html_user_bin_i18n_mae_html_user.js:303 XHR finished loading: POST "https://n-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com/jserror?script=https%3A%2F%2Fn-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com%2FuserCodeAppPanel&error=%22%5Bobject%20Object%5D%22%20is%20not%20valid%20JSON&line=Not%20available&errorSender_enqueueTimeMs=1757554860496&errorSenderType=MemoryErrorSender".
+20:01:35.457 Navigated to https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=admin
+720:03:36.212 XHR finished loading: POST "<URL>".
+20:01:38.599 userCodeAppPanel:3 this is coming from BOOT_ID → (none)
+20:01:38.599 userCodeAppPanel:3 this is coming from debounceWithFlush → wait 300
+20:01:38.599 userCodeAppPanel:3 this is coming from watchViewport → init
+20:01:38.638 userCodeAppPanel:3 this is coming from DOMContentLoaded → bind handlers
+20:01:38.638 userCodeAppPanel:3 this is coming from syncWeeksVisibility → entry
+20:01:38.638 userCodeAppPanel:3 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
+20:01:38.639 userCodeAppPanel:3 this is coming from loadEvents → entry
+20:01:38.639 userCodeAppPanel:3 this is coming from setBusy → on → Loading events…
+20:01:38.639 userCodeAppPanel:3 this is coming from gs → getEventsSafe([])
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnCreate → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnFlowHelp → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #evFlow → change
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #chooseEvent → change
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnRefreshEvents → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnSetDefault → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnOpenPublic → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnOpenSheets → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnCreateForm → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnAddSeedCol → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnGenSchedule → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #elimTypeEdit → change
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #seedModeEdit → change
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnGenBrackets → click
+20:01:38.639 userCodeAppPanel:3 this is coming from bind → ok #btnRefreshView → click
+20:01:38.640 userCodeAppPanel:3 this is coming from bind → ok #btnRunSuite → click
+20:01:38.640 userCodeAppPanel:3 this is coming from bind → ok #btnSelfHeal → click
+20:01:38.640 userCodeAppPanel:3 this is coming from bind → ok #btnHardReset → click
+20:01:38.640 userCodeAppPanel:3 this is coming from bind → ok #btnShowStatus → click
+20:01:38.640 userCodeAppPanel:3 this is coming from bind → ok #btnShowLogs → click
+20:01:38.640 userCodeAppPanel:3 this is coming from bind → ok #btnCopyReport → click
+20:01:38.640 userCodeAppPanel:3 this is coming from gs → getEvents([])
+20:01:38.658 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink 0
+20:01:38.663 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
+20:01:53.642 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:02:01.717 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
+20:02:01.719 userCodeAppPanel:3 this is coming from gs → getEvents success
+20:02:01.719 userCodeAppPanel:3 this is coming from loadEvents → rows 0
+20:02:01.720 userCodeAppPanel:3 this is coming from setCurrent → entry → null
+20:02:01.720 userCodeAppPanel:3 this is coming from setCurrent → STATE.current (null)
+20:02:01.720 userCodeAppPanel:3 this is coming from renderCurrent → entry
+20:02:01.720 userCodeAppPanel:3 this is coming from renderCurrent → no event selected
+20:02:01.720 userCodeAppPanel:3 this is coming from setQR → #qrPublic → (empty)
+20:02:01.720 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
+20:02:01.720 userCodeAppPanel:3 this is coming from updateStickyCta → entry
+20:02:01.720 userCodeAppPanel:3 this is coming from updateStickyCta → hidden (no current)
+20:02:01.720 userCodeAppPanel:3 this is coming from loadEvents → no events
+20:02:01.721 userCodeAppPanel:3 this is coming from setBusy → off
+20:02:01.721 userCodeAppPanel:3 this is coming from loadEvents → finally exit
+20:02:01.721 userCodeAppPanel:3 this is coming from DOMContentLoaded → loadEvents ready
+20:02:02.027 userCodeAppPanel:3 this is coming from debounceWithFlush → flush
+20:02:02.027 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → entry
+20:02:02.027 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → no current
+20:02:05.111 3710275545-mae_html_user_bin_i18n_mae_html_user.js:324 dropping postMessage.. deserialize threw error.
+20:02:05.253 3710275545-mae_html_user_bin_i18n_mae_html_user.js:303 XHR finished loading: POST "https://n-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com/jserror?script=https%3A%2F%2Fn-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com%2FuserCodeAppPanel&error=%22%5Bobject%20Object%5D%22%20is%20not%20valid%20JSON&line=Not%20available&errorSender_enqueueTimeMs=1757638925114&errorSenderType=MemoryErrorSender".
 Is @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:303
 Gs @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:248
 (anonymous) @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:246
@@ -79,243 +75,91 @@ rv @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:324
 Tq @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:199
 c @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:297
 a @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:197
-20:41:02.428 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:41:17.418 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:41:20.778 userCodeAppPanel:5 this is coming from onCreateClick → entry
-20:41:20.778 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:41:20.778 userCodeAppPanel:5 this is coming from onCreateClick → payload {"name":"Loop testing 8:41 pm","startDate":"2025-09-10","flow":"SEASON_TOURNEY","weeks":5,"elimType":"SINGLE","seedMode":"RANDOM"}
-20:41:20.779 userCodeAppPanel:5 this is coming from setBusy → on → Creating event…
-20:41:20.779 userCodeAppPanel:5 this is coming from toast → ok → Creating event…
-20:41:20.779 userCodeAppPanel:5 this is coming from createEventSmart → entry
-20:41:20.780 userCodeAppPanel:5 this is coming from gs → createEventVerified([{"name":"Loop testing 8:41 pm","startDate":"2025-09-10","flow":"SEASON_TOURNEY","weeks":5,"elimType":"SINGLE","seedMode":"RANDOM"}] …)
-20:41:23.184 userCodeAppPanel:5 this is coming from toast → hide
-20:41:32.420 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:41:46.679 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:41:46.686 userCodeAppPanel:5 this is coming from gs → createEventVerified success
-20:41:46.686 userCodeAppPanel:5 this is coming from onCreateClick → created {"eventId":"b62ff49d-e828-47ec-b3ba-01417169770b","weeks":5,"endDate":"","elimType":"SINGLE","type":"event","seedMode":"RANDOM","sid":"b62ff49d","displayUrl":"https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=display&eventId=b62ff49d-e828-47ec-b3ba-01417169770b&tv=1&slug=loop-testing-8-41-pm-2025-09-10","createdAt":"2025-09-11T01:41:42.654Z","isDefault":false,"formUrl":"","publicUrl":"https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=public&eventId=b62ff49d-e828-47ec-b3ba-01417169770b&slug=loop-testing-8-41-pm-2025-09-10","name":"Loop testing 8:41 pm","signupSheet":"Signupsb62ff49d","scheduleSheet":"Scheduleb62ff49d","bracketSheet":"Bracketb62ff49d","adminUrl":"https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=admin&eventId=b62ff49d-e828-47ec-b3ba-01417169770b","startDate":"2025-09-10","slug":"loop-testing-8-41-pm-2025-09-10","flow":"SEASON_TOURNEY","status":"active","updatedAt":"2025-09-11T01:41:42.654Z"}
-20:41:46.686 userCodeAppPanel:5 this is coming from optimisticAddEvent → entry → {"eventId":"b62ff49d-e828-47ec-b3ba-01417169770b","weeks":5,"endDate":"","elimType":"SINGLE","type":"event","seedMode":"RANDOM","sid":"b62ff49d","displayUrl":"https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=display&eventId=b62ff49d-e828-47ec-b3ba-01417169770b&tv=1&slug=loop-testing-8-41-pm-2025-09-10","createdAt":"2025-09-11T01:41:42.654Z","isDefault":false,"formUrl":"","publicUrl":"https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=public&eventId=b62ff49d-e828-47ec-b3ba-01417169770b&slug=loop-testing-8-41-pm-2025-09-10","name":"Loop testing 8:41 pm","signupSheet":"Signupsb62ff49d","scheduleSheet":"Scheduleb62ff49d","bracketSheet":"Bracketb62ff49d","adminUrl":"https://script.google.com/macros/s/AKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg/exec?view=admin&eventId=b62ff49d-e828-47ec-b3ba-01417169770b","startDate":"2025-09-10","slug":"loop-testing-8-41-pm-2025-09-10","flow":"SEASON_TOURNEY","status":"active","updatedAt":"2025-09-11T01:41:42.654Z"}
-20:41:46.686 userCodeAppPanel:5 this is coming from optimisticAddEvent → pushed → b62ff49d-e828-47ec-b3ba-01417169770b
-20:41:46.687 userCodeAppPanel:5 this is coming from setCurrent → entry → b62ff49d-e828-47ec-b3ba-01417169770b (immediate)
-20:41:46.687 userCodeAppPanel:5 this is coming from setCurrent → STATE.current Loop testing 8:41 pm
-20:41:46.687 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:41:46.687 userCodeAppPanel:5 this is coming from renderCurrent → draw Loop testing 8:41 pm
-20:41:46.687 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:41:46.687 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:41:46.687 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:41:46.687 userCodeAppPanel:5 this is coming from setCurrent → flush share links
-20:41:46.687 userCodeAppPanel:5 this is coming from debounceWithFlush → manual flush
-20:41:46.687 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:41:46.687 userCodeAppPanel:5 this is coming from setBusy → on → Preparing links…
-20:41:46.687 userCodeAppPanel:5 this is coming from gs → getShareLinks(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:41:46.687 userCodeAppPanel:5 this is coming from toast → ok → Event created. View Manage Events dropdown!
-20:41:46.688 userCodeAppPanel:5 this is coming from reloadEventsEnsure → entry → b62ff49d-e828-47ec-b3ba-01417169770b
-20:41:46.688 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 1/6
-20:41:46.688 userCodeAppPanel:5 this is coming from loadEvents → entry → preselect b62ff49d-e828-47ec-b3ba-01417169770b
-20:41:46.688 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:41:46.688 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:41:46.688 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:41:47.430 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:41:47.430 userCodeAppPanel:5 this is coming from gs → getSignupCount(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:41:49.067 userCodeAppPanel:5 this is coming from toast → hide
-20:41:57.988 userCodeAppPanel:5 this is coming from gs → getShareLinks fail: Exception: Invalid argument: https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg%2Fexec%3Fview%3Dpublic%26eventId%3Db62ff49d-e828-47ec-b3ba-01417169770b%26slug%3Dloop-testing-8-41-pm-2025-09-10
-20:41:57.988 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → catch Exception: Invalid argument: https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg%2Fexec%3Fview%3Dpublic%26eventId%3Db62ff49d-e828-47ec-b3ba-01417169770b%26slug%3Dloop-testing-8-41-pm-2025-09-10
-20:41:57.988 userCodeAppPanel:5 this is coming from toast → danger → Link prep failed
-20:41:57.989 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → finally
-20:42:00.389 userCodeAppPanel:5 this is coming from toast → hide
-20:42:02.396 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:42:02.396 userCodeAppPanel:5 this is coming from gs → getSignupCount(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:42:03.801 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:42:03.802 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:42:03.802 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:42:03.802 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:42:03.802 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:42:03.802 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:42:03.802 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:42:03.802 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:42:03.802 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:42:03.802 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:42:03.802 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:42:03.802 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:42:03.802 userCodeAppPanel:5 this is coming from setBusy → off
-20:42:03.802 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:42:03.802 userCodeAppPanel:5 this is coming from sleep → 300ms
-20:42:04.023 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:42:04.023 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:42:04.023 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:42:04.110 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 2/6
-20:42:04.111 userCodeAppPanel:5 this is coming from loadEvents → entry → preselect b62ff49d-e828-47ec-b3ba-01417169770b
-20:42:04.111 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:42:04.111 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:42:04.415 userCodeAppPanel:5 this is coming from gs → getSignupCount success
-20:42:15.147 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:42:15.147 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:42:15.147 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:42:15.147 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:42:15.147 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:42:15.148 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:42:15.148 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:42:15.148 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:42:15.148 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:42:15.148 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:42:15.148 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:42:15.148 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:42:15.148 userCodeAppPanel:5 this is coming from setBusy → off
-20:42:15.148 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:42:15.148 userCodeAppPanel:5 this is coming from sleep → 480ms
-20:42:15.374 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:42:15.375 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:42:15.375 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:42:15.630 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 3/6
-20:42:15.630 userCodeAppPanel:5 this is coming from loadEvents → entry → preselect b62ff49d-e828-47ec-b3ba-01417169770b
-20:42:15.630 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:42:15.630 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:42:17.388 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:42:18.636 userCodeAppPanel:5 this is coming from gs → getSignupCount success
-20:42:30.558 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:42:30.566 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:42:30.566 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:42:30.567 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:42:30.567 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:42:30.567 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:42:30.567 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:42:30.567 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:42:30.567 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:42:30.567 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:42:30.567 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:42:30.567 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:42:30.567 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:42:30.567 userCodeAppPanel:5 this is coming from setBusy → off
-20:42:30.567 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:42:30.567 userCodeAppPanel:5 this is coming from sleep → 768.0000000000001ms
-20:42:30.798 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:42:30.798 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:42:30.799 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:42:31.347 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:42:31.350 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 4/6
-20:42:31.350 userCodeAppPanel:5 this is coming from loadEvents → entry → preselect b62ff49d-e828-47ec-b3ba-01417169770b
-20:42:31.351 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:42:31.351 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:42:32.395 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:42:47.391 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:42:49.434 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:42:49.434 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:42:49.435 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:42:49.435 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:42:49.435 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:42:49.435 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:42:49.435 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:42:49.435 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:42:49.435 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:42:49.435 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:42:49.435 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:42:49.435 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:42:49.435 userCodeAppPanel:5 this is coming from setBusy → off
-20:42:49.435 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:42:49.435 userCodeAppPanel:5 this is coming from sleep → 1228.8000000000002ms
-20:42:49.459 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:42:49.660 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:42:49.660 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:42:49.660 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:42:50.671 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 5/6
-20:42:50.671 userCodeAppPanel:5 this is coming from loadEvents → entry → preselect b62ff49d-e828-47ec-b3ba-01417169770b
-20:42:50.671 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:42:50.671 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:42:50.700 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:43:02.365 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:43:04.072 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:43:04.081 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:43:04.081 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:43:04.081 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:43:04.081 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:43:04.081 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:43:04.081 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:43:04.081 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:43:04.081 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:43:04.081 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:43:04.081 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:43:04.082 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:43:04.082 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:43:04.082 userCodeAppPanel:5 this is coming from setBusy → off
-20:43:04.082 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:43:04.082 userCodeAppPanel:5 this is coming from sleep → 1966.0800000000004ms
-20:43:04.316 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:43:04.316 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:43:04.316 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:43:06.045 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:43:06.052 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 6/6
-20:43:06.052 userCodeAppPanel:5 this is coming from loadEvents → entry → preselect b62ff49d-e828-47ec-b3ba-01417169770b
-20:43:06.052 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
-20:43:06.052 userCodeAppPanel:5 this is coming from gs → getEvents([])
-20:43:17.360 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:43:22.246 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:43:22.255 userCodeAppPanel:5 this is coming from gs → getEvents success
-20:43:22.255 userCodeAppPanel:5 this is coming from loadEvents → rows 0
-20:43:22.255 userCodeAppPanel:5 this is coming from loadEvents → STATE.events set
-20:43:22.255 userCodeAppPanel:5 this is coming from loadEvents → no events
-20:43:22.255 userCodeAppPanel:5 this is coming from setCurrent → entry → null
-20:43:22.255 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
-20:43:22.255 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:43:22.255 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
-20:43:22.255 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:43:22.255 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:43:22.256 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:43:22.256 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
-20:43:22.256 userCodeAppPanel:5 this is coming from setBusy → off
-20:43:22.256 userCodeAppPanel:5 this is coming from loadEvents → finally exit
-20:43:22.256 userCodeAppPanel:5 this is coming from sleep → 3145.728000000001ms
-20:43:22.492 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
-20:43:22.492 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:43:22.492 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
-20:43:25.414 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:43:25.416 userCodeAppPanel:5 this is coming from reloadEventsEnsure → optimistic add
-20:43:25.416 userCodeAppPanel:5 this is coming from optimisticAddEvent → entry → {"eventId":"b62ff49d-e828-47ec-b3ba-01417169770b"}
-20:43:25.416 userCodeAppPanel:5 this is coming from optimisticAddEvent → pushed → b62ff49d-e828-47ec-b3ba-01417169770b
-20:43:25.416 userCodeAppPanel:5 this is coming from setCurrent → entry → b62ff49d-e828-47ec-b3ba-01417169770b (immediate)
-20:43:25.416 userCodeAppPanel:5 this is coming from setCurrent → STATE.current b62ff49d-e828-47ec-b3ba-01417169770b
-20:43:25.417 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:43:25.417 userCodeAppPanel:5 this is coming from renderCurrent → draw (unnamed)
-20:43:25.417 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:43:25.417 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:43:25.417 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:43:25.417 userCodeAppPanel:5 this is coming from setCurrent → flush share links
-20:43:25.417 userCodeAppPanel:5 this is coming from debounceWithFlush → manual flush
-20:43:25.417 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:43:25.417 userCodeAppPanel:5 this is coming from setBusy → on → Preparing links…
-20:43:25.417 userCodeAppPanel:5 this is coming from gs → getShareLinks(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:43:25.418 userCodeAppPanel:5 this is coming from selectEvent → entry → b62ff49d-e828-47ec-b3ba-01417169770b
-20:43:25.418 userCodeAppPanel:5 this is coming from setCurrent → entry → b62ff49d-e828-47ec-b3ba-01417169770b (immediate)
-20:43:25.418 userCodeAppPanel:5 this is coming from setCurrent → STATE.current b62ff49d-e828-47ec-b3ba-01417169770b
-20:43:25.418 userCodeAppPanel:5 this is coming from renderCurrent → entry
-20:43:25.418 userCodeAppPanel:5 this is coming from renderCurrent → draw (unnamed)
-20:43:25.418 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
-20:43:25.418 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
-20:43:25.418 userCodeAppPanel:5 this is coming from updateStickyCta → entry
-20:43:25.418 userCodeAppPanel:5 this is coming from setCurrent → flush share links
-20:43:25.418 userCodeAppPanel:5 this is coming from debounceWithFlush → manual flush
-20:43:25.418 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
-20:43:25.418 userCodeAppPanel:5 this is coming from setBusy → on → Preparing links…
-20:43:25.418 userCodeAppPanel:5 this is coming from gs → getShareLinks(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:43:25.418 userCodeAppPanel:5 this is coming from onCreateClick → flush share links
-20:43:25.418 userCodeAppPanel:5 this is coming from gs → refreshPublicCache(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:43:25.418 userCodeAppPanel:5 this is coming from syncWeeksVisibility → entry
-20:43:25.419 userCodeAppPanel:5 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
-20:43:25.420 userCodeAppPanel:5 this is coming from setBusy → off
-20:43:25.420 userCodeAppPanel:5 this is coming from onCreateClick → finally exit
-20:43:32.359 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:43:32.359 userCodeAppPanel:5 this is coming from gs → getSignupCount(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:43:35.122 userCodeAppPanel:5 this is coming from gs → getShareLinks fail: Exception: Invalid argument: https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg%2Fexec%3Fview%3Dpublic%26eventId%3Db62ff49d-e828-47ec-b3ba-01417169770b%26slug%3Dloop-testing-8-41-pm-2025-09-10
-20:43:35.122 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → catch Exception: Invalid argument: https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg%2Fexec%3Fview%3Dpublic%26eventId%3Db62ff49d-e828-47ec-b3ba-01417169770b%26slug%3Dloop-testing-8-41-pm-2025-09-10
-20:43:35.122 userCodeAppPanel:5 this is coming from toast → danger → Link prep failed
-20:43:35.122 userCodeAppPanel:5 this is coming from setBusy → off
-20:43:35.122 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → finally
-20:43:37.535 userCodeAppPanel:5 this is coming from toast → hide
-20:43:39.332 userCodeAppPanel:5 this is coming from gs → refreshPublicCache success
-20:43:43.163 userCodeAppPanel:5 this is coming from gs → getShareLinks fail: Exception: Invalid argument: https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg%2Fexec%3Fview%3Dpublic%26eventId%3Db62ff49d-e828-47ec-b3ba-01417169770b%26slug%3Dloop-testing-8-41-pm-2025-09-10
-20:43:43.163 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → catch Exception: Invalid argument: https://chart.googleapis.com/chart?cht=qr&chs=512x512&chld=M|0&chl=https%3A%2F%2Fscript.google.com%2Fmacros%2Fs%2FAKfycbx7rLrF7PATDXIcv9SkaS1itgQpKs81GXObf5AlEJCNALMiHgCkWhRapKBK3CMqhTidXg%2Fexec%3Fview%3Dpublic%26eventId%3Db62ff49d-e828-47ec-b3ba-01417169770b%26slug%3Dloop-testing-8-41-pm-2025-09-10
-20:43:43.164 userCodeAppPanel:5 this is coming from toast → danger → Link prep failed
-20:43:43.164 userCodeAppPanel:5 this is coming from setBusy → off
-20:43:43.164 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → finally
-20:43:45.572 userCodeAppPanel:5 this is coming from toast → hide
-20:43:47.365 userCodeAppPanel:5 this is coming from signupCountInterval → tick
-20:43:47.365 userCodeAppPanel:5 this is coming from gs → getSignupCount(["b62ff49d-e828-47ec-b3ba-01417169770b"] …)
-20:43:49.521 userCodeAppPanel:5 this is coming from gs → getSignupCount success
+20:02:08.650 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:02:23.652 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:02:36.468 userCodeAppPanel:3 this is coming from onCreateClick → entry
+20:02:36.468 userCodeAppPanel:3 this is coming from onCreateClick → payload {"name":"event looping 2","startDate":"2025-09-11","flow":"SEASON_TOURNEY","weeks":6,"elimType":"SINGLE","seedMode":"SEEDED"}
+20:02:36.469 userCodeAppPanel:3 this is coming from setBusy → on → Creating event…
+20:02:36.469 userCodeAppPanel:3 this is coming from toast → ok → Creating event…
+20:02:36.470 userCodeAppPanel:3 this is coming from createEventSmart → entry
+20:02:36.470 userCodeAppPanel:3 this is coming from gs → createEventVerified([{"name":"event looping 2","startDate":"2025-09-11","flow":"SEASON_TOURNEY","weeks":6,"elimType":"SINGLE","seedMode":"SEEDED"}] …)
+20:02:36.477 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
+20:02:38.655 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:02:38.873 userCodeAppPanel:3 this is coming from toast → hide
+20:02:48.591 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink 0
+20:02:48.621 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink 0
+20:02:48.672 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink 0
+20:02:48.693 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:48.739 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:48.823 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:48.858 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:48.921 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:49.038 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:49.122 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:49.161 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:49.831 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:02:53.652 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:03:08.644 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:03:11.952 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
+20:03:11.953 userCodeAppPanel:3 this is coming from gs → createEventVerified success
+20:03:11.953 userCodeAppPanel:3 this is coming from onCreateClick → created {"eventId":"d1e8d56f-df5b-4075-8647-2893603a5972","weeks":6,"endDate":"","elimType":"SINGLE","type":"event","sid":"d1e8d56f","seedMode":"SEEDED","displayUrl":"https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=display&eventId=d1e8d56f-df5b-4075-8647-2893603a5972&tv=1&slug=event-looping-2-2025-09-11","createdAt":"2025-09-12T01:03:08.497Z","isDefault":false,"formUrl":"","name":"event looping 2","publicUrl":"https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=public&eventId=d1e8d56f-df5b-4075-8647-2893603a5972&slug=event-looping-2-2025-09-11","signupSheet":"Signupsd1e8d56f","scheduleSheet":"Scheduled1e8d56f","bracketSheet":"Bracketd1e8d56f","adminUrl":"https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=admin&eventId=d1e8d56f-df5b-4075-8647-2893603a5972","startDate":"2025-09-11","slug":"event-looping-2-2025-09-11","flow":"SEASON_TOURNEY","updatedAt":"2025-09-12T01:03:08.497Z","status":"active"}
+20:03:11.953 userCodeAppPanel:3 this is coming from optimisticAddEvent → entry → {"eventId":"d1e8d56f-df5b-4075-8647-2893603a5972","weeks":6,"endDate":"","elimType":"SINGLE","type":"event","sid":"d1e8d56f","seedMode":"SEEDED","displayUrl":"https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=display&eventId=d1e8d56f-df5b-4075-8647-2893603a5972&tv=1&slug=event-looping-2-2025-09-11","createdAt":"2025-09-12T01:03:08.497Z","isDefault":false,"formUrl":"","name":"event looping 2","publicUrl":"https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=public&eventId=d1e8d56f-df5b-4075-8647-2893603a5972&slug=event-looping-2-2025-09-11","signupSheet":"Signupsd1e8d56f","scheduleSheet":"Scheduled1e8d56f","bracketSheet":"Bracketd1e8d56f","adminUrl":"https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=admin&eventId=d1e8d56f-df5b-4075-8647-2893603a5972","startDate":"2025-09-11","slug":"event-looping-2-2025-09-11","flow":"SEASON_TOURNEY","updatedAt":"2025-09-12T01:03:08.497Z","status":"active"}
+20:03:11.953 userCodeAppPanel:3 this is coming from optimisticAddEvent → pushed → d1e8d56f-df5b-4075-8647-2893603a5972
+20:03:11.954 userCodeAppPanel:3 this is coming from setCurrent → entry → d1e8d56f-df5b-4075-8647-2893603a5972 (immediate)
+20:03:11.954 userCodeAppPanel:3 this is coming from setCurrent → STATE.current event looping 2
+20:03:11.954 userCodeAppPanel:3 this is coming from renderCurrent → entry
+20:03:11.954 userCodeAppPanel:3 this is coming from renderCurrent → draw event looping 2
+20:03:11.954 userCodeAppPanel:3 this is coming from setQR → #qrPublic → (empty)
+20:03:11.954 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
+20:03:11.955 userCodeAppPanel:3 this is coming from updateStickyCta → entry
+20:03:11.955 userCodeAppPanel:3 this is coming from setCurrent → flush share links
+20:03:11.955 userCodeAppPanel:3 this is coming from debounceWithFlush → manual flush
+20:03:11.955 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → entry
+20:03:11.955 userCodeAppPanel:3 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=public&eventId=d1e8d56f-df5b-4075-8647-2893603a5972&slug=event-looping-2-2025-09-11
+20:03:11.955 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
+20:03:11.955 userCodeAppPanel:3 this is coming from setBusy → on → Preparing links…
+20:03:11.956 userCodeAppPanel:3 this is coming from gs → getShareLinks(["d1e8d56f-df5b-4075-8647-2893603a5972"] …)
+20:03:11.956 userCodeAppPanel:3 this is coming from toast → ok → Event created. View Manage Events dropdown!
+20:03:11.956 userCodeAppPanel:3 this is coming from loadEvents → entry → preselect d1e8d56f-df5b-4075-8647-2893603a5972
+20:03:11.956 userCodeAppPanel:3 this is coming from setBusy → on → Loading events…
+20:03:11.957 userCodeAppPanel:3 this is coming from gs → getEventsSafe([])
+20:03:11.957 userCodeAppPanel:3 this is coming from gs → getEvents([])
+20:03:11.966 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -17
+20:03:11.969 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
+20:03:14.365 userCodeAppPanel:3 this is coming from toast → hide
+20:03:23.649 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:03:23.650 userCodeAppPanel:3 this is coming from gs → getSignupCount(["d1e8d56f-df5b-4075-8647-2893603a5972"] …)
+20:03:34.657 userCodeAppPanel:3 this is coming from gs → getEvents success
+20:03:34.657 userCodeAppPanel:3 this is coming from loadEvents → rows 0
+20:03:34.657 userCodeAppPanel:3 this is coming from setCurrent → entry → null
+20:03:34.658 userCodeAppPanel:3 this is coming from setCurrent → STATE.current (null)
+20:03:34.658 userCodeAppPanel:3 this is coming from renderCurrent → entry
+20:03:34.658 userCodeAppPanel:3 this is coming from renderCurrent → no event selected
+20:03:34.658 userCodeAppPanel:3 this is coming from setQR → #qrPublic → (empty)
+20:03:34.658 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
+20:03:34.658 userCodeAppPanel:3 this is coming from updateStickyCta → entry
+20:03:34.658 userCodeAppPanel:3 this is coming from updateStickyCta → hidden (no current)
+20:03:34.658 userCodeAppPanel:3 this is coming from loadEvents → no events
+20:03:34.658 userCodeAppPanel:3 this is coming from setBusy → off
+20:03:34.658 userCodeAppPanel:3 this is coming from loadEvents → finally exit
+20:03:34.658 userCodeAppPanel:3 this is coming from onCreateClick → flush share links
+20:03:34.658 userCodeAppPanel:3 this is coming from debounceWithFlush → manual flush
+20:03:34.658 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → entry
+20:03:34.658 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → no current
+20:03:34.658 userCodeAppPanel:3 this is coming from gs → refreshPublicCache(["d1e8d56f-df5b-4075-8647-2893603a5972"] …)
+20:03:34.659 userCodeAppPanel:3 this is coming from syncWeeksVisibility → entry
+20:03:34.659 userCodeAppPanel:3 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
+20:03:34.660 userCodeAppPanel:3 this is coming from setBusy → off
+20:03:34.660 userCodeAppPanel:3 this is coming from onCreateClick → finally exit
+20:03:34.660 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -32
+20:03:36.209 userCodeAppPanel:3 this is coming from gs → getShareLinks success
+20:03:36.209 userCodeAppPanel:3 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbxJDsTstlSvfDpHl9X4z60pxuE4R3TJCgcEpAA6LpdH4HaSP20HnAPKvO5UTmZMzNageQ/exec?view=public&eventId=d1e8d56f-df5b-4075-8647-2893603a5972&slug=event-looping-2-2025-09-11
+20:03:36.210 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
+20:03:36.210 userCodeAppPanel:3 this is coming from setBusy → off
+20:03:36.210 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → finally
+20:03:36.211 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink -17
+20:03:38.640 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:03:44.099 userCodeAppPanel:3 this is coming from gs → getSignupCount success
+20:03:53.652 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+20:03:58.533 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
+20:03:58.534 userCodeAppPanel:3 this is coming from gs → refreshPublicCache success
