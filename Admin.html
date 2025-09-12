@@ -405,108 +405,74 @@
         let _loadVer = 0;
 
         /* ---------- Load & Render ---------- */
-        // --- helpers (add once, near top with other utils) ---
-        function normEvent(raw) {
-            if (!raw || typeof raw !== 'object') return null;
-            const id = raw.eventId || raw.id || raw.sid || '';
-            const name = (raw.name && raw.name.trim()) ? raw.name.trim() : '';
-            const dateISO = raw.startDate || raw.dateISO || raw.date || '';
-            const isDefault = !!raw.isDefault;
-            const publicUrl = raw.publicUrl || raw.public || '';
-            const displayUrl = raw.displayUrl || raw.display || '';
-            const formUrl = raw.formUrl || '';
-            return {
-                eventId: id, name, startDate: dateISO, isDefault,
-                publicUrl, displayUrl, formUrl, slug: raw.slug || raw.sid || '',
-                flow: raw.flow || '', weeks: raw.weeks || 0, elimType: raw.elimType || '', seedMode: raw.seedMode || '',
-                counts: raw.counts || { signups: 0 }, _raw: raw
-            };
-        }
-
-        // one at a time + stale guard
-        let __loadEventsInflight = 0;
-
-        // --- REPLACE your entire loadEvents with this ---
         async function loadEvents(preselectId) {
-            logFrom("loadEvents", "entry" + (preselectId ? " → preselect " + preselectId : ""));
-            if (STATE.loading) return;
+            logFn("loadEvents", "entry" + (preselectId ? " → preselect " + preselectId : ""));
+
+            // 1) Don’t bump version if we’re already loading; just bail.
+            if (STATE.loading) { logFn("loadEvents", "already loading → bail"); return; }
+
             STATE.loading = true;
-            const myKey = ++__loadEventsInflight;
+            const myVer = ++_loadVer;
 
-            setBusy(true, "Loading events…");
-            const sel = $("#chooseEvent");
-            const tip = $("#emptyTip");
-
-            // try getEventsSafe() first, fallback to getEvents()
-            async function fetchEvents() {
-                try { return await gs("getEventsSafe"); }
-                catch { return await gs("getEvents"); }
-            }
+            setBusy(true, 'Loading events…');
+            const sel = $('#chooseEvent');
+            const tip = $('#emptyTip');
 
             try {
-                const res = await fetchEvents();
-                if (myKey !== __loadEventsInflight) return; // stale response
+                const rows = await gs('getEvents');
+                logFn("loadEvents", "rows " + (rows ? rows.length : 0));
 
-                // Accept both shapes: array or {ok,items}
-                const rawList = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
-                logFrom("loadEvents", "rows " + rawList.length);
+                // Guard UI updates from stale responses.
+                if (myVer !== _loadVer) { logFn("loadEvents", "stale response, ignore"); return; }
 
-                const items = rawList.map(normEvent).filter(Boolean);
-                STATE.events = items;
+                STATE.events = rows || [];
+                sel.innerHTML = '';
+                logFn("loadEvents", "STATE.events set");
 
-                if (sel) sel.innerHTML = "";
-
-                if (!items.length) {
-                    if (sel) {
-                        const o = document.createElement("option");
-                        o.disabled = true; o.textContent = "— No events —";
-                        sel.appendChild(o);
-                        sel.disabled = true;
-                    }
-                    if (tip) tip.style.display = "block";
+                if (!STATE.events.length) {
+                    logFn("loadEvents", "no events");
+                    const o = document.createElement('option');
+                    o.disabled = true; o.textContent = '— No events —';
+                    sel.appendChild(o); sel.disabled = true; tip.style.display = 'block';
                     setCurrent(null);
-                    logFrom("loadEvents", "no events");
                     return;
                 }
 
-                if (tip) tip.style.display = "none";
-                if (sel) sel.disabled = false;
+                tip.style.display = 'none'; sel.disabled = false;
 
-                // build options
-                for (const e of items) {
-                    const o = document.createElement("option");
+                STATE.events.forEach(e => {
+                    const o = document.createElement('option');
                     o.value = e.eventId;
-                    const label = e.name || e.slug || "(untitled event)";
-                    const dateStr = e.startDate ? " (" + e.startDate + ")" : "";
-                    o.textContent = label + dateStr + (e.isDefault ? " ★" : "");
-                    o.title = label + (e.startDate ? " • " + e.startDate : "");
-                    sel && sel.appendChild(o);
-                }
+                    const dateStr = e.startDate || e.date || '';
+                    const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
+                    o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}${e.isDefault ? ' ★' : ''}`;
+                    o.title = `${label}${dateStr ? ' • ' + dateStr : ''}`;
+                    sel.appendChild(o);
+                    logFn("loadEvents", "render option → " + label);
+                });
 
-                // choose current
                 let chosen = null;
-                if (preselectId) chosen = items.find(e => e.eventId === preselectId);
-                if (!chosen) chosen = items.find(e => e.isDefault) || items[0];
+                if (preselectId) chosen = STATE.events.find(e => e.eventId === preselectId);
+                if (!chosen) chosen = STATE.events.find(e => e.isDefault) || STATE.events[0] || null;
 
                 if (chosen) {
-                    if (sel) sel.value = chosen.eventId;
-                    try { persistEventId(chosen.eventId, chosen.slug); } catch { }
-                    setCurrent(chosen.eventId, true);
+                    logFn("loadEvents", "chosen " + chosen.eventId);
+                    sel.value = chosen.eventId;
+                    setCurrent(chosen.eventId, /*immediate*/ true);
                 } else {
+                    logFn("loadEvents", "no chosen, setCurrent(null)");
                     setCurrent(null);
                 }
-
             } catch (err) {
-                console.error(err);
-                logFrom("loadEvents", "getEvents* failed: " + (err?.message || err));
-                toast(err?.message || "Failed to load events", false);
-                if (sel) sel.innerHTML = "<option disabled>(load failed)</option>";
+                logFn("loadEvents", "catch " + (err?.message || err));
+                console.error('getEvents failed:', err);
+                toast(err?.message || 'Failed to load events', false);
+                sel.innerHTML = '<option disabled>(load failed)</option>';
                 setCurrent(null);
             } finally {
-                if (myKey === __loadEventsInflight) { /* ok */ }
                 STATE.loading = false;
                 setBusy(false);
-                logFrom("loadEvents", "finally exit");
+                logFn("loadEvents", "finally exit");
             }
         }
 
@@ -542,10 +508,10 @@
             logFn("renderCurrent", "draw " + label);
 
             meta.innerHTML = `
-              <div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
-              <div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
-              <div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
-              `;
+<div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
+<div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
+<div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
+`;
 
             $('#seedTools').style.display = (e.seedMode === 'SEEDED') ? 'flex' : 'none';
             setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
@@ -555,50 +521,60 @@
 
         /* ---------- Share / Links ---------- */
         const _refreshShareLinksRaw = () => {
-            logFrom("_refreshShareLinksRaw", "entry");
-            if (!STATE.current || !STATE.current.eventId) {
-                logFrom("_refreshShareLinksRaw", "no current");
-                STATE.links = null;
-                return;
-            }
+            logFn("_refreshShareLinksRaw", "entry");
+            if (!STATE.current || !STATE.current.eventId) { logFn("_refreshShareLinksRaw", "no current"); STATE.links = null; return; }
+            if (!STATE.loading) setBusy(true, 'Preparing links…');
+            gs('getShareLinks', STATE.current.eventId)
+                .then(links => {
+                    logFn("_refreshShareLinksRaw", "links ok");
+                    STATE.links = links || {};
+                    const publicUrlEl = $('#publicUrl');
+                    const formUrlEl = $('#formUrl');
+                    setQR($('#qrPublic'), links.publicUrl || '');
+                    setQR($('#qrForm'), links.formUrl || '');
+                    publicUrlEl.textContent = links.publicUrl || '';
+                    formUrlEl.textContent = links.formUrl || '';
 
-            // Local fallback first (so user sees something even if server fetch fails)
-            const local = {
-                publicUrl: STATE.current.publicUrl || "",
-                displayUrl: STATE.current.displayUrl || "",
-                formUrl: STATE.current.formUrl || "",
-                posterUrl: STATE.current.posterUrl || ""
-            };
+                    const tv = $('#aOpenTV');
+                    if (tv) { if (links.displayUrl) { tv.href = links.displayUrl; } else { tv.removeAttribute('href'); } }
 
-            const apply = (links) => {
-                const L = links || local;
-                STATE.links = L;
+                    $('#btnCopyPublic').onclick = async () => {
+                        logFn("btnCopyPublic", "click");
+                        toast((await copyText(links.publicUrl || '')) ? 'Public link copied' : 'Copy failed', !!links.publicUrl);
+                    };
+                    $('#btnCopyDisplay').onclick = async () => {
+                        logFn("btnCopyDisplay", "click");
+                        toast((await copyText(links.displayUrl || '')) ? 'Display link copied' : 'Copy failed', !!links.displayUrl);
+                    };
+                    $('#btnCopyPoster').onclick = async () => {
+                        logFn("btnCopyPoster", "click");
+                        toast((await copyText(links.posterUrl || '')) ? 'Poster link copied' : 'Copy failed', !!links.posterUrl);
+                    };
+                    $('#btnCopyForm').onclick = async () => {
+                        logFn("btnCopyForm", "click");
+                        toast((await copyText(links.formUrl || '')) ? 'Form link copied' : 'Copy failed', !!links.formUrl);
+                    };
 
-                setQR($("#qrPublic"), L.publicUrl || "");
-                setQR($("#qrForm"), L.formUrl || "");
-
-                const publicUrlEl = $("#publicUrl");
-                const formUrlEl = $("#formUrl");
-                if (publicUrlEl) publicUrlEl.textContent = L.publicUrl || "";
-                if (formUrlEl) formUrlEl.textContent = L.formUrl || "";
-
-                const tv = $("#aOpenTV");
-                if (tv) { if (L.displayUrl) tv.href = L.displayUrl; else tv.removeAttribute("href"); }
-            };
-
-            // show local immediately (no spinner delay)
-            apply(local);
-
-            // Try server for fresher/shortened links; if it fails, keep local without toasting red
-            if (!STATE.loading) setBusy(true, "Preparing links…");
-            gs("getShareLinks", STATE.current.eventId)
-                .then(links => { apply(links || local); })
-                .catch(err => {
-                    logFrom("_refreshShareLinksRaw", "catch " + (err?.message || err));
-                    // no toast("danger") here; we already applied local links
+                    const shareBtn = $('#btnShare');
+                    if (shareBtn) {
+                        shareBtn.onclick = async () => {
+                            logFn("btnShare", "click");
+                            const url = links.publicUrl || '';
+                            const title = (STATE.current?.name || 'Event') + ' · NextUp';
+                            const text = 'Join or follow this event:';
+                            if (navigator.share) {
+                                try { await navigator.share({ title, text, url }); }
+                                catch { /* canceled */ }
+                            } else {
+                                toast((await copyText(url)) ? 'Public link copied' : 'Share not supported', !!url);
+                            }
+                        };
+                    }
                 })
-                .finally(() => { if (!STATE.loading) setBusy(false); logFrom("_refreshShareLinksRaw", "finally"); });
+                .catch(err => { logFn("_refreshShareLinksRaw", "catch " + (err?.message || err)); console.error(err); toast('Link prep failed', false); })
+                .finally(() => { if (!STATE.loading) setBusy(false); logFn("_refreshShareLinksRaw", "finally"); });
         };
+        const refreshShareLinks = debounceWithFlush(_refreshShareLinksRaw, 220);
 
         /* ---------- Selection helpers ---------- */
         function selectEvent(id) {
@@ -650,7 +626,7 @@
                 sel.disabled = false;
                 const o = document.createElement('option');
                 const rawName = (item.name && item.name.trim()) ? item.name.trim() : '';
-                const label = rawName || item.slug || item.sid || "(untitled event)"
+                const label = rawName && rawName !== '(unnamed)' ? rawName : (item.slug || item.sid || 'unnamed');
                 const dateStr = item.startDate || '';
                 o.value = item.eventId;
                 o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}`;
