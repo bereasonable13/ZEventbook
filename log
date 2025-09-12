@@ -1,220 +1,62 @@
-20:35:42.021 m=_b,_tp:393 XHR finished loading: POST "https://accounts.google.com/ListAccounts?listPages=0&pid=243&gpsia=1&source=ogb&atic=1&mo=1&mn=1&hl=en&ts=157".
-(anonymous) @ m=_b,_tp:393
-_.Tk @ m=_b,_tp:206
-_.ru @ m=_b,_tp:392
-soa @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:744
-(anonymous) @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:745
-Hj @ m=_b,_tp:152
-next @ m=_b,_tp:153
-(anonymous) @ m=_b,_tp:153
-Uba @ m=_b,_tp:153
-_.Jj @ m=_b,_tp:154
-_.SW.qp @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:745
-(anonymous) @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:895
-Hj @ m=_b,_tp:152
-next @ m=_b,_tp:153
-(anonymous) @ m=_b,_tp:153
-Uba @ m=_b,_tp:153
-_.Jj @ m=_b,_tp:154
-Poa @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:895
-_.k.AB @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:898
-(anonymous) @ m=_b,_tp:380
-(anonymous) @ m=_b,_tp:256
-_.cf @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-_.Ze @ m=_b,_tp:255
-_.Ze.map @ m=_b,_tp:256
-Vt @ m=_b,_tp:380
-(anonymous) @ m=_b,_tp:378
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-u @ m=_b,_tp:374
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-nl @ m=_b,_tp:224
-ml @ m=_b,_tp:221
-_.bf.Qb @ m=_b,_tp:221
-Tn.Cb @ m=_b,_tp:262
-nl @ m=_b,_tp:224
-ml @ m=_b,_tp:221
-_.bf.Qb @ m=_b,_tp:221
-(anonymous) @ m=_b,_tp:225
-Promise.then
-_.sl @ m=_b,_tp:225
-_.Ur @ m=_b,_tp:322
-_.R.ke @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:872
-tX @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:896
-(anonymous) @ m=_b,_tp:324
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-nl @ m=_b,_tp:224
-ml @ m=_b,_tp:221
-_.bf.Qb @ m=_b,_tp:221
-Tn.Cb @ m=_b,_tp:262
-nl @ m=_b,_tp:224
-ml @ m=_b,_tp:221
-_.bf.Qb @ m=_b,_tp:221
-(anonymous) @ m=_b,_tp:225
-Promise.then
-_.sl @ m=_b,_tp:225
-_.Ur @ m=_b,_tp:322
-_.bD.ke @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:569
-_.bX @ m=ws9Tlc,n73qwf,aW3pY,GkRiKb,e5qFLc,IZT63,UUJqVe,O1Gjze,byfTOb,lsjVmc,xUdipf,ZDZcre,OTA3Ae,ZwDk9d,RyvaUb,mI3LFb,TwklV,hJpE8,XDvpOd,d0sHPd,O6y8ed,PrPYRd,MpJwZc,LEikZe,NwH0H,V3dDOb,lazG7b,XVMNvd,KUM7Z,qTnoBf,lwddkf,gychg,w9hDv,RMhBfe,SdcwHb,pw70Gc,EFQ78c,Ulmmrd,A7fCU,mdR7q,wmnU7d,xQtZb,JNoxi,MI6k7c,kjKdXe,BVgquf,QIhFr,hKSk3e,hc6Ubd,SpsfSb,Z5uLle,MdUzUe,zbML3c,zr1jrb,Uas9Hd,pjICDe:862
-(anonymous) @ m=_b,_tp:324
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:257
-c @ m=_b,_tp:255
-(anonymous) @ m=_b,_tp:256
-c @ m=_b,_tp:255
-e.v @ m=_b,_tp:210
-jl @ m=_b,_tp:213
-hl @ m=_b,_tp:213
-_.Tk.V @ m=_b,_tp:213
-eaa @ m=_b,_tp:39
-Promise.then
-Ok @ m=_b,_tp:206
-Pk @ m=_b,_tp:206
-il @ m=_b,_tp:213
-Sk @ m=_b,_tp:212
-(anonymous) @ m=_b,_tp:206
-nl @ m=_b,_tp:224
-ml @ m=_b,_tp:221
-_.bf.Qb @ m=_b,_tp:221
-kk.wd @ m=_b,_tp:194
-c @ m=_b,_tp:303
-xk @ m=_b,_tp:200
-yk @ m=_b,_tp:199
-zb @ m=_b,_tp:239
-_.x @ m=_b,_tp:39
-(anonymous) @ m=sOXFj,q0xTif,WNBcme:6
-(anonymous) @ m=sOXFj,q0xTif,WNBcme:93
-20:35:43.204 rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:71 XHR finished loading: POST "https://play.google.com/log?format=json&hasfast=true&authuser=0".
-_.jl.send @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:71
-_.nl @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:68
-send @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:74
-m @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:65
-flush @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:65
-(anonymous) @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:55
-qk @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:53
-(anonymous) @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:53
-setTimeout
-start @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:53
-log @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:62
-tb @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:61
-log @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:93
-VE @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:406
-bi @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:422
-yf @ one-google-bar?paramsencoded=:136
-_.n.dispatchEvent @ one-google-bar?paramsencoded=:134
-B @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:386
-a.onmessage @ rs=AA2YrTv7FsbgCKTX-W0ZX0KlDh9w0jgxxg:253
-20:35:55.602 Navigated to https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=admin
-720:37:24.487 XHR finished loading: POST "<URL>".
-20:35:58.050 userCodeAppPanel:3 this is coming from BOOT_ID → (none)
-20:35:58.051 userCodeAppPanel:3 this is coming from debounceWithFlush → wait 300
-20:35:58.051 userCodeAppPanel:3 this is coming from watchViewport → init
-20:35:58.095 userCodeAppPanel:3 this is coming from DOMContentLoaded → bind handlers
-20:35:58.096 userCodeAppPanel:3 this is coming from syncWeeksVisibility → entry
-20:35:58.096 userCodeAppPanel:3 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
-20:35:58.096 userCodeAppPanel:3 this is coming from loadEvents → entry
-20:35:58.096 userCodeAppPanel:3 this is coming from setBusy → on → Loading events…
-20:35:58.097 userCodeAppPanel:3 this is coming from gs → getEventsSafe([])
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnCreate → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnFlowHelp → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #evFlow → change
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #chooseEvent → change
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnRefreshEvents → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnSetDefault → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnOpenPublic → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnOpenSheets → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnCreateForm → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnAddSeedCol → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnGenSchedule → click
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #elimTypeEdit → change
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #seedModeEdit → change
-20:35:58.097 userCodeAppPanel:3 this is coming from bind → ok #btnGenBrackets → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnRefreshView → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnRunSuite → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnSelfHeal → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnHardReset → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnShowStatus → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnShowLogs → click
-20:35:58.098 userCodeAppPanel:3 this is coming from bind → ok #btnCopyReport → click
-20:35:58.098 userCodeAppPanel:3 this is coming from gs → getEvents([])
-20:35:58.116 userCodeAppPanel:3 this is coming from watchViewport → resize → shrink 0
-20:35:58.122 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:36:10.789 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:36:10.790 userCodeAppPanel:3 this is coming from gs → getEvents success
-20:36:10.791 userCodeAppPanel:3 this is coming from loadEvents → rows 0
-20:36:10.791 userCodeAppPanel:3 this is coming from setCurrent → entry → null
-20:36:10.791 userCodeAppPanel:3 this is coming from setCurrent → STATE.current (null)
-20:36:10.791 userCodeAppPanel:3 this is coming from renderCurrent → entry
-20:36:10.791 userCodeAppPanel:3 this is coming from renderCurrent → no event selected
-20:36:10.791 userCodeAppPanel:3 this is coming from setQR → #qrPublic → (empty)
-20:36:10.791 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
-20:36:10.791 userCodeAppPanel:3 this is coming from updateStickyCta → entry
-20:36:10.791 userCodeAppPanel:3 this is coming from updateStickyCta → hidden (no current)
-20:36:10.791 userCodeAppPanel:3 this is coming from loadEvents → no events
-20:36:10.791 userCodeAppPanel:3 this is coming from setBusy → off
-20:36:10.791 userCodeAppPanel:3 this is coming from loadEvents → finally exit
-20:36:10.792 userCodeAppPanel:3 this is coming from DOMContentLoaded → loadEvents ready
-20:36:11.107 userCodeAppPanel:3 this is coming from debounceWithFlush → flush
-20:36:11.107 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → entry
-20:36:11.107 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → no current
-20:36:13.111 userCodeAppPanel:3 this is coming from signupCountInterval → tick
-20:36:26.818 3710275545-mae_html_user_bin_i18n_mae_html_user.js:324 dropping postMessage.. deserialize threw error.
-20:36:26.895 3710275545-mae_html_user_bin_i18n_mae_html_user.js:303 XHR finished loading: POST "https://n-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com/jserror?script=https%3A%2F%2Fn-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com%2FuserCodeAppPanel&error=%22%5Bobject%20Object%5D%22%20is%20not%20valid%20JSON&line=Not%20available&errorSender_enqueueTimeMs=1757640986822&errorSenderType=MemoryErrorSender".
+22:36:43.170 Navigated to https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=admin
+1022:38:47.340 XHR finished loading: POST "<URL>".
+22:36:46.150 userCodeAppPanel:5 this is coming from BOOT_ID → (none)
+22:36:46.150 userCodeAppPanel:5 this is coming from debounceWithFlush → wait 300
+22:36:46.150 userCodeAppPanel:5 this is coming from watchViewport → init
+22:36:46.202 userCodeAppPanel:5 this is coming from DOMContentLoaded → bind handlers
+22:36:46.203 userCodeAppPanel:5 this is coming from syncWeeksVisibility → entry
+22:36:46.203 userCodeAppPanel:5 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
+22:36:46.203 userCodeAppPanel:107 this is coming from loadEvents → entry
+22:36:46.203 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
+22:36:46.203 userCodeAppPanel:121 this is coming from gs → getEventsSafe([])
+22:36:46.204 userCodeAppPanel:5 this is coming from bind → ok #btnCreate → click
+22:36:46.204 userCodeAppPanel:5 this is coming from bind → ok #btnFlowHelp → click
+22:36:46.204 userCodeAppPanel:5 this is coming from bind → ok #evFlow → change
+22:36:46.204 userCodeAppPanel:5 this is coming from bind → ok #chooseEvent → change
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnRefreshEvents → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnSetDefault → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnOpenPublic → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnOpenSheets → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnCreateForm → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnAddSeedCol → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnGenSchedule → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #elimTypeEdit → change
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #seedModeEdit → change
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnGenBrackets → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnRefreshView → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnRunSuite → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnSelfHeal → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnHardReset → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnShowStatus → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnShowLogs → click
+22:36:46.205 userCodeAppPanel:5 this is coming from bind → ok #btnCopyReport → click
+22:36:46.223 userCodeAppPanel:5 this is coming from watchViewport → resize → shrink 0
+22:36:46.228 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
+22:37:01.210 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:37:04.860 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
+22:37:04.862 userCodeAppPanel:144 this is coming from gs → getEvents success
+22:37:04.862 userCodeAppPanel:161 this is coming from loadEvents → rows 0
+22:37:04.862 userCodeAppPanel:196 this is coming from setCurrent → entry → null
+22:37:04.862 userCodeAppPanel:231 this is coming from renderCurrent → no event selected
+22:37:04.862 userCodeAppPanel:5 this is coming from setCurrent → entry → null
+22:37:04.862 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
+22:37:04.862 userCodeAppPanel:5 this is coming from renderCurrent → entry
+22:37:04.862 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
+22:37:04.862 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
+22:37:04.862 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:37:04.862 userCodeAppPanel:5 this is coming from updateStickyCta → entry
+22:37:04.863 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
+22:37:04.863 userCodeAppPanel:5 this is coming from updateStickyCta → entry
+22:37:04.863 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
+22:37:04.863 userCodeAppPanel:5 this is coming from setBusy → off
+22:37:04.863 userCodeAppPanel:243 this is coming from loadEvents → finally exit
+22:37:04.863 userCodeAppPanel:5 this is coming from DOMContentLoaded → loadEvents ready
+22:37:05.165 userCodeAppPanel:5 this is coming from debounceWithFlush → flush
+22:37:05.165 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
+22:37:05.165 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → no current
+22:37:16.212 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:37:26.821 3710275545-mae_html_user_bin_i18n_mae_html_user.js:324 dropping postMessage.. deserialize threw error.
+22:37:26.931 3710275545-mae_html_user_bin_i18n_mae_html_user.js:303 XHR finished loading: POST "https://n-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com/jserror?script=https%3A%2F%2Fn-vvftmioclfs3selg7h6qh25tpbzlaunlkys3jiq-0lu-script.googleusercontent.com%2FuserCodeAppPanel&error=%22%5Bobject%20Object%5D%22%20is%20not%20valid%20JSON&line=Not%20available&errorSender_enqueueTimeMs=1757648246824&errorSenderType=MemoryErrorSender".
 Is @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:303
 Gs @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:248
 (anonymous) @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:246
@@ -236,72 +78,99 @@ rv @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:324
 Tq @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:199
 c @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:297
 a @ 3710275545-mae_html_user_bin_i18n_mae_html_user.js:197
-20:36:28.100 userCodeAppPanel:3 this is coming from signupCountInterval → tick
-20:36:43.105 userCodeAppPanel:3 this is coming from signupCountInterval → tick
-20:36:44.090 userCodeAppPanel:3 this is coming from onCreateClick → entry
-20:36:44.090 userCodeAppPanel:3 this is coming from onCreateClick → payload {"name":"event looping 3","startDate":"2025-09-11","flow":"SEASON_TOURNEY","weeks":6,"elimType":"SINGLE","seedMode":"SEEDED"}
-20:36:44.090 userCodeAppPanel:3 this is coming from setBusy → on → Creating event…
-20:36:44.091 userCodeAppPanel:3 this is coming from toast → ok → Creating event…
-20:36:44.091 userCodeAppPanel:3 this is coming from createEventSmart → entry
-20:36:44.091 userCodeAppPanel:3 this is coming from gs → createEventVerified([{"name":"event looping 3","startDate":"2025-09-11","flow":"SEASON_TOURNEY","weeks":6,"elimType":"SINGLE","seedMode":"SEEDED"}] …)
-20:36:44.094 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:36:46.494 userCodeAppPanel:3 this is coming from toast → hide
-20:36:58.110 userCodeAppPanel:3 this is coming from signupCountInterval → tick
-20:37:04.043 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
-20:37:04.044 userCodeAppPanel:3 this is coming from gs → createEventVerified success
-20:37:04.044 userCodeAppPanel:3 this is coming from onCreateClick → created {"eventId":"23ac1971-097d-42fb-9001-41b179cb9342","weeks":6,"endDate":"","elimType":"SINGLE","type":"event","seedMode":"SEEDED","sid":"23ac1971","displayUrl":"https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=display&eventId=23ac1971-097d-42fb-9001-41b179cb9342&tv=1&slug=event-looping-3-2025-09-11","createdAt":"2025-09-12T01:37:02.030Z","isDefault":false,"formUrl":"","signupSheet":"Signups23ac1971","publicUrl":"https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=public&eventId=23ac1971-097d-42fb-9001-41b179cb9342&slug=event-looping-3-2025-09-11","name":"event looping 3","scheduleSheet":"Schedule23ac1971","adminUrl":"https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=admin&eventId=23ac1971-097d-42fb-9001-41b179cb9342","bracketSheet":"Bracket23ac1971","slug":"event-looping-3-2025-09-11","flow":"SEASON_TOURNEY","startDate":"2025-09-11","status":"active","updatedAt":"2025-09-12T01:37:02.030Z"}
-20:37:04.044 userCodeAppPanel:3 this is coming from optimisticAddEvent → entry → {"eventId":"23ac1971-097d-42fb-9001-41b179cb9342","weeks":6,"endDate":"","elimType":"SINGLE","type":"event","seedMode":"SEEDED","sid":"23ac1971","displayUrl":"https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=display&eventId=23ac1971-097d-42fb-9001-41b179cb9342&tv=1&slug=event-looping-3-2025-09-11","createdAt":"2025-09-12T01:37:02.030Z","isDefault":false,"formUrl":"","signupSheet":"Signups23ac1971","publicUrl":"https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=public&eventId=23ac1971-097d-42fb-9001-41b179cb9342&slug=event-looping-3-2025-09-11","name":"event looping 3","scheduleSheet":"Schedule23ac1971","adminUrl":"https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=admin&eventId=23ac1971-097d-42fb-9001-41b179cb9342","bracketSheet":"Bracket23ac1971","slug":"event-looping-3-2025-09-11","flow":"SEASON_TOURNEY","startDate":"2025-09-11","status":"active","updatedAt":"2025-09-12T01:37:02.030Z"}
-20:37:04.044 userCodeAppPanel:3 this is coming from optimisticAddEvent → pushed → 23ac1971-097d-42fb-9001-41b179cb9342
-20:37:04.044 userCodeAppPanel:3 this is coming from setCurrent → entry → 23ac1971-097d-42fb-9001-41b179cb9342 (immediate)
-20:37:04.044 userCodeAppPanel:3 this is coming from setCurrent → STATE.current event looping 3
-20:37:04.044 userCodeAppPanel:3 this is coming from renderCurrent → entry
-20:37:04.044 userCodeAppPanel:3 this is coming from renderCurrent → draw event looping 3
-20:37:04.044 userCodeAppPanel:3 this is coming from setQR → #qrPublic → (empty)
-20:37:04.044 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
-20:37:04.044 userCodeAppPanel:3 this is coming from updateStickyCta → entry
-20:37:04.045 userCodeAppPanel:3 this is coming from setCurrent → flush share links
-20:37:04.045 userCodeAppPanel:3 this is coming from debounceWithFlush → manual flush
-20:37:04.045 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → entry
-20:37:04.045 userCodeAppPanel:3 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=public&eventId=23ac1971-097d-42fb-9001-41b179cb9342&slug=event-looping-3-2025-09-11
-20:37:04.045 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
-20:37:04.045 userCodeAppPanel:3 this is coming from setBusy → on → Preparing links…
-20:37:04.045 userCodeAppPanel:3 this is coming from gs → getShareLinks(["23ac1971-097d-42fb-9001-41b179cb9342"] …)
-20:37:04.045 userCodeAppPanel:3 this is coming from toast → ok → Event created. View Manage Events dropdown!
-20:37:04.046 userCodeAppPanel:3 this is coming from loadEvents → entry → preselect 23ac1971-097d-42fb-9001-41b179cb9342
-20:37:04.046 userCodeAppPanel:3 this is coming from setBusy → on → Loading events…
-20:37:04.046 userCodeAppPanel:3 this is coming from gs → getEventsSafe([])
-20:37:04.046 userCodeAppPanel:3 this is coming from gs → getEvents([])
-20:37:04.056 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
-20:37:06.452 userCodeAppPanel:3 this is coming from toast → hide
-20:37:13.103 userCodeAppPanel:3 this is coming from signupCountInterval → tick
-20:37:13.103 userCodeAppPanel:3 this is coming from gs → getSignupCount(["23ac1971-097d-42fb-9001-41b179cb9342"] …)
-20:37:22.886 userCodeAppPanel:3 this is coming from gs → getEvents success
-20:37:22.886 userCodeAppPanel:3 this is coming from loadEvents → rows 0
-20:37:22.886 userCodeAppPanel:3 this is coming from setCurrent → entry → null
-20:37:22.886 userCodeAppPanel:3 this is coming from setCurrent → STATE.current (null)
-20:37:22.886 userCodeAppPanel:3 this is coming from renderCurrent → entry
-20:37:22.887 userCodeAppPanel:3 this is coming from renderCurrent → no event selected
-20:37:22.887 userCodeAppPanel:3 this is coming from setQR → #qrPublic → (empty)
-20:37:22.887 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
-20:37:22.887 userCodeAppPanel:3 this is coming from updateStickyCta → entry
-20:37:22.887 userCodeAppPanel:3 this is coming from updateStickyCta → hidden (no current)
-20:37:22.887 userCodeAppPanel:3 this is coming from loadEvents → no events
-20:37:22.887 userCodeAppPanel:3 this is coming from setBusy → off
-20:37:22.887 userCodeAppPanel:3 this is coming from loadEvents → finally exit
-20:37:22.887 userCodeAppPanel:3 this is coming from onCreateClick → flush share links
-20:37:22.887 userCodeAppPanel:3 this is coming from debounceWithFlush → manual flush
-20:37:22.887 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → entry
-20:37:22.887 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → no current
-20:37:22.887 userCodeAppPanel:3 this is coming from gs → refreshPublicCache(["23ac1971-097d-42fb-9001-41b179cb9342"] …)
-20:37:22.888 userCodeAppPanel:3 this is coming from syncWeeksVisibility → entry
-20:37:22.888 userCodeAppPanel:3 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
-20:37:22.889 userCodeAppPanel:3 this is coming from setBusy → off
-20:37:22.889 userCodeAppPanel:3 this is coming from onCreateClick → finally exit
-20:37:24.484 userCodeAppPanel:3 this is coming from gs → getShareLinks success
-20:37:24.484 userCodeAppPanel:3 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbwMan60LjLjDbaB84tRzSYq27m6Ezf9Fw4zPSBfDVOmiP7AL-fOOwoo7yc7HqVvzhELjg/exec?view=public&eventId=23ac1971-097d-42fb-9001-41b179cb9342&slug=event-looping-3-2025-09-11
-20:37:24.485 userCodeAppPanel:3 this is coming from setQR → #qrForm → (empty)
-20:37:24.485 userCodeAppPanel:3 this is coming from setBusy → off
-20:37:24.485 userCodeAppPanel:3 this is coming from _refreshShareLinksRaw → finally
-20:37:28.109 userCodeAppPanel:3 this is coming from signupCountInterval → tick
-20:37:34.242 userCodeAppPanel:3 this is coming from gs → getSignupCount success
-20:37:43.107 userCodeAppPanel:3 this is coming from signupCountInterval → tick
+22:37:31.213 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:37:46.212 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:38:01.220 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:38:02.900 userCodeAppPanel:5 this is coming from onCreateClick → entry
+22:38:02.900 userCodeAppPanel:5 this is coming from onCreateClick → payload {"name":"event looping 4","startDate":"2025-09-11","flow":"SEASON_TOURNEY","weeks":6,"elimType":"SINGLE","seedMode":"SEEDED"}
+22:38:02.901 userCodeAppPanel:5 this is coming from setBusy → on → Creating event…
+22:38:02.901 userCodeAppPanel:5 this is coming from toast → ok → Creating event…
+22:38:02.901 userCodeAppPanel:5 this is coming from createEventSmart → entry
+22:38:02.901 userCodeAppPanel:5 this is coming from gs → createEventVerified([{"name":"event looping 4","startDate":"2025-09-11","flow":"SEASON_TOURNEY","weeks":6,"elimType":"SINGLE","seedMode":"SEEDED"}] …)
+22:38:02.905 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
+22:38:05.307 userCodeAppPanel:5 this is coming from toast → hide
+22:38:16.206 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:38:31.058 1192490786-warden_bin_i18n_warden.js:129 Net state changed from BUSY to IDLE
+22:38:31.059 userCodeAppPanel:5 this is coming from gs → createEventVerified success
+22:38:31.059 userCodeAppPanel:5 this is coming from onCreateClick → created {"eventId":"19b26f69-dd7f-45f6-a34e-e62923d3db9a","weeks":6,"endDate":"","elimType":"SINGLE","type":"event","seedMode":"SEEDED","sid":"19b26f69","displayUrl":"https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=display&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&tv=1&slug=event-looping-4-2025-09-11-2","createdAt":"2025-09-12T03:38:27.809Z","isDefault":false,"formUrl":"","signupSheet":"Signups19b26f69","name":"event looping 4","publicUrl":"https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=public&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&slug=event-looping-4-2025-09-11-2","scheduleSheet":"Schedule19b26f69","adminUrl":"https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=admin&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a","bracketSheet":"Bracket19b26f69","slug":"event-looping-4-2025-09-11-2","flow":"SEASON_TOURNEY","startDate":"2025-09-11","status":"active","updatedAt":"2025-09-12T03:38:27.809Z"}
+22:38:31.060 userCodeAppPanel:5 this is coming from optimisticAddEvent → entry → {"eventId":"19b26f69-dd7f-45f6-a34e-e62923d3db9a","weeks":6,"endDate":"","elimType":"SINGLE","type":"event","seedMode":"SEEDED","sid":"19b26f69","displayUrl":"https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=display&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&tv=1&slug=event-looping-4-2025-09-11-2","createdAt":"2025-09-12T03:38:27.809Z","isDefault":false,"formUrl":"","signupSheet":"Signups19b26f69","name":"event looping 4","publicUrl":"https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=public&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&slug=event-looping-4-2025-09-11-2","scheduleSheet":"Schedule19b26f69","adminUrl":"https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=admin&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a","bracketSheet":"Bracket19b26f69","slug":"event-looping-4-2025-09-11-2","flow":"SEASON_TOURNEY","startDate":"2025-09-11","status":"active","updatedAt":"2025-09-12T03:38:27.809Z"}
+22:38:31.060 userCodeAppPanel:5 this is coming from optimisticAddEvent → pushed → 19b26f69-dd7f-45f6-a34e-e62923d3db9a
+22:38:31.060 userCodeAppPanel:5 this is coming from setCurrent → entry → 19b26f69-dd7f-45f6-a34e-e62923d3db9a (immediate)
+22:38:31.060 userCodeAppPanel:5 this is coming from setCurrent → STATE.current event looping 4
+22:38:31.060 userCodeAppPanel:5 this is coming from renderCurrent → entry
+22:38:31.060 userCodeAppPanel:5 this is coming from renderCurrent → draw event looping 4
+22:38:31.060 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
+22:38:31.060 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:38:31.060 userCodeAppPanel:5 this is coming from updateStickyCta → entry
+22:38:31.060 userCodeAppPanel:5 this is coming from setCurrent → flush share links
+22:38:31.060 userCodeAppPanel:5 this is coming from debounceWithFlush → manual flush
+22:38:31.060 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
+22:38:31.061 userCodeAppPanel:5 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=public&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&slug=event-looping-4-2025-09-11-2
+22:38:31.061 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:38:31.061 userCodeAppPanel:5 this is coming from setBusy → on → Preparing links…
+22:38:31.061 userCodeAppPanel:5 this is coming from gs → getShareLinks(["19b26f69-dd7f-45f6-a34e-e62923d3db9a"] …)
+22:38:31.062 userCodeAppPanel:5 this is coming from toast → ok → Event created. View Manage Events dropdown!
+22:38:31.062 userCodeAppPanel:5 this is coming from reloadEventsEnsure → entry → 19b26f69-dd7f-45f6-a34e-e62923d3db9a
+22:38:31.062 userCodeAppPanel:5 this is coming from reloadEventsEnsure → try 1/6
+22:38:31.062 userCodeAppPanel:107 this is coming from loadEvents → entry → preselect 19b26f69-dd7f-45f6-a34e-e62923d3db9a
+22:38:31.062 userCodeAppPanel:5 this is coming from setBusy → on → Loading events…
+22:38:31.062 userCodeAppPanel:121 this is coming from gs → getEventsSafe([])
+22:38:31.074 1192490786-warden_bin_i18n_warden.js:129 Net state changed from IDLE to BUSY
+22:38:31.215 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:38:31.215 userCodeAppPanel:5 this is coming from gs → getSignupCount(["19b26f69-dd7f-45f6-a34e-e62923d3db9a"] …)
+22:38:33.463 userCodeAppPanel:5 this is coming from toast → hide
+22:38:46.211 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:38:46.211 userCodeAppPanel:5 this is coming from gs → getSignupCount(["19b26f69-dd7f-45f6-a34e-e62923d3db9a"] …)
+22:38:46.930 userCodeAppPanel:5 this is coming from gs → getShareLinks success
+22:38:46.930 userCodeAppPanel:5 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=public&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&slug=event-looping-4-2025-09-11-2
+22:38:46.930 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:38:46.930 userCodeAppPanel:5 this is coming from setBusy → off
+22:38:46.931 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → finally
+22:38:47.337 userCodeAppPanel:5 this is coming from gs → getSignupCount success
+22:38:52.173 userCodeAppPanel:144 this is coming from gs → getEvents success
+22:38:52.173 userCodeAppPanel:161 this is coming from loadEvents → rows 0
+22:38:52.173 userCodeAppPanel:196 this is coming from setCurrent → entry → 19b26f69-dd7f-45f6-a34e-e62923d3db9a
+22:38:52.173 userCodeAppPanel:231 this is coming from renderCurrent → no event selected
+22:38:52.173 userCodeAppPanel:5 this is coming from setCurrent → entry → null
+22:38:52.173 userCodeAppPanel:5 this is coming from setCurrent → STATE.current (null)
+22:38:52.173 userCodeAppPanel:5 this is coming from renderCurrent → entry
+22:38:52.173 userCodeAppPanel:5 this is coming from renderCurrent → no event selected
+22:38:52.173 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
+22:38:52.173 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:38:52.173 userCodeAppPanel:5 this is coming from updateStickyCta → entry
+22:38:52.173 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
+22:38:52.173 userCodeAppPanel:5 this is coming from updateStickyCta → entry
+22:38:52.173 userCodeAppPanel:5 this is coming from updateStickyCta → hidden (no current)
+22:38:52.173 userCodeAppPanel:5 this is coming from setBusy → off
+22:38:52.173 userCodeAppPanel:243 this is coming from loadEvents → finally exit
+22:38:52.174 userCodeAppPanel:5 this is coming from reloadEventsEnsure → found, select
+22:38:52.174 userCodeAppPanel:5 this is coming from selectEvent → entry → 19b26f69-dd7f-45f6-a34e-e62923d3db9a
+22:38:52.174 userCodeAppPanel:5 this is coming from setCurrent → entry → 19b26f69-dd7f-45f6-a34e-e62923d3db9a (immediate)
+22:38:52.174 userCodeAppPanel:5 this is coming from setCurrent → STATE.current event looping 4
+22:38:52.174 userCodeAppPanel:5 this is coming from renderCurrent → entry
+22:38:52.174 userCodeAppPanel:5 this is coming from renderCurrent → draw event looping 4
+22:38:52.174 userCodeAppPanel:5 this is coming from setQR → #qrPublic → (empty)
+22:38:52.174 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:38:52.174 userCodeAppPanel:5 this is coming from updateStickyCta → entry
+22:38:52.174 userCodeAppPanel:5 this is coming from setCurrent → flush share links
+22:38:52.174 userCodeAppPanel:5 this is coming from debounceWithFlush → manual flush
+22:38:52.174 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → entry
+22:38:52.174 userCodeAppPanel:5 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=public&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&slug=event-looping-4-2025-09-11-2
+22:38:52.174 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:38:52.174 userCodeAppPanel:5 this is coming from setBusy → on → Preparing links…
+22:38:52.174 userCodeAppPanel:5 this is coming from gs → getShareLinks(["19b26f69-dd7f-45f6-a34e-e62923d3db9a"] …)
+22:38:52.175 userCodeAppPanel:5 this is coming from onCreateClick → flush share links
+22:38:52.175 userCodeAppPanel:5 this is coming from gs → refreshPublicCache(["19b26f69-dd7f-45f6-a34e-e62923d3db9a"] …)
+22:38:52.176 userCodeAppPanel:5 this is coming from syncWeeksVisibility → entry
+22:38:52.176 userCodeAppPanel:5 this is coming from weeksRequiredFor → SEASON_TOURNEY → true
+22:38:52.177 userCodeAppPanel:5 this is coming from setBusy → off
+22:38:52.177 userCodeAppPanel:5 this is coming from onCreateClick → finally exit
+22:39:01.210 userCodeAppPanel:5 this is coming from signupCountInterval → tick
+22:39:01.210 userCodeAppPanel:5 this is coming from gs → getSignupCount(["19b26f69-dd7f-45f6-a34e-e62923d3db9a"] …)
+22:39:03.388 userCodeAppPanel:5 this is coming from gs → getSignupCount success
+22:39:08.912 userCodeAppPanel:5 this is coming from gs → getShareLinks success
+22:39:08.912 userCodeAppPanel:5 this is coming from setQR → #qrPublic → https://script.google.com/macros/s/AKfycbxff4v_98cEpMJ-eeKO3nVqSJDSTeM2-jUDNva2l1TQVW8Ld_4Ut6yeGfgelRtrC8Y2jw/exec?view=public&eventId=19b26f69-dd7f-45f6-a34e-e62923d3db9a&slug=event-looping-4-2025-09-11-2
+22:39:08.912 userCodeAppPanel:5 this is coming from setQR → #qrForm → (empty)
+22:39:08.913 userCodeAppPanel:5 this is coming from setBusy → off
+22:39:08.913 userCodeAppPanel:5 this is coming from _refreshShareLinksRaw → finally
+22:39:08.949 userCodeAppPanel:5 this is coming from gs → refreshPublicCache success
