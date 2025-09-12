@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>NextUp · Admin</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <style>
+    :root { --bg:#0b0c0f; --panel:#12141a; --muted:#8891a7; --ink:#e6eaf2; --accent:#8bd5ff; --accent2:#ffd27d; --ok:#77e49a; --bad:#ff8b8b; }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--ink); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+    .wrap { max-width:1100px; margin:0 auto; padding:16px; }
+    h1 { margin:0 0 12px; font-weight:700; font-size:22px; }
+    .bar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
+    .card { background:var(--panel); border:1px solid #202533; border-radius:10px; padding:14px; margin:12px 0; }
+    label { display:block; font-size:12px; color:var(--muted); margin-bottom:6px; }
+    input[type="text"], input[type="date"], select { width:100%; background:#0f1218; color:var(--ink); border:1px solid #252a36; border-radius:8px; padding:10px 12px; }
+    .row { display:grid; grid-template-columns:repeat(12, 1fr); gap:12px; }
+    .col-3 { grid-column:span 3; } .col-4 { grid-column:span 4; } .col-5 { grid-column:span 5; } .col-6 { grid-column:span 6; } .col-8 { grid-column:span 8; } .col-12 { grid-column:span 12; }
+    button { background:#1b2130; color:var(--ink); border:1px solid #2a3346; border-radius:8px; padding:10px 12px; cursor:pointer; }
+    button.primary { background:#27324a; border-color:#364568; }
+    small.muted { color:var(--muted); }
+    .hint { color:var(--muted); font-size:12px; margin-top:6px; }
+    .row + .row { margin-top:12px; }
+    .pill { display:inline-flex; align-items:center; gap:6px; padding:6px 8px; background:#0f1218; border:1px solid #252a36; border-radius:999px; font-size:12px; color:var(--muted); }
+    .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:18px; background:#11151d; border:1px solid #2b3344; color:var(--ink); padding:10px 14px; border-radius:8px; display:none; z-index:9999; }
+    .qr { background:#0f1218; border:1px dashed #283042; min-height:120px; border-radius:8px; display:flex; align-items:center; justify-content:center; }
+    .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .right { text-align:right; }
+    .busy { opacity:.6; pointer-events:none; }
+    .footer { color:var(--muted); font-size:12px; margin-top:18px; text-align:center; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>NextUp Admin</h1>
+
+  <div class="bar">
+    <span id="statusPill" class="pill">Status: <b id="statusText">Idle</b></span>
+    <button id="btnShowStatus">Status JSON</button>
+    <button id="btnShowLogs">Logs</button>
+    <button id="btnCopyReport">Copy Report</button>
+  </div>
+
+  <!-- Manage Events -->
+  <div class="card" id="cardManage">
+    <div class="row">
+      <div class="col-8">
+        <label for="chooseEvent">Manage Events</label>
+        <select id="chooseEvent"></select>
+        <div class="hint">Tip: default event shows a ★ in the list.</div>
+      </div>
+      <div class="col-4 right" style="align-self:end;">
+        <button id="btnRefreshEvents">Refresh</button>
+        <button id="btnSetDefault">Set Default</button>
+        <button id="btnOpenPublic">Open Public</button>
+        <button id="btnOpenSheets">Open Sheets</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Event -->
+  <div class="card" id="cardCreate">
+    <div class="row">
+      <div class="col-5">
+        <label for="evName">Event name</label>
+        <input type="text" id="evName" placeholder="Spring League, 3v3 Classic…" />
+      </div>
+      <div class="col-3">
+        <label for="evDate">Start date</label>
+        <input type="date" id="evDate" />
+      </div>
+      <div class="col-4">
+        <label for="evFlow">Flow</label>
+        <select id="evFlow">
+          <option value="SEASON_ONLY">Season only (schedule + standings)</option>
+          <option value="SEASON_TOURNEY" selected>Season + Tournament</option>
+          <option value="TOURNEY_ONLY">Tournament only</option>
+          <option value="REGISTRATION">Registration only</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row" id="rowWeeks">
+      <div class="col-3">
+        <label for="evWeeks">Weeks (for season flows)</label>
+        <input type="text" id="evWeeks" inputmode="numeric" placeholder="e.g. 6" />
+      </div>
+      <div class="col-3">
+        <label for="elimType">Elimination</label>
+        <select id="elimType">
+          <option value="SINGLE" selected>Single</option>
+          <option value="DOUBLE">Double</option>
+        </select>
+      </div>
+      <div class="col-3">
+        <label for="seedMode">Seeding</label>
+        <select id="seedMode">
+          <option value="RANDOM">Random</option>
+          <option value="SEEDED" selected>Seeded</option>
+        </select>
+      </div>
+      <div class="col-3" style="align-self:end;">
+        <button class="primary" id="btnCreate">Create</button>
+        <button id="btnFlowHelp">Flow?</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="card" id="cardActions">
+    <div class="row">
+      <div class="col-6">
+        <label>Signups & Form</label>
+        <div class="grid2">
+          <button id="btnCreateForm">Build Signup Form</button>
+          <button id="btnAddSeedCol">Ensure Seed Column</button>
+        </div>
+        <div class="hint">Linked “Form Responses …” is normalized & retained. Seeds column enforced.</div>
+      </div>
+      <div class="col-6">
+        <label>Schedule & Brackets</label>
+        <div class="grid2">
+          <button id="btnGenSchedule">Generate Schedule</button>
+          <div>
+            <select id="elimTypeEdit">
+              <option value="SINGLE" selected>Single</option>
+              <option value="DOUBLE">Double</option>
+            </select>
+            <select id="seedModeEdit">
+              <option value="RANDOM">Random</option>
+              <option value="SEEDED" selected>Seeded</option>
+            </select>
+            <button id="btnGenBrackets">Generate Brackets</button>
+          </div>
+        </div>
+        <div class="hint">Standings tiebreakers: Win% → Point Diff → Points For.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Share -->
+  <div class="card" id="cardShare">
+    <div class="row">
+      <div class="col-6">
+        <label>Share links</label>
+        <div class="grid2">
+          <div>
+            <div><small class="muted">Public</small></div>
+            <div id="qrPublic" class="qr">—</div>
+          </div>
+          <div>
+            <div><small class="muted">Form</small></div>
+            <div id="qrForm" class="qr">—</div>
+          </div>
+        </div>
+        <div class="hint">Poster/Display links available via “Open Public”.</div>
+      </div>
+      <div class="col-6">
+        <label>View</label>
+        <div class="grid2">
+          <button id="btnRefreshView">Refresh Section</button>
+          <button id="btnRunSuite">Run QA Suite</button>
+          <button id="btnSelfHeal">Self-heal</button>
+          <button id="btnHardReset">Hard reset Events</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <span class="mono">Build: nextup-v2.2-flow</span>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function() {
+  const LOG = (...a) => console.log('userCodeAppPanel:', ...a);
+  const q = (s) => document.querySelector(s);
+
+  const STATE = {
+    events: [],
+    current: null,
+    bootId: (function() { try { return localStorage.getItem('nextup:lastEvent') || ''; } catch(_) { return ''; } })(),
+    loading: false
+  };
+
+  const FLOW = {
+    SEASON_ONLY: 'SEASON_ONLY',
+    SEASON_TOURNEY: 'SEASON_TOURNEY',
+    TOURNEY_ONLY: 'TOURNEY_ONLY',
+    REGISTRATION: 'REGISTRATION',
+  };
+
+  function toast(msg) {
+    const el = q('#toast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; LOG('this is coming from toast → hide'); }, 2000);
+    LOG('this is coming from toast → ok →', msg);
+  }
+
+  function setBusy(on, msg) {
+    document.body.classList.toggle('busy', !!on);
+    q('#statusText').textContent = on ? (msg || 'Working…') : 'Idle';
+    LOG('this is coming from setBusy →', on ? 'on' : 'off', '→', msg || '');
+  }
+
+  // GAS helpers
+  function gs(name, args) {
+    LOG('this is coming from gs →', name, JSON.stringify(args || []));
+    return google.script.run
+      .withSuccessHandler((res) => { LOG('this is coming from gs →', name, 'success'); })
+      .withFailureHandler((e) => { console.error(e); toast('Error: ' + (e && e.message ? e.message : e)); })
+      [name].apply(google.script.run, args || []);
+  }
+
+  // Persist last event (id + slug) to localStorage
+  function persistEventId(id, slug) {
+    try { localStorage.setItem('nextup:lastEvent', JSON.stringify({ id, slug })); } catch {}
+  }
+
+  // Label builder — EXACT per your snippet
+  function optionLabel(e) {
+    const nameTrim = (e.name && e.name.trim()) ? e.name.trim() : '';
+    const base = nameTrim || (e.slug || e.sid || '(unnamed)');
+    const dateStr = e.startDate ? (' (' + e.startDate + ')') : '';
+    const star = e.isDefault ? ' ★' : '';
+    return base + dateStr + star;
+  }
+  function optionTitle(e) {
+    const nameTrim = (e.name && e.name.trim()) ? e.name.trim() : '';
+    const base = nameTrim || (e.slug || e.sid || '(unnamed)');
+    return base + (e.startDate ? (' • ' + e.startDate) : '');
+  }
+
+  // Render selection-dependent areas
+  function setQR(which, url) {
+    const el = q(which);
+    if (!url) { el.textContent = '—'; el.dataset.url = ''; LOG('this is coming from setQR →', which, '→ (empty)'); return; }
+    el.innerHTML = '<small class="muted">' + url + '</small>';
+    el.dataset.url = url;
+    LOG('this is coming from setQR →', which, '→', url);
+  }
+
+  function updateStickyCta() {
+    LOG('this is coming from updateStickyCta → entry');
+    if (!STATE.current) { LOG('this is coming from updateStickyCta → hidden (no current)'); return; }
+  }
+
+  function renderCurrent() {
+    LOG('this is coming from renderCurrent → entry');
+    const e = STATE.current;
+    if (!e) {
+      LOG('this is coming from renderCurrent → no event selected');
+      setQR('#qrPublic',''); setQR('#qrForm',''); return;
+    }
+    LOG('this is coming from renderCurrent → draw', e.name || e.slug || e.sid || '(unnamed)');
+    setQR('#qrPublic', e.publicUrl || '');
+    setQR('#qrForm', e.formUrl || '');
+    updateStickyCta();
+  }
+
+  function setCurrent(eventId, immediate) {
+    LOG('this is coming from setCurrent → entry →', eventId || null, immediate ? '(immediate)' : '');
+    let found = null;
+    if (eventId) found = STATE.events.find(x => x.eventId === eventId) || null;
+    if (!found && eventId == null) found = null;
+    STATE.current = found;
+    if (found) persistEventId(found.eventId, found.slug || '');
+    LOG('this is coming from setCurrent → STATE.current', found ? (found.name || found.slug || found.sid) : '(null)');
+
+    renderCurrent();
+
+    if (found) {
+      LOG('this is coming from setCurrent → flush share links');
+      debounceWithFlush(_refreshShareLinksRaw);
+    }
+  }
+
+  // Debounce util with “manual flush”
+  let _debTimer = null;
+  function debounceWithFlush(fn, wait=300) {
+    if (!_debTimer) LOG('this is coming from debounceWithFlush → wait', wait);
+    clearTimeout(_debTimer);
+    _debTimer = setTimeout(() => { _debTimer = null; LOG('this is coming from debounceWithFlush → flush'); fn(); }, wait);
+  }
+  debounceWithFlush.flush = () => { if (_debTimer) { clearTimeout(_debTimer); _debTimer = null; LOG('this is coming from debounceWithFlush → manual flush'); _refreshShareLinksRaw(); } };
+
+  // Share links refresh (gets QR, etc.)
+  function _refreshShareLinksRaw() {
+    LOG('this is coming from _refreshShareLinksRaw → entry');
+    const cur = STATE.current;
+    if (!cur) { LOG('this is coming from _refreshShareLinksRaw → no current'); return; }
+    setQR('#qrPublic', cur.publicUrl || '');
+    setQR('#qrForm', cur.formUrl || '');
+    setBusy(true, 'Preparing links…');
+    gs('getShareLinks', [cur.eventId, null])
+      .withSuccessHandler((links) => {
+        setQR('#qrPublic', links.publicUrl || cur.publicUrl || '');
+        setQR('#qrForm', links.formUrl || cur.formUrl || '');
+        setBusy(false);
+        LOG('this is coming from gs → getShareLinks success');
+      });
+    LOG('this is coming from _refreshShareLinksRaw → finally');
+  }
+
+  // Fill dropdown from events; preserve selection on transient empty fetches
+  function loadEvents(preselectId) {
+    LOG('this is coming from loadEvents → entry' + (preselectId ? (' → preselect ' + preselectId) : ''));
+    const sel = q('#chooseEvent');
+    setBusy(true, 'Loading events…');
+    STATE.loading = true;
+
+    gs('getEventsSafe', [])
+      .withSuccessHandler((safe) => {
+        const items = Array.isArray(safe && safe.events) ? safe.events : [];
+        LOG('this is coming from gs → getEvents success');
+        LOG('this is coming from loadEvents → rows', items.length);
+
+        // If server reports zero right after creation, KEEP current list & selection to avoid slug/label flicker.
+        if (items.length === 0 && (STATE.current || (STATE.events && STATE.events.length))) {
+          LOG('this is coming from loadEvents → server returned 0; keeping existing options & selection');
+          return; // finally{} will still run to clear busy
+        }
+
+        // Normal rebuild
+        sel.innerHTML = '';
+        STATE.events = items.slice();
+
+        if (!items.length) {
+          const opt = document.createElement('option');
+          opt.value = '';
+          opt.textContent = 'No events yet';
+          sel.appendChild(opt);
+          setCurrent(null, true);
+          LOG('this is coming from loadEvents → no events');
+          return;
+        }
+
+        // Build options with exact label contract
+        const frag = document.createDocumentFragment();
+        for (const e of items) {
+          const o = document.createElement('option');
+          o.value = e.eventId;
+          const label = (e.name && e.name.trim()) ? e.name.trim() : (e.slug || e.sid || '(unnamed)');
+          const dateStr = e.startDate ? (' (' + e.startDate + ')') : '';
+          o.textContent = label + dateStr + (e.isDefault ? ' ★' : '');
+          o.title = label + (e.startDate ? (' • ' + e.startDate) : '');
+          frag.appendChild(o);
+        }
+        sel.appendChild(frag);
+
+        // choose selection
+        let want = preselectId || (function() {
+          try {
+            const raw = localStorage.getItem('nextup:lastEvent');
+            if (!raw) return '';
+            const parsed = JSON.parse(raw);
+            return parsed && parsed.id ? parsed.id : '';
+          } catch(_) { return ''; }
+        })();
+
+        if (want && items.some(x => x.eventId === want)) {
+          sel.value = want;
+          setCurrent(want, true);
+        } else {
+          // pick default ★ or first
+          const def = items.find(x => x.isDefault) || items[0];
+          sel.value = def.eventId;
+          setCurrent(def.eventId, true);
+        }
+      })
+      .withFailureHandler((e) => {
+        console.error(e);
+        toast('Failed to load events');
+      })
+      .withSuccessHandler(() => {}) // keep chain happy
+      .finally(() => {
+        setBusy(false);
+        STATE.loading = false;
+        LOG('this is coming from loadEvents → finally exit');
+      });
+
+  }
+
+  // Optimistic add (immediately visible)
+  function optimisticAddEvent(ev) {
+    LOG('this is coming from optimisticAddEvent → entry →', JSON.stringify(ev));
+    const sel = q('#chooseEvent');
+
+    STATE.events.push(ev);
+    const o = document.createElement('option');
+    o.value = ev.eventId;
+
+    const label = (ev.name && ev.name.trim()) ? ev.name.trim() : (ev.slug || ev.sid || '(unnamed)');
+    const dateStr = ev.startDate ? (' (' + ev.startDate + ')') : '';
+    o.textContent = label + dateStr + (ev.isDefault ? ' ★' : '');
+    o.title = label + (ev.startDate ? (' • ' + ev.startDate) : '');
+    sel.appendChild(o);
+
+    LOG('this is coming from optimisticAddEvent → pushed →', ev.eventId);
+    sel.value = ev.eventId;
+    setCurrent(ev.eventId, true);
+  }
+
+  // Create
+  function onCreateClick() {
+    LOG('this is coming from onCreateClick → entry');
+    const name = q('#evName').value.trim();
+    const startDate = q('#evDate').value;
+    const flow = q('#evFlow').value;
+    const weeks = q('#evWeeks').value ? Number(q('#evWeeks').value) : undefined;
+    const elimType = q('#elimType').value;
+    const seedMode = q('#seedMode').value;
+
+    const payload = { name, startDate, flow, weeks, elimType, seedMode };
+    LOG('this is coming from onCreateClick → payload', JSON.stringify(payload));
+
+    setBusy(true, 'Creating event…');
+    toast('Creating event…');
+
+    gs('createEventVerified', [payload])
+      .withSuccessHandler((ev) => {
+        LOG('this is coming from onCreateClick → created', JSON.stringify(ev));
+        optimisticAddEvent(ev);
+
+        // kick share links
+        debounceWithFlush(_refreshShareLinksRaw);
+        toast('Event created. View Manage Events dropdown!');
+
+        // Refresh list, but tolerate transient empty
+        loadEvents(ev.eventId);
+        gs('refreshPublicCache', [ev.eventId]);
+      })
+      .withFailureHandler((e) => {
+        console.error(e);
+        toast('Failed to create event');
+      })
+      .finally(() => {
+        // Keep weeks row visibility correct
+        syncWeeksVisibility();
+        setBusy(false);
+        LOG('this is coming from onCreateClick → finally exit');
+      });
+
+    LOG('this is coming from onCreateClick → flush share links');
+    debounceWithFlush.flush();
+  }
+
+  // Weeks visibility based on flow
+  function weeksRequiredFor(flow) {
+    const yes = (flow === FLOW.SEASON_ONLY || flow === FLOW.SEASON_TOURNEY);
+    LOG('this is coming from weeksRequiredFor →', flow, '→', yes);
+    return yes;
+  }
+  function syncWeeksVisibility() {
+    LOG('this is coming from syncWeeksVisibility → entry');
+    const flow = q('#evFlow').value;
+    q('#rowWeeks').style.display = weeksRequiredFor(flow) ? '' : 'none';
+  }
+
+  // Other actions
+  function onGenerateSchedule() {
+    if (!STATE.current) return toast('Pick an event first');
+    const weeks = Number(q('#evWeeks').value || STATE.current.weeks || 0);
+    gs('generateSchedule', [STATE.current.eventId, weeks]).withSuccessHandler(() => toast('Schedule generated'));
+  }
+  function onGenerateBrackets() {
+    if (!STATE.current) return toast('Pick an event first');
+    const elimType = q('#elimTypeEdit').value;
+    const seedMode = q('#seedModeEdit').value;
+    gs('generateBrackets', [STATE.current.eventId, { elimType, seedMode }]).withSuccessHandler(() => toast('Brackets generated'));
+  }
+  function onCreateForm() {
+    if (!STATE.current) return toast('Pick an event first');
+    gs('buildSignupForm', [STATE.current.eventId, { email:true, phone:true, notes:true }]).withSuccessHandler((r) => {
+      toast('Form created'); if (r && r.formUrl) window.open(r.formUrl, '_blank');
+    });
+  }
+  function onEnsureSeedColumn() {
+    if (!STATE.current) return toast('Pick an event first');
+    gs('ensureSeedColumn', [STATE.current.eventId]).withSuccessHandler(() => toast('Seed column OK'));
+  }
+  function onSetDefault() {
+    if (!STATE.current) return toast('Pick an event first');
+    gs('setDefaultEvent', [STATE.current.eventId, true]).withSuccessHandler(() => {
+      toast('Default set');
+      loadEvents(STATE.current.eventId);
+    });
+  }
+  function onOpenPublic() {
+    if (!STATE.current) return toast('Pick an event first');
+    const url = STATE.current.publicUrl || '';
+    if (url) window.open(url, '_blank'); else toast('No public URL yet');
+  }
+  function onOpenSheets() {
+    if (!STATE.current) return toast('Pick an event first');
+    gs('openSheetUrl', [STATE.current.eventId]).withSuccessHandler((u) => u && window.open(u, '_blank'));
+  }
+
+  // Bind events
+  function bind() {
+    LOG('this is coming from bind → ok #btnCreate → click');
+    q('#btnCreate').addEventListener('click', onCreateClick);
+    LOG('this is coming from bind → ok #btnFlowHelp → click');
+    q('#btnFlowHelp').addEventListener('click', () => alert('Flows:\nSeason Only = schedule+standings\nSeason + Tournament = both\nTournament Only = bracket only\nRegistration = signups only'));
+    LOG('this is coming from bind → ok #evFlow → change');
+    q('#evFlow').addEventListener('change', syncWeeksVisibility);
+    LOG('this is coming from bind → ok #chooseEvent → change');
+    q('#chooseEvent').addEventListener('change', (e) => setCurrent(e.target.value, true));
+    LOG('this is coming from bind → ok #btnRefreshEvents → click');
+    q('#btnRefreshEvents').addEventListener('click', () => loadEvents(STATE.current && STATE.current.eventId));
+    LOG('this is coming from bind → ok #btnSetDefault → click');
+    q('#btnSetDefault').addEventListener('click', onSetDefault);
+    LOG('this is coming from bind → ok #btnOpenPublic → click');
+    q('#btnOpenPublic').addEventListener('click', onOpenPublic);
+    LOG('this is coming from bind → ok #btnOpenSheets → click');
+    q('#btnOpenSheets').addEventListener('click', onOpenSheets);
+    LOG('this is coming from bind → ok #btnCreateForm → click');
+    q('#btnCreateForm').addEventListener('click', onCreateForm);
+    LOG('this is coming from bind → ok #btnAddSeedCol → click');
+    q('#btnAddSeedCol').addEventListener('click', onEnsureSeedColumn);
+    LOG('this is coming from bind → ok #btnGenSchedule → click');
+    q('#btnGenSchedule').addEventListener('click', onGenerateSchedule);
+    LOG('this is coming from bind → ok #elimTypeEdit → change');
+    q('#elimTypeEdit').addEventListener('change', () => {});
+    LOG('this is coming from bind → ok #seedModeEdit → change');
+    q('#seedModeEdit').addEventListener('change', () => {});
+    LOG('this is coming from bind → ok #btnGenBrackets → click');
+    q('#btnGenBrackets').addEventListener('click', onGenerateBrackets);
+    LOG('this is coming from bind → ok #btnRefreshView → click');
+    q('#btnRefreshView').addEventListener('click', () => { renderCurrent(); debounceWithFlush(_refreshShareLinksRaw); });
+    LOG('this is coming from bind → ok #btnRunSuite → click');
+    q('#btnRunSuite').addEventListener('click', () => gs('runAllCardTests', []));
+    LOG('this is coming from bind → ok #btnSelfHeal → click');
+    q('#btnSelfHeal').addEventListener('click', () => gs('selfHeal', [{}]));
+    LOG('this is coming from bind → ok #btnHardReset → click');
+    q('#btnHardReset').addEventListener('click', () => { if (confirm('Really hard reset Events sheet?')) gs('hardResetEventsSheet', []); });
+    LOG('this is coming from bind → ok #btnShowStatus → click');
+    q('#btnShowStatus').addEventListener('click', () => gs('getStatus', []).withSuccessHandler(s => alert(JSON.stringify(s, null, 2))));
+    LOG('this is coming from bind → ok #btnShowLogs → click');
+    q('#btnShowLogs').addEventListener('click', () => gs('getLogs', [100]).withSuccessHandler(ls => alert(JSON.stringify(ls, null, 2))));
+    LOG('this is coming from bind → ok #btnCopyReport → click');
+    q('#btnCopyReport').addEventListener('click', async () => {
+      const s = await new Promise((resolve)=>google.script.run.withSuccessHandler(resolve).getStatus());
+      const l = await new Promise((resolve)=>google.script.run.withSuccessHandler(resolve).getLogs(50));
+      const txt = 'Status:\n' + JSON.stringify(s,null,2) + '\n\nLogs:\n' + JSON.stringify(l,null,2);
+      try { await navigator.clipboard.writeText(txt); toast('Copied'); } catch { toast('Copy failed'); }
+    });
+  }
+
+  function watchViewport() {
+    LOG('this is coming from watchViewport → init');
+    let lastH = window.innerHeight;
+    function onResize() {
+      const dh = window.innerHeight - lastH;
+      lastH = window.innerHeight;
+      LOG('this is coming from watchViewport → resize → shrink', dh);
+    }
+    window.addEventListener('resize', onResize, { passive:true });
+  }
+
+  // Signup count ping (kept)
+  function signupCountInterval() {
+    setInterval(() => {
+      LOG('this is coming from signupCountInterval → tick');
+      if (!STATE.current) return;
+      gs('getSignupCount', [STATE.current.eventId])
+        .withSuccessHandler((n) => { /* could show somewhere */ });
+    }, 15000);
+  }
+
+  // Boot
+  document.addEventListener('DOMContentLoaded', () => {
+    const boot = (function(){ try { const j = JSON.parse(localStorage.getItem('nextup:lastEvent')||''); return (j && j.id) || ''; } catch(_) { return ''; } })();
+    LOG('this is coming from BOOT_ID →', boot || '(none)');
+    bind();
+    watchViewport();
+    LOG('this is coming from DOMContentLoaded → bind handlers');
+    syncWeeksVisibility();
+    LOG('this is coming from DOMContentLoaded → loadEvents ready');
+    loadEvents(boot || null);
+    signupCountInterval();
+  });
+
+})();
+</script>
+</body>
+</html>
