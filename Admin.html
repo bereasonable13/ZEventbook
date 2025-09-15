@@ -1,1019 +1,793 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html lang="en" data-theme="light">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta charset="utf-8">
     <title>
-        <?= appTitle ?> · Admin
+        <?= appTitle || 'NextUp' ?>
     </title>
-    <?!= include('Styles'); ?>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
     <style>
-        /* Admin-only small tweaks */
-        .section-caption {
-            margin-top: -6px;
-            margin-bottom: 8px
+        :root {
+            --bg: #ffffff;
+            --fg: #0b1324;
+            --muted: #6a7280;
+            --card: #f6f8fb;
+            --line: #e7edf5;
+            --ok: #16a34a;
+            --warn: #f59e0b;
+            --err: #ef4444;
+            --link: #2563eb;
+            --btn: #111827;
+            --btnfg: #ffffff;
         }
 
-        .label-inline {
-            font-size: .98rem;
-            margin-left: 8px
+        html[data-theme="dark"] {
+            --bg: #0b1020;
+            --fg: #e6ecff;
+            --muted: #9fb1d1;
+            --card: #151b2e;
+            --line: #263251;
+            --ok: #22c55e;
+            --warn: #fbbf24;
+            --err: #f87171;
+            --link: #93c5fd;
+            --btn: #1f2937;
+            --btnfg: #e6ecff;
         }
 
-        .qrwrap {
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
+            background: var(--bg);
+            color: var(--fg);
+        }
+
+        a {
+            color: var(--link);
+            text-decoration: none;
+        }
+
+        .appbar {
             display: flex;
-            gap: 14px;
             align-items: center;
-            flex-wrap: wrap
+            justify-content: space-between;
+            gap: 12px;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 10;
         }
 
-        .links a {
-            margin-right: 10px
+        .title {
+            font-weight: 700;
+            letter-spacing: .2px;
         }
 
-        /* Busy overlay (page-local) */
-        #busy {
-            position: fixed;
-            inset: 0;
-            display: none;
-            place-items: center;
-            z-index: 4000;
-            background: rgba(0, 0, 0, .55)
-        }
-
-        #busy .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 16px;
+        .row {
             display: flex;
             gap: 10px;
             align-items: center;
-            box-shadow: 0 14px 40px rgba(0, 0, 0, .35)
         }
 
-        #busy .spinner {
-            font-size: 1.6rem;
-            line-height: 1;
+        .col {
             display: flex;
-            gap: 8px
+            flex-direction: column;
+            gap: 8px;
         }
 
-        #busy .msg {
-            font-weight: 900;
-            font-size: 1.2rem
+        .wrap {
+            padding: 16px;
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(12, 1fr);
         }
 
-        /* Sticky CTA */
-        #stickyCta.hidden {
-            display: none !important
+        .card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 14px;
+            grid-column: span 12;
         }
 
-        body.is-busy #stickyCta {
-            display: none !important
+        .card-title {
+            font-weight: 700;
+            margin-bottom: 8px;
         }
 
-        #stickyCta .btn {
-            min-height: 56px
+        @media(min-width:960px) {
+            .span-6 {
+                grid-column: span 6;
+            }
+
+            .span-4 {
+                grid-column: span 4;
+            }
+
+            .span-8 {
+                grid-column: span 8;
+            }
         }
 
-        #ctaRow2 .btn {
-            flex: 1
+        label {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        input[type="text"],
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--bg);
+            color: var(--fg);
+            font-size: 16px;
+        }
+
+        button.btn {
+            padding: 12px 14px;
+            min-height: 44px;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: var(--btn);
+            color: var(--btnfg);
+            cursor: pointer;
+        }
+
+        button.btn[disabled] {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .btn-ghost {
+            background: transparent;
+            color: var(--fg);
+        }
+
+        .kpi {
+            font-weight: 700;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .table th,
+        .table td {
+            border-top: 1px solid var(--line);
+            padding: 6px 8px;
+            vertical-align: top;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .pill {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .06);
+        }
+
+        /* Toast */
+        #toastHost {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 14px;
+            display: flex;
+            justify-content: center;
+            pointer-events: none;
+            z-index: 99;
+        }
+
+        .toast {
+            background: var(--card);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            padding: 10px 12px;
+            border-radius: 10px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
+            pointer-events: auto;
+        }
+
+        .toast.ok {
+            border-color: var(--ok);
+        }
+
+        .toast.err {
+            border-color: var(--err);
+        }
+
+        .toast.info {
+            border-color: var(--warn);
+        }
+
+        /* Events Cache Badge */
+        #eventsCacheBadge {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, .06);
+        }
+
+        #eventsCacheBadge .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #aaa;
+        }
+
+        #eventsCacheBadge .panel {
+            position: absolute;
+            top: 120%;
+            right: 0;
+            width: min(92vw, 420px);
+            background: var(--bg);
+            color: var(--fg);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
+            padding: 12px;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(6px);
+            transition: .15s ease;
+            z-index: 50;
+        }
+
+        #eventsCacheBadge:hover .panel {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateY(0);
+        }
+
+        .grid2 {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 8px;
+        }
+
+        .mono {
+            font-family: ui-monospace, Menlo, Consolas, monospace;
+            word-break: break-all;
+        }
+
+        /* Status ribbons */
+        .ribbon {
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(0, 0, 0, .06);
+            font-size: 13px;
         }
     </style>
 </head>
 
 <body>
     <header class="appbar">
-        <div class="appbar__title">
-            <?= appTitle ?> · Admin
+        <div class="row">
+            <div class="title">NextUp · Admin</div>
+            <div id="eventsCacheBadge" aria-live="polite">
+                <span class="dot" id="ecbDot" title="green=fresh, amber=304, red=error"></span>
+                <span class="muted">Events Cache</span>
+                <div class="panel">
+                    <div class="grid2">
+                        <div>ETag</div>
+                        <div class="mono" id="ecbEtag">—</div>
+                        <div>Last</div>
+                        <div id="ecbLast">—</div>
+                        <div>Age</div>
+                        <div id="ecbAge">—</div>
+                        <div>Last Result</div>
+                        <div id="ecbKind">—</div>
+                    </div>
+                    <div style="margin-top:8px; border-top:1px solid var(--line); padding-top:8px" class="muted">
+                        <div><b>ETag</b> is the server’s fingerprint of Events. If your ETag matches, the server may
+                            return <b>304</b> and the UI keeps its list.</div>
+                        <div><b>Never-blank rule</b>: after writes, if a fetch comes back empty, we keep the last good
+                            list and retry with backoff.</div>
+                    </div>
+                    <div class="row" style="margin-top:8px; flex-wrap:wrap">
+                        <button type="button" class="btn btn-ghost" id="btnForceReval">Force revalidate</button>
+                        <button type="button" class="btn btn-ghost" id="btnCopyDiag">Copy diagnostics</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="row">
+            <button class="btn btn-ghost" id="themeToggle" aria-label="Toggle theme">🌓</button>
         </div>
     </header>
 
-    <main class="container">
-        <!-- Busy overlay -->
-        <div id="busy" aria-live="polite">
-            <div class="card">
-                <div class="spinner">
-                    <span class="mascot" data-kind="runner">🏃‍♂️</span>
-                    <span class="mascot" data-kind="pitcher">🥎</span>
-                    <span class="mascot" data-kind="bocce">🧶</span>
+    <div class="wrap">
+        <!-- Create -->
+        <section class="card span-6">
+            <div class="card-title">Create Event</div>
+            <div class="row" style="flex-wrap:wrap">
+                <div class="col" style="flex:1 1 220px; min-width:220px">
+                    <label>Event Name</label>
+                    <input type="text" id="inpName" placeholder="e.g., Fall Open 2025">
                 </div>
-                <div class="msg">Working…</div>
-            </div>
-        </div>
-
-        <!-- Toast -->
-        <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
-
-        <!-- CREATE EVENT -->
-        <section class="card" aria-labelledby="createTitle">
-            <h2 class="card__title" id="createTitle">Create Event</h2>
-            <form id="createForm" class="grid grid--compact" novalidate>
-                <input id="evName" class="input" placeholder="Event name (e.g., Fall Weeklies)" autocomplete="off"
-                    required />
-                <input id="evDate" class="input" type="date" required />
-                <div class="row">
-                    <label class="sr-only" for="evFlow">Flow</label>
-                    <select id="evFlow" class="input" title="Flow" aria-describedby="flowHint">
-                        <option value="SEASON_TOURNEY" selected>Season → Tournament</option>
-                        <option value="SEASON_ONLY">Season only</option>
-                        <option value="TOURNEY_ONLY">Tournament only</option>
-                        <option value="REGISTRATION">Signups only</option>
+                <div class="col" style="width:200px">
+                    <label>Start Date</label>
+                    <input type="date" id="inpDate">
+                </div>
+                <div class="col" style="width:160px">
+                    <label>Seed Mode</label>
+                    <select id="inpSeed">
+                        <option value="random">random</option>
+                        <option value="seeded">seeded</option>
                     </select>
-
-                    <label class="sr-only" for="evWeeks">Weeks</label>
-                    <select id="evWeeks" class="input" title="Weeks (required for Season flows)">
-                        <option value="">Weeks…</option>
-                        <option>3</option>
-                        <option>4</option>
-                        <option selected>5</option>
-                        <option>6</option>
-                        <option>7</option>
-                        <option>8</option>
+                </div>
+                <div class="col" style="width:160px">
+                    <label>Elimination</label>
+                    <select id="inpElim">
+                        <option value="none">none</option>
+                        <option value="single">single</option>
+                        <option value="double">double</option>
                     </select>
-
-                    <button id="btnFlowHelp" class="btn btn--icon" type="button" popovertarget="popFlowHelp"
-                        aria-label="Flow help">?</button>
-
-                    <label class="sr-only" for="evElim">Elimination</label>
-                    <select id="evElim" class="input" title="Elimination">
-                        <option value="SINGLE" selected>Single Elimination</option>
-                        <option value="DOUBLE">Double Elimination</option>
-                    </select>
-
-                    <label class="sr-only" for="evSeed">Seeding</label>
-                    <select id="evSeed" class="input" title="Seeding">
-                        <option value="RANDOM" selected>Random</option>
-                        <option value="SEEDED">Seeded</option>
-                    </select>
-
-                    <button id="btnCreate" type="button" class="btn btn--primary btn--xl">Create</button>
-                </div>
-                <p id="flowHint" class="hint mt-1">Season flows require Weeks; Tournament-only & Signups-only don’t.</p>
-            </form>
-
-            <!-- Flow Help Popover -->
-            <div id="popFlowHelp" popover>
-                <div class="popover-title">Event flows</div>
-                <ul class="hint" style="margin:0 0 8px 16px;">
-                    <li><b>Season → Tournament</b>: schedule + standings, then bracket.</li>
-                    <li><b>Season only</b>: schedule + standings, no bracket.</li>
-                    <li><b>Tournament only</b>: bracket only (entrants from signups).</li>
-                    <li><b>Signups only</b>: registration list only.</li>
-                </ul>
-                <div class="popover-actions">
-                    <button popovertarget="popFlowHelp" popovertargetaction="hide" class="btn btn--ghost">Close</button>
                 </div>
             </div>
-
-            <p class="hint mt-1">Defaults: Flow = Season→Tournament, Weeks = 5, Elimination = Single, Seeding = Random.
-            </p>
-            <div id="createMsg" class="hint" role="status" aria-live="polite"></div>
-        </section>
-
-        <!-- MANAGE EVENT -->
-        <section class="card" aria-labelledby="manageTitle">
-            <h2 class="card__title" id="manageTitle">Manage Event</h2>
-            <div class="row row--justify">
-                <label class="sr-only" for="chooseEvent">Choose Event</label>
-                <select id="chooseEvent" class="input input--select"
-                    title="Choose Event (empty until you create one)"></select>
-                <button id="btnRefreshEvents" class="btn btn--ghost btn--icon" title="Refresh"
-                    aria-label="Refresh">↻</button>
-            </div>
-            <p id="emptyTip" class="hint mt-1" style="display:none;">No events yet — create one above to populate this
-                menu.</p>
-            <div id="eventMeta" class="mt-2"><!-- Filled by renderCurrent() --></div>
-            <div class="actions">
-                <button id="btnSetDefault" class="btn">Set Default</button>
-                <button id="btnOpenPublic" class="btn">Open Public</button>
-                <a id="aOpenTV" class="btn btn--ghost" target="_blank" rel="noopener">Open TV/Display</a>
-                <button id="btnOpenSheets" class="btn">Open Sheets</button>
+            <div class="row" style="margin-top:10px">
+                <button class="btn" id="btnCreateEvent">Create</button>
+                <div class="ribbon" id="createStatus">Ready</div>
             </div>
         </section>
 
-        <!-- SIGNUPS -->
-        <section class="card" aria-labelledby="signupsTitle">
-            <h2 class="card__title" id="signupsTitle">Signups</h2>
-            <div class="row" style="align-items:flex-end;">
-                <div>
-                    <div id="signupCountTile" class="tile">0</div>
-                    <div class="hint">Total signups</div>
-                </div>
-                <div>
-                    <button id="btnCreateForm" class="btn">Create Signup Form</button>
-                    <label class="label-inline"><input type="checkbox" id="optEmail"> Require Email</label>
-                    <label class="label-inline"><input type="checkbox" id="optPhone"> Phone</label>
-                    <label class="label-inline"><input type="checkbox" id="optNotes"> Notes</label>
+        <!-- Manage -->
+        <section class="card span-6">
+            <div class="card-title">Manage Event</div>
+            <div class="col" style="gap:6px">
+                <label>Choose</label>
+                <select id="chooseEvent"></select>
+            </div>
+            <div class="row" style="flex-wrap:wrap; margin-top:10px">
+                <button class="btn" id="btnOpenWorkbook" disabled>Open Workbook</button>
+                <button class="btn" id="btnOpenAdmin" disabled>Open Admin</button>
+                <button class="btn" id="btnOpenDisplay" disabled>Open Display</button>
+                <button class="btn" id="btnOpenPublic" disabled>Open Public</button>
+                <button class="btn" id="btnOpenPoster" disabled>Open Poster</button>
+                <button class="btn btn-ghost" id="btnCopyLink" disabled>Copy Link</button>
+            </div>
+
+            <div class="card" style="margin-top:12px">
+                <div class="card-title">Form</div>
+                <div class="row" style="flex-wrap:wrap">
+                    <input type="text" id="inpForm" placeholder="Paste Google Form URL or ID"
+                        style="flex:1 1 280px; min-width:240px">
+                    <button class="btn" id="btnSaveForm" disabled>Save Form</button>
+                    <a id="lnkFormView" class="btn btn-ghost" target="_blank" rel="noopener" style="display:none">View
+                        Form</a>
+                    <a id="lnkFormEdit" class="btn btn-ghost" target="_blank" rel="noopener" style="display:none">Edit
+                        Form</a>
                 </div>
             </div>
-            <div id="seedTools" class="row mt-1" style="display:none;">
-                <button id="btnAddSeedCol" class="btn">Add/Update “Seed” Column</button>
-                <span class="hint">For seeded brackets, add seeds in the Signups sheet (1..N).</span>
-            </div>
         </section>
 
-        <!-- SHARE -->
-        <section class="card" aria-labelledby="shareTitle">
-            <h2 class="card__title" id="shareTitle">Share</h2>
-            <div class="qrwrap">
-                <div>
-                    <div id="qrPublic" class="qr muted" title="Public link QR"></div>
-                    <div class="section-caption hint">Public QR</div>
-                    <div class="row">
-                        <button id="btnCopyPublic" class="btn btn--ghost">Copy Public Link</button>
-                        <button id="btnCopyDisplay" class="btn btn--ghost">Copy Display Link</button>
-                        <button id="btnCopyPoster" class="btn btn--ghost">Copy Poster Link</button>
-                        <button id="btnShare" class="btn btn--primary">Share…</button>
-                    </div>
-                    <div id="publicUrl" class="hint" style="margin-top:6px;"></div>
-                </div>
-                <div>
-                    <div id="qrForm" class="qr muted" title="Signup form QR"></div>
-                    <div class="section-caption hint">Signup Form QR</div>
-                    <div class="row"><button id="btnCopyForm" class="btn btn--ghost">Copy Form Link</button></div>
-                    <div id="formUrl" class="hint" style="margin-top:6px;"></div>
-                </div>
+        <!-- Diagnostics -->
+        <section class="card span-8">
+            <div class="card-title">Diagnostics</div>
+            <div class="row" style="flex-wrap:wrap; gap:8px">
+                <button class="btn btn-ghost" id="dxPing">Ping</button>
+                <button class="btn btn-ghost" id="dxIdentity">Identity</button>
+                <button class="btn btn-ghost" id="dxProps">Props</button>
+                <button class="btn btn-ghost" id="dxControl">Control</button>
+                <button class="btn btn-ghost" id="dxIdx">Events Index</button>
+                <button class="btn btn-ghost" id="dxEcho">Echo</button>
+                <button class="btn btn-ghost" id="dxCreateArchive">Create→Archive</button>
             </div>
-            <p class="hint mt-1">Public & TV pages auto-refresh. Share the QR or short link.</p>
+            <pre id="dxOut"
+                style="margin-top:10px; max-height:38vh; overflow:auto; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px;">—</pre>
         </section>
 
-        <!-- SCHEDULE -->
-        <section class="card" aria-labelledby="schedTitle">
-            <h2 class="card__title" id="schedTitle">Schedule</h2>
-            <div class="row">
-                <label class="sr-only" for="weeksEdit">Weeks</label>
-                <select id="weeksEdit" class="input" title="Weeks">
-                    <option value="">Weeks…</option>
-                    <option>3</option>
-                    <option>4</option>
-                    <option>5</option>
-                    <option>6</option>
-                    <option>7</option>
-                    <option>8</option>
-                </select>
-                <button id="btnGenSchedule" class="btn">Generate Schedule</button>
-                <span class="hint">Creates Week rows; courts/times/teams can be filled in Google Sheets.</span>
+        <!-- Server Test Runner -->
+        <section class="card span-4">
+            <div class="card-title">Server Test Runner</div>
+            <div class="row" style="flex-wrap:wrap; gap:8px">
+                <button class="btn" id="btnRunSmoke">Run Smoke</button>
+                <button class="btn" id="btnRunDaily">Run Daily</button>
+                <button class="btn" id="btnRunFull">Run Full</button>
+                <button class="btn btn-ghost" id="btnCopyReport">Copy JSON</button>
+                <button class="btn btn-ghost" id="btnLogReport">Log to Sheet</button>
             </div>
+            <div id="testSummary" class="kpi" style="margin-top:8px"></div>
+            <table class="table" style="margin-top:8px">
+                <thead>
+                    <tr>
+                        <th>Suite</th>
+                        <th>Test</th>
+                        <th>OK</th>
+                        <th>ms</th>
+                        <th>Error</th>
+                    </tr>
+                </thead>
+                <tbody id="testTbody"></tbody>
+            </table>
         </section>
 
-        <!-- BRACKETS -->
-        <section class="card" aria-labelledby="brktTitle">
-            <h2 class="card__title" id="brktTitle">Brackets</h2>
-            <div class="row">
-                <label class="sr-only" for="elimTypeEdit">Elimination</label>
-                <select id="elimTypeEdit" class="input" title="Elimination">
-                    <option value="SINGLE">Single Elimination</option>
-                    <option value="DOUBLE">Double Elimination</option>
-                </select>
-                <label class="sr-only" for="seedModeEdit">Seeding</label>
-                <select id="seedModeEdit" class="input" title="Seeding">
-                    <option value="RANDOM">Random</option>
-                    <option value="SEEDED">Seeded</option>
-                </select>
-                <button id="btnGenBrackets" class="btn">Generate / Reset</button>
-                <button id="btnRefreshView" class="btn btn--icon" title="Refresh" aria-label="Refresh">↻</button>
-                <span id="brktStatus" class="hint"></span>
+        <!-- UI Tests (Client) -->
+        <section class="card span-12" id="uiTestsCard">
+            <div class="card-title">UI Tests (Client-Side)</div>
+            <div class="row" style="flex-wrap:wrap; gap:8px">
+                <button class="btn" id="btnUiSmoke">Run UI Smoke</button>
+                <button class="btn" id="btnUiFull">Run UI Full</button>
+                <button class="btn btn-ghost" id="btnUiCopy">Copy Report</button>
             </div>
-            <p class="hint mt-1">If “Seeded” is chosen, ensure the Signups sheet has a contiguous 1..N “Seed” column.
-            </p>
+            <div id="uiTestSummary" class="kpi" style="margin-top:8px"></div>
+            <table class="table" style="margin-top:8px">
+                <thead>
+                    <tr>
+                        <th>Test</th>
+                        <th>OK</th>
+                        <th>ms</th>
+                        <th>Detail</th>
+                    </tr>
+                </thead>
+                <tbody id="uiTestBody"></tbody>
+            </table>
         </section>
+    </div>
 
-        <!-- DIAGNOSTICS -->
-        <section class="card" aria-labelledby="diagTitle">
-            <h2 class="card__title" id="diagTitle">Diagnostics</h2>
-            <div class="row">
-                <select id="diagSuite" class="input input--select" style="max-width:260px">
-                    <option value="quick">Quick Checks</option>
-                    <option value="full">Full QA Suite</option>
-                    <option value="create">Create Card</option>
-                    <option value="manage">Manage Card</option>
-                    <option value="signups">Signups Card</option>
-                    <option value="share">Share Card</option>
-                    <option value="schedule">Schedule Card</option>
-                    <option value="brackets">Brackets Card</option>
-                    <option value="allcards">All Card Suites</option>
-                </select>
-                <button id="btnRunSuite" class="btn btn--ok">Run</button>
-                <button id="btnSelfHeal" class="btn">Self-Heal</button>
-                <button id="btnHardReset" class="btn btn--danger">Hard Reset Events</button>
-                <button id="btnShowStatus" class="btn btn--ghost">Status</button>
-                <button id="btnShowLogs" class="btn btn--ghost">Logs</button>
-                <button id="btnCopyReport" class="btn btn--ghost">Copy JSON</button>
-            </div>
-
-            <div id="diagOut" class="mt-2 scroll-x">
-                <button id="btnExportTests" class="btn btn--ghost">Export CSV</button>
-                <button id="btnRunAllSuites" class="btn">Run All Suites</button>
-                <table class="table" id="diagTable" aria-live="polite">
-                    <tbody></tbody>
-                </table>
-            </div>
-        </section>
-
-        <!-- STICKY CTA (mobile) -->
-        <div id="stickyCta" class="sticky-cta mobile-only hidden" role="group" aria-label="Quick actions">
-            <button id="ctaOpenTV" class="btn btn--ghost btn-block">Open TV</button>
-            <button id="ctaForm" class="btn btn--primary btn-block">Create Form</button>
-            <div id="ctaRow2" class="row" style="margin-top:8px;">
-                <button id="ctaSchedule" class="btn btn-block">Generate Schedule</button>
-                <button id="ctaBracket" class="btn btn--ok btn-block">Generate Bracket</button>
-            </div>
-        </div>
-    </main>
+    <!-- Toast host -->
+    <div id="toastHost" data-toast-host></div>
 
     <script>
-        /* ---------- Logging helper (breadcrumb) ---------- */
-        function logFn(fn, tag) {
-            const msg = "this is coming from " + fn + (tag ? " → " + tag : "");
-            console.log(msg);
+        /******** Theme ********/
+        (() => {
+            const key = 'nu.theme';
+            function apply(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem(key, t); }
+            document.getElementById('themeToggle').addEventListener('click', () => {
+                const cur = document.documentElement.getAttribute('data-theme') || 'light';
+                apply(cur === 'light' ? 'dark' : 'light');
+            });
+            apply(localStorage.getItem(key) || 'light');
+        })();
+
+        /******** Toast ********/
+        function toast(msg, kind) {
+            const host = document.getElementById('toastHost');
+            const el = document.createElement('div');
+            el.className = 'toast ' + (kind || 'ok');
+            el.textContent = msg;
+            host.appendChild(el);
+            setTimeout(() => { el.remove(); }, 2600);
         }
 
-        /* ---------- Utilities ---------- */
-        const $ = (s, p = document) => p.querySelector(s);
-        const $all = (s, p = document) => Array.from(p.querySelectorAll(s));
-        const fmt = (x) => (x == null ? '' : String(x));
-        const sleep = (ms) => new Promise(r => { logFn("sleep", "" + ms + "ms"); setTimeout(r, ms); });
+        /******** State + Cache badge ********/
+        const STATE = { etag: null, items: [], lastFetch: 0, lastKind: 'idle', lastWriteAt: 0, loading: false, poller: null };
+        function setDot(kind) { document.getElementById('ecbDot').style.background = ({ fresh: '#16a34a', notmod: '#f59e0b', error: '#ef4444', idle: '#aaa' })[kind] || '#aaa'; }
+        function updBadge() {
+            const age = STATE.lastFetch ? ((Date.now() - STATE.lastFetch) / 1000 | 0) + 's' : '—';
+            document.getElementById('ecbEtag').textContent = STATE.etag || '—';
+            document.getElementById('ecbLast').textContent = STATE.lastFetch ? new Date(STATE.lastFetch).toLocaleString() : '—';
+            document.getElementById('ecbAge').textContent = age;
+            document.getElementById('ecbKind').textContent = STATE.lastKind;
+            setDot(STATE.lastKind === 'fresh' ? 'fresh' : STATE.lastKind === 'notmod' ? 'notmod' : STATE.lastKind === 'error' ? 'error' : 'idle');
+        }
 
-        function gs(fn, ...args) {
-            logFn("gs", fn + "(" + JSON.stringify(args).slice(0, 200) + (args.length > 0 ? " …" : "") + ")");
-            return new Promise((resolve, reject) => {
+        /******** Render ********/
+        function labelOf(ev) {
+            const n = (ev.name || ev.slug || ev.id || '(unnamed)').toString().trim();
+            const d = (ev.startDateISO || '').toString().slice(0, 10);
+            return d ? `${n} (${d})` : n;
+        }
+        function renderEvents(items) {
+            // Keep selection if possible
+            const sel = document.getElementById('chooseEvent');
+            const prev = sel.value;
+            sel.innerHTML = '';
+            items.forEach(ev => {
+                const opt = document.createElement('option');
+                opt.value = ev.id; opt.textContent = (ev.isDefault ? '★ ' : '') + labelOf(ev);
+                opt.dataset.ssUrl = ev.eventSpreadsheetUrl || '';
+                sel.appendChild(opt);
+            });
+            if (items.length && items.some(e => e.id === prev)) sel.value = prev;
+            enableManageButtons();
+        }
+        function enableManageButtons() {
+            const sel = document.getElementById('chooseEvent');
+            const id = sel.value || '';
+            const ev = STATE.items.find(e => e.id === id);
+            const has = !!ev;
+            const hasWB = !!(ev && ev.eventSpreadsheetUrl);
+            const set = (id, on) => { const b = document.getElementById(id); if (b) b.disabled = !on; };
+            set('btnOpenWorkbook', hasWB);
+            set('btnOpenAdmin', has);
+            set('btnOpenDisplay', has);
+            set('btnOpenPublic', has);
+            set('btnOpenPoster', has);
+            set('btnCopyLink', has);
+            set('btnSaveForm', has);
+            // Form links
+            if (ev && ev.formId) {
+                const view = `https://docs.google.com/forms/d/${ev.formId}/viewform`;
+                const edit = `https://docs.google.com/forms/d/${ev.formId}/edit`;
+                const l1 = document.getElementById('lnkFormView');
+                const l2 = document.getElementById('lnkFormEdit');
+                l1.href = view; l1.style.display = 'inline-flex';
+                l2.href = edit; l2.style.display = 'inline-flex';
+            } else {
+                document.getElementById('lnkFormView').style.display = 'none';
+                document.getElementById('lnkFormEdit').style.display = 'none';
+            }
+        }
+
+        /******** Poller (single instance) ********/
+        function schedulePoll(ms) { if (STATE.poller) clearTimeout(STATE.poller); STATE.poller = setTimeout(loadEvents, ms || 0); }
+        function loadEvents(options) {
+            if (STATE.loading) return;
+            STATE.loading = true;
+            google.script.run
+                .withSuccessHandler(res => {
+                    STATE.loading = false;
+                    if (!res || !res.ok) { STATE.lastKind = 'error'; STATE.lastFetch = Date.now(); updBadge(); return; }
+                    STATE.etag = res.etag || STATE.etag;
+                    STATE.lastFetch = Date.now();
+                    if (res.status === 304) {
+                        STATE.lastKind = 'notmod'; updBadge();
+                        // Do not re-render; keep the UI; schedule next poll
+                        schedulePoll(3000);
+                        return;
+                    }
+                    const items = Array.isArray(res.items) ? res.items : [];
+                    // Never-blank rule: if we recently wrote and got empty, keep old and retry
+                    if (STATE.lastWriteAt && (Date.now() - STATE.lastWriteAt < 5000) && items.length === 0 && STATE.items.length) {
+                        STATE.lastKind = 'notmod'; updBadge(); schedulePoll(1200); return;
+                    }
+                    STATE.items = items;
+                    STATE.lastKind = 'fresh'; updBadge();
+                    renderEvents(items);
+                    schedulePoll(3000);
+                })
+                .withFailureHandler(err => {
+                    STATE.loading = false;
+                    STATE.lastKind = 'error'; STATE.lastFetch = Date.now(); updBadge();
+                    console.error(err); toast('Failed to load events', 'err'); schedulePoll(2000);
+                })
+                .getEventsSafe(STATE.etag);
+        }
+
+        /******** Create flow ********/
+        async function onCreate() {
+            const btn = document.getElementById('btnCreateEvent');
+            const name = document.getElementById('inpName').value.trim();
+            const date = document.getElementById('inpDate').value.trim();
+            const seed = document.getElementById('inpSeed').value;
+            const elim = document.getElementById('inpElim').value;
+            if (!name || !date) { toast('Name and Date required', 'err'); return; }
+            btn.disabled = true; document.getElementById('createStatus').textContent = 'Creating…';
+            STATE.lastWriteAt = Date.now();
+            google.script.run
+                .withSuccessHandler(res => {
+                    btn.disabled = false;
+                    if (!res || !res.ok) { toast('Create failed', 'err'); document.getElementById('createStatus').textContent = 'Failed'; return; }
+                    toast('Event created', 'ok'); document.getElementById('createStatus').textContent = 'Created';
+                    // Optimistic insert stub (keeps dropdown non-empty)
+                    STATE.items = [{ id: res.id, name, slug: name.toLowerCase(), startDateISO: date, eventSpreadsheetUrl: '', formId: '', isDefault: false }].concat(STATE.items);
+                    renderEvents(STATE.items);
+                    schedulePoll(400); // reconcile soon
+                })
+                .withFailureHandler(err => {
+                    btn.disabled = false; document.getElementById('createStatus').textContent = 'Failed';
+                    console.error(err); toast('Create failed', 'err');
+                })
+                .createEvent({ name, startDateISO: date, seedMode: seed, elimType: elim });
+        }
+
+        /******** Quick links ********/
+        function withSelectedEvent(fn) {
+            const sel = document.getElementById('chooseEvent'); const id = sel.value;
+            if (!id) { toast('Pick an event', 'err'); return; }
+            const ev = STATE.items.find(e => e.id === id); fn(ev, id);
+        }
+        function openLink(which) {
+            withSelectedEvent((ev) => {
+                // Prefer workbook for "Open Workbook"
+                if (which === 'workbook' && ev.eventSpreadsheetUrl) { window.open(ev.eventSpreadsheetUrl, '_blank'); return; }
                 google.script.run
-                    .withSuccessHandler((res) => { logFn("gs", fn + " success"); resolve(res); })
-                    .withFailureHandler((err) => { logFn("gs", fn + " fail: " + (err && err.message || err)); reject(err); })
-                [fn](...args);
+                    .withSuccessHandler(r => {
+                        if (!r || !r.ok) { toast('No links', 'err'); return; }
+                        const map = {
+                            admin: r.adminUrl, display: r.displayUrl, public: r.publicUrl, poster: r.posterPageUrl
+                        };
+                        const url = which === 'admin' ? map.admin : which === 'display' ? map.display : which === 'public' ? map.public : which === 'poster' ? map.poster : ev.eventSpreadsheetUrl;
+                        if (url) window.open(url, '_blank'); else toast('Link unavailable', 'err');
+                    })
+                    .withFailureHandler(e => { console.error(e); toast('Failed to fetch links', 'err'); })
+                    .getEventQuickLinks(ev.id);
+            });
+        }
+        function copySelectedLink() {
+            withSelectedEvent((ev) => {
+                google.script.run
+                    .withSuccessHandler(r => {
+                        const url = r?.publicUrl || '';
+                        if (!url) { toast('No public link', 'err'); return; }
+                        navigator.clipboard?.writeText(url).then(() => toast('Copied public link', 'ok')).catch(() => toast('Copy failed', 'err'));
+                    })
+                    .withFailureHandler(e => { console.error(e); toast('Failed', 'err'); })
+                    .getEventQuickLinks(ev.id);
             });
         }
 
-        function toast(msg, ok = true) {
-            logFn("toast", (ok ? "ok" : "danger") + " → " + msg);
-            const t = $('#toast'); if (!t) return;
-            t.textContent = msg; t.style.display = 'block';
-            t.className = 'toast ' + (ok ? 'ok' : 'danger');
-            setTimeout(() => { logFn("toast", "hide"); t.style.display = 'none'; }, 2400);
+        /******** Form save ********/
+        function saveForm() {
+            const s = document.getElementById('inpForm').value.trim();
+            withSelectedEvent((ev) => {
+                google.script.run
+                    .withSuccessHandler(r => {
+                        if (r?.ok) { toast('Form saved', 'ok'); loadEvents(); }
+                        else toast('Save failed', 'err');
+                    })
+                    .withFailureHandler(e => { console.error(e); toast('Save failed', 'err'); })
+                    .setEventFormId(ev.id, s);
+            });
         }
 
-        function setBusy(on, message) {
-            logFn("setBusy", (on ? "on" : "off") + (message ? " → " + message : ""));
-            const ov = $('#busy'); if (!ov) return;
-            const msg = ov.querySelector('.msg'); if (msg && message) msg.textContent = message;
-            ov.style.display = on ? 'grid' : 'none';
-            document.body.classList.toggle('is-busy', !!on);
-        }
-
-        function setQR(el, url) {
-            logFn("setQR", (el ? "#" + (el.id || "no-id") : "null") + " → " + (url || "(empty)"));
-            if (!el) return;
-            el.innerHTML = '';
-            if (!url) { el.classList.add('muted'); el.title = 'No link yet'; return; }
-            el.classList.remove('muted');
-            const img = new Image();
-            img.width = 200; img.height = 200; img.alt = 'QR';
-            img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chl=' + encodeURIComponent(url);
-            el.appendChild(img);
-        }
-
-        const copyText = async (txt) => {
-            logFn("copyText", (txt || "").slice(0, 64));
-            try { await navigator.clipboard.writeText(txt); return true; } catch { return false; }
-        };
-
-        function debounceWithFlush(fn, wait = 220) {
-            logFn("debounceWithFlush", "wait " + wait);
-            let t = null, lastArgs = null;
-            const wrapped = (...args) => {
-                lastArgs = args;
-                if (t) clearTimeout(t);
-                t = setTimeout(() => { t = null; logFn("debounceWithFlush", "flush"); fn(...(lastArgs || [])); }, wait);
-            };
-            wrapped.flush = () => { if (t) { clearTimeout(t); t = null; logFn("debounceWithFlush", "manual flush"); fn(...(lastArgs || [])); } };
-            return wrapped;
-        }
-
-        /* ---------- Boot identity ---------- */
-        const URLQ = new URLSearchParams(location.search);
-        const SERVER_SLUG = "<?= slug ?>";
-        const BOOT_ID =
-            (window.eventId && String(window.eventId).trim()) ||
-            URLQ.get('eventId') || URLQ.get('event') || URLQ.get('slug') ||
-            SERVER_SLUG || '';
-        logFn("BOOT_ID", BOOT_ID || "(none)");
-
-        /* ---------- State ---------- */
-        const STATE = { events: [], current: null, loading: false, links: null };
-        let _loadVer = 0;
-
-        /* ---------- Load & Render ---------- */
-        async function loadEvents(preselectId) {
-            logFn("loadEvents", "entry" + (preselectId ? " → preselect " + preselectId : ""));
-
-            // 1) Don’t bump version if we’re already loading; just bail.
-            if (STATE.loading) { logFn("loadEvents", "already loading → bail"); return; }
-
-            STATE.loading = true;
-            const myVer = ++_loadVer;
-
-            setBusy(true, 'Loading events…');
-            const sel = $('#chooseEvent');
-            const tip = $('#emptyTip');
-
-            try {
-                const rows = await gs('getEvents');
-                logFn("loadEvents", "rows " + (rows ? rows.length : 0));
-
-                // Guard UI updates from stale responses.
-                if (myVer !== _loadVer) { logFn("loadEvents", "stale response, ignore"); return; }
-
-                STATE.events = rows || [];
-                sel.innerHTML = '';
-                logFn("loadEvents", "STATE.events set");
-
-                if (!STATE.events.length) {
-                    logFn("loadEvents", "no events");
-                    const o = document.createElement('option');
-                    o.disabled = true; o.textContent = '— No events —';
-                    sel.appendChild(o); sel.disabled = true; tip.style.display = 'block';
-                    setCurrent(null);
-                    return;
-                }
-
-                tip.style.display = 'none'; sel.disabled = false;
-
-                STATE.events.forEach(e => {
-                    const o = document.createElement('option');
-                    o.value = e.eventId;
-                    const dateStr = e.startDate || e.date || '';
-                    const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
-                    o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}${e.isDefault ? ' ★' : ''}`;
-                    o.title = `${label}${dateStr ? ' • ' + dateStr : ''}`;
-                    sel.appendChild(o);
-                    logFn("loadEvents", "render option → " + label);
+        /******** Diagnostics ********/
+        (function diag() {
+            const out = () => document.getElementById('dxOut');
+            function show(x) { out().textContent = (typeof x === 'string') ? x : JSON.stringify(x, null, 2); }
+            function bind(id, fn) {
+                const el = document.getElementById(id); if (!el) return; el.addEventListener('click', () => {
+                    show('Running ' + fn + ' …');
+                    google.script.run.withSuccessHandler(show).withFailureHandler(e => show({ ok: false, err: String(e) }))[fn]();
                 });
-
-                let chosen = null;
-                if (preselectId) chosen = STATE.events.find(e => e.eventId === preselectId);
-                if (!chosen) chosen = STATE.events.find(e => e.isDefault) || STATE.events[0] || null;
-
-                if (chosen) {
-                    logFn("loadEvents", "chosen " + chosen.eventId);
-                    sel.value = chosen.eventId;
-                    setCurrent(chosen.eventId, /*immediate*/ true);
-                } else {
-                    logFn("loadEvents", "no chosen, setCurrent(null)");
-                    setCurrent(null);
-                }
-            } catch (err) {
-                logFn("loadEvents", "catch " + (err?.message || err));
-                console.error('getEvents failed:', err);
-                toast(err?.message || 'Failed to load events', false);
-                sel.innerHTML = '<option disabled>(load failed)</option>';
-                setCurrent(null);
-            } finally {
-                STATE.loading = false;
-                setBusy(false);
-                logFn("loadEvents", "finally exit");
             }
-        }
-
-        function setCurrent(eventId, immediate = false) {
-            logFn("setCurrent", "entry → " + eventId + (immediate ? " (immediate)" : ""));
-            STATE.current = STATE.events.find(e => e.eventId === eventId) || null;
-            logFn("setCurrent", "STATE.current " + (STATE.current ? (STATE.current.name || STATE.current.slug || STATE.current.eventId) : "(null)"));
-            renderCurrent();
-            updateStickyCta();
-            refreshShareLinks();
-            if (immediate && refreshShareLinks.flush) { logFn("setCurrent", "flush share links"); refreshShareLinks.flush(); }
-        }
-
-        function renderCurrent() {
-            logFn("renderCurrent", "entry");
-            const e = STATE.current;
-            const meta = $('#eventMeta');
-            const publicUrlEl = $('#publicUrl');
-            const formUrlEl = $('#formUrl');
-
-            if (!e) {
-                logFn("renderCurrent", "no event selected");
-                meta.innerHTML = '<div class="empty">No event selected.</div>';
-                setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
-                publicUrlEl.textContent = ''; formUrlEl.textContent = '';
-                $('#seedTools').style.display = 'none';
-                $('#aOpenTV').removeAttribute('href');
-                return;
-            }
-
-            const dateStr = e.startDate || e.date || '';
-            const label = (e.name && e.name.trim()) ? e.name : (e.slug || e.sid || '(unnamed)');
-            logFn("renderCurrent", "draw " + label);
-
-            meta.innerHTML = `
-<div><strong>${label}</strong>${dateStr ? ' • ' + dateStr : ''} ${e.isDefault ? '★' : ''}</div>
-<div class="hint">Flow: ${e.flow} • Elim: ${e.elimType} • Seed: ${e.seedMode}</div>
-<div class="hint">Signups: ${e.counts?.signups ?? 0}</div>
-`;
-
-            $('#seedTools').style.display = (e.seedMode === 'SEEDED') ? 'flex' : 'none';
-            setQR($('#qrPublic'), ''); setQR($('#qrForm'), '');
-            publicUrlEl.textContent = ''; formUrlEl.textContent = '';
-            $('#aOpenTV').removeAttribute('href');
-        }
-
-        /* ---------- Share / Links ---------- */
-        const _refreshShareLinksRaw = () => {
-            logFn("_refreshShareLinksRaw", "entry");
-            if (!STATE.current || !STATE.current.eventId) { logFn("_refreshShareLinksRaw", "no current"); STATE.links = null; return; }
-            if (!STATE.loading) setBusy(true, 'Preparing links…');
-            gs('getShareLinks', STATE.current.eventId)
-                .then(links => {
-                    logFn("_refreshShareLinksRaw", "links ok");
-                    STATE.links = links || {};
-                    const publicUrlEl = $('#publicUrl');
-                    const formUrlEl = $('#formUrl');
-                    setQR($('#qrPublic'), links.publicUrl || '');
-                    setQR($('#qrForm'), links.formUrl || '');
-                    publicUrlEl.textContent = links.publicUrl || '';
-                    formUrlEl.textContent = links.formUrl || '';
-
-                    const tv = $('#aOpenTV');
-                    if (tv) { if (links.displayUrl) { tv.href = links.displayUrl; } else { tv.removeAttribute('href'); } }
-
-                    $('#btnCopyPublic').onclick = async () => {
-                        logFn("btnCopyPublic", "click");
-                        toast((await copyText(links.publicUrl || '')) ? 'Public link copied' : 'Copy failed', !!links.publicUrl);
-                    };
-                    $('#btnCopyDisplay').onclick = async () => {
-                        logFn("btnCopyDisplay", "click");
-                        toast((await copyText(links.displayUrl || '')) ? 'Display link copied' : 'Copy failed', !!links.displayUrl);
-                    };
-                    $('#btnCopyPoster').onclick = async () => {
-                        logFn("btnCopyPoster", "click");
-                        toast((await copyText(links.posterUrl || '')) ? 'Poster link copied' : 'Copy failed', !!links.posterUrl);
-                    };
-                    $('#btnCopyForm').onclick = async () => {
-                        logFn("btnCopyForm", "click");
-                        toast((await copyText(links.formUrl || '')) ? 'Form link copied' : 'Copy failed', !!links.formUrl);
-                    };
-
-                    const shareBtn = $('#btnShare');
-                    if (shareBtn) {
-                        shareBtn.onclick = async () => {
-                            logFn("btnShare", "click");
-                            const url = links.publicUrl || '';
-                            const title = (STATE.current?.name || 'Event') + ' · NextUp';
-                            const text = 'Join or follow this event:';
-                            if (navigator.share) {
-                                try { await navigator.share({ title, text, url }); }
-                                catch { /* canceled */ }
-                            } else {
-                                toast((await copyText(url)) ? 'Public link copied' : 'Share not supported', !!url);
-                            }
-                        };
-                    }
-                })
-                .catch(err => { logFn("_refreshShareLinksRaw", "catch " + (err?.message || err)); console.error(err); toast('Link prep failed', false); })
-                .finally(() => { if (!STATE.loading) setBusy(false); logFn("_refreshShareLinksRaw", "finally"); });
-        };
-        const refreshShareLinks = debounceWithFlush(_refreshShareLinksRaw, 220);
-
-        /* ---------- Selection helpers ---------- */
-        function selectEvent(id) {
-            logFn("selectEvent", "entry → " + id);
-            const sel = document.getElementById('chooseEvent');
-            if (sel) sel.value = id;
-            setCurrent(id, true);
-        }
-
-        async function reloadEventsEnsure(newId, { tries = 3, baseDelay = 240 } = {}) {
-            logFn("reloadEventsEnsure", "entry → " + newId);
-            for (let i = 0; i < tries; i++) {
-                logFn("reloadEventsEnsure", "try " + (i + 1) + "/" + tries);
-                await loadEvents(newId);
-                if (STATE.events.some(e => e.eventId === newId)) { logFn("reloadEventsEnsure", "found, select"); selectEvent(newId); return true; }
-                await sleep(baseDelay * Math.pow(1.6, i));
-            }
-            logFn("reloadEventsEnsure", "optimistic add");
-            optimisticAddEvent({ eventId: newId });
-            selectEvent(newId);
-            return false;
-        }
-
-        function optimisticAddEvent(mini) {
-            logFn("optimisticAddEvent", "entry → " + JSON.stringify(mini));
-            if (!mini || !mini.eventId) { logFn("optimisticAddEvent", "no mini/eventId"); return; }
-            const exists = STATE.events.some(e => e.eventId === mini.eventId);
-            if (exists) { logFn("optimisticAddEvent", "exists, select"); selectEvent(mini.eventId); return; }
-
-            const item = {
-                eventId: mini.eventId, sid: mini.sid || '', slug: mini.slug || '',
-                name: mini.name || '', type: mini.type || '', status: mini.status || '',
-                startDate: mini.startDate || '', endDate: mini.endDate || '',
-                flow: mini.flow || '', weeks: mini.weeks || '',
-                elimType: mini.elimType || '', seedMode: mini.seedMode || '',
-                isDefault: false,
-                publicUrl: mini.publicUrl || '', displayUrl: mini.displayUrl || '',
-                adminUrl: mini.adminUrl || '', formUrl: mini.formUrl || '',
-                signupSheet: mini.signupSheet || '', scheduleSheet: mini.scheduleSheet || '',
-                bracketSheet: mini.bracketSheet || '', counts: { signups: 0 }
-            };
-            STATE.events.push(item);
-            logFn("optimisticAddEvent", "pushed → " + item.eventId);
-
-            const sel = document.getElementById('chooseEvent');
-            const tip = document.getElementById('emptyTip');
-            if (sel) {
-                if (tip) tip.style.display = 'none';
-                sel.disabled = false;
-                const o = document.createElement('option');
-                const rawName = (item.name && item.name.trim()) ? item.name.trim() : '';
-                const label = rawName && rawName !== '(unnamed)' ? rawName : (item.slug || item.sid || 'unnamed');
-                const dateStr = item.startDate || '';
-                o.value = item.eventId;
-                o.textContent = `${label}${dateStr ? ' (' + dateStr + ')' : ''}`;
-                o.title = `${label}${dateStr ? ' • ' + dateStr : ''}`;
-                sel.appendChild(o);
-                sel.value = item.eventId;
-            }
-            setCurrent(item.eventId, true);
-        }
-
-        /* ---------- Sticky CTA ---------- */
-        function updateStickyCta() {
-            logFn("updateStickyCta", "entry");
-            const bar = document.getElementById('stickyCta');
-            if (!bar) { logFn("updateStickyCta", "no bar"); return; }
-            const e = STATE.current, has = !!e;
-            bar.classList.toggle('hidden', !has);
-            if (!has) { logFn("updateStickyCta", "hidden (no current)"); return; }
-
-            const bTV = document.getElementById('ctaOpenTV');
-            const bForm = document.getElementById('ctaForm');
-            const bSched = document.getElementById('ctaSchedule');
-            const bBrkt = document.getElementById('ctaBracket');
-            const row2 = document.getElementById('ctaRow2');
-
-            if (bTV) bTV.onclick = () => { logFn("ctaOpenTV", "click"); document.getElementById('aOpenTV')?.click(); };
-
-            const hasForm = !!(e.formUrl && String(e.formUrl).trim());
-            if (bForm) {
-                bForm.textContent = hasForm ? 'Open Form' : 'Create Form';
-                bForm.classList.toggle('btn--primary', !hasForm);
-                bForm.classList.toggle('btn--ghost', hasForm);
-                bForm.onclick = () => {
-                    logFn("ctaForm", "click");
-                    hasForm ? window.open(e.formUrl, '_blank') : document.getElementById('btnCreateForm')?.click();
-                };
-            }
-
-            const flow = e.flow;
-            const showSched = flow === 'SEASON_ONLY' || flow === 'SEASON_TOURNEY';
-            const showBrkt = flow === 'SEASON_TOURNEY' || flow === 'TOURNEY_ONLY';
-            if (row2) row2.style.display = (showSched || showBrkt) ? '' : 'none';
-            if (bSched) { bSched.style.display = showSched ? '' : 'none'; bSched.onclick = () => { logFn("ctaSchedule", "click"); document.getElementById('btnGenSchedule')?.click(); }; }
-            if (bBrkt) { bBrkt.style.display = showBrkt ? '' : 'none'; bBrkt.onclick = () => { logFn("ctaBracket", "click"); document.getElementById('btnGenBrackets')?.click(); }; }
-        }
-
-        /* Hide CTA on mobile keyboard */
-        (function watchViewport() {
-            logFn("watchViewport", "init");
-            if (!window.visualViewport) return;
-            const baseH = window.visualViewport.height;
-            window.visualViewport.addEventListener('resize', () => {
-                const bar = document.getElementById('stickyCta'); if (!bar) return;
-                const shrink = baseH - window.visualViewport.height;
-                bar.classList.toggle('hidden', shrink > 120);
-                logFn("watchViewport", "resize → shrink " + shrink);
+            bind('dxPing', 'dx_ping'); bind('dxIdentity', 'dx_identity'); bind('dxProps', 'dx_props'); bind('dxControl', 'dx_control'); bind('dxIdx', 'dx_events_index');
+            document.getElementById('dxEcho')?.addEventListener('click', () => {
+                google.script.run.withSuccessHandler(show).withFailureHandler(e => show({ ok: false, err: String(e) })).dx_echo({ client: Date.now(), rnd: Math.random().toString(36).slice(2, 7) });
+            });
+            document.getElementById('dxCreateArchive')?.addEventListener('click', () => {
+                google.script.run.withSuccessHandler(show).withFailureHandler(e => show({ ok: false, err: String(e) })).dx_create_archive_cycle();
             });
         })();
 
-        /* ---------- Create flow ---------- */
-        async function createEventSmart(payload) {
-            logFn("createEventSmart", "entry");
-            try {
-                return await gs('createEventVerified', payload);
-            } catch (e) {
-                const msg = (e && e.message) ? String(e.message) : String(e);
-                if (/createEventVerified/i.test(msg) || /not found/i.test(msg) || /is not a function/i.test(msg)) {
-                    console.warn('createEventVerified not available, falling back:', msg);
-                    logFn("createEventSmart", "fallback to createEvent");
-                    return await gs('createEvent', payload);
-                }
-                logFn("createEventSmart", "rethrow " + msg);
-                throw e;
-            }
-        }
-        function weeksRequiredFor(flow) { const r = (flow === 'SEASON_TOURNEY' || flow === 'SEASON_ONLY'); logFn("weeksRequiredFor", flow + " → " + r); return r; }
-        function syncWeeksVisibility() {
-            logFn("syncWeeksVisibility", "entry");
-            const show = weeksRequiredFor($('#evFlow').value);
-            const weeks = $('#evWeeks');
-            weeks.style.display = show ? '' : 'none';
-            if (show) weeks.setAttribute('required', 'required');
-            else { weeks.removeAttribute('required'); weeks.value = ''; }
-        }
-
-        /* ---------- Diagnostics table renderer ---------- */
-        function renderDiagTable(report) {
-            logFn("renderDiagTable", "entry");
-            const tb = document.querySelector('#diagTable tbody'); tb.innerHTML = '';
-            if (!report) { logFn("renderDiagTable", "no report"); return; }
-            if (Array.isArray(report.results)) {
-                for (const r of report.results) {
+        /******** Server Test Runner ********/
+        (function tests() {
+            let LAST = null;
+            function render(rep) {
+                LAST = rep;
+                const tb = document.getElementById('testTbody'); tb.innerHTML = '';
+                const flat = rep.flat || [];
+                const total = flat.length, pass = flat.filter(x => x.ok).length, fail = total - pass;
+                document.getElementById('testSummary').textContent = `${rep.mode.toUpperCase()} • ${rep.ok ? '✅ PASS' : '❌ FAIL'} • ${pass}/${total} passed • ${rep.ms} ms`;
+                flat.forEach(r => {
                     const tr = document.createElement('tr');
-                    const td1 = document.createElement('td'); td1.textContent = r.name || '(suite)';
-                    const td2 = document.createElement('td'); td2.textContent = r.ok ? 'PASS' : 'FAIL';
-                    td2.style.fontWeight = '800'; td2.style.color = r.ok ? 'var(--ok)' : 'var(--danger)';
-                    const td3 = document.createElement('td'); td3.textContent = JSON.stringify(r.meta || {});
-                    tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
+                    tr.innerHTML = `<td>${r.suite}</td><td>${r.name}</td><td>${r.ok ? '✅' : '❌'}</td><td>${r.ms}</td><td><pre style="white-space:pre-wrap;margin:0">${r.err ? (r.err.msg || JSON.stringify(r.err)) || ''}</pre></td>`;
                     tb.appendChild(tr);
-                }
-            } else {
-                const tr = document.createElement('tr');
-                const td1 = document.createElement('td'); td1.textContent = 'status';
-                const td2 = document.createElement('td'); td2.textContent = report.ok ? 'OK' : 'ERR';
-                const td3 = document.createElement('td'); td3.textContent = JSON.stringify(report);
-                tr.appendChild(td1); tr.appendChild(td2); tr.appendChild(td3);
-                tb.appendChild(tr);
+                });
             }
-        }
-
-        /* ---------- Button handlers ---------- */
-        async function onCreateClick() {
-            logFn("onCreateClick", "entry");
-
-            const flowVal = $('#evFlow').value;
-            const needWeeks = flowVal === 'SEASON_TOURNEY' || flowVal === 'SEASON_ONLY';
-
-            if (!$('#evName').checkValidity() || !$('#evDate').checkValidity() || (needWeeks && !$('#evWeeks').checkValidity())) {
-                logFn("onCreateClick", "invalid inputs");
-                $('#evName').reportValidity(); $('#evDate').reportValidity(); $('#evWeeks').reportValidity(); return;
+            function run(mode) {
+                toast('Running ' + mode + '…', 'info');
+                google.script.run.withSuccessHandler(r => { render(r); toast('Done', 'ok'); }).withFailureHandler(e => toast('Runner failed', 'err')).run_test_suite(mode);
             }
-            const payload = {
-                name: $('#evName').value.trim(),
-                startDate: $('#evDate').value,
-                flow: flowVal,
-                weeks: needWeeks ? Number($('#evWeeks').value || 0) : 0,
-                elimType: $('#evElim').value,
-                seedMode: $('#evSeed').value
-            };
-            logFn("onCreateClick", "payload " + JSON.stringify(payload));
-
-            const btn = $('#btnCreate');
-            btn.disabled = true; setBusy(true, 'Creating event…'); toast('Creating event…');
-            try {
-                const created = await createEventSmart(payload);
-                logFn("onCreateClick", "created " + JSON.stringify(created));
-                optimisticAddEvent(created);
-                toast('Event created. View Manage Events dropdown!');
-                await reloadEventsEnsure(created.eventId, { tries: 6, baseDelay: 300 });
-                if (refreshShareLinks.flush) { logFn("onCreateClick", "flush share links"); refreshShareLinks.flush(); }
-                gs('refreshPublicCache', created.eventId);
-                // reset
-                $('#evName').value = ''; $('#evDate').value = ''; $('#evWeeks').value = '';
-                $('#evElim').value = 'SINGLE'; $('#evSeed').value = 'RANDOM'; $('#evFlow').value = payload.flow;
-                syncWeeksVisibility();
-                document.getElementById('manageTitle')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } catch (err) {
-                logFn("onCreateClick", "catch " + (err && err.message || err));
-                console.error('Create failed:', err);
-                toast((err && err.message) || 'Create failed', false);
-            } finally {
-                btn.disabled = false; setBusy(false);
-                logFn("onCreateClick", "finally exit");
-            }
-        }
-
-        async function runSelectedSuite() {
-            logFn("runSelectedSuite", "entry");
-            setBusy(true, 'Running…');
-            try {
-                const sel = document.getElementById('diagSuite').value;
-                let rep = null;
-                if (sel === 'quick') rep = await gs('runQuickChecks');
-                else if (sel === 'full') rep = await gs('runQaSuite');
-                else if (sel === 'create') rep = await gs('runTestsCreateCard');
-                else if (sel === 'manage') rep = await gs('runTestsManageCard');
-                else if (sel === 'signups') rep = await gs('runTestsSignupsCard');
-                else if (sel === 'share') rep = await gs('runTestsShareCard');
-                else if (sel === 'schedule') rep = await gs('runTestsScheduleCard');
-                else if (sel === 'brackets') rep = await gs('runTestsBracketsCard');
-                else if (sel === 'allcards') rep = await gs('runAllCardTests');
-                renderDiagTable(rep); window.__lastDiagReport = rep;
-                toast(rep.ok ? 'Suite PASS' : 'Suite ATTENTION', rep.ok);
-            } catch (e) { logFn("runSelectedSuite", "catch " + (e?.message || e)); console.error(e); toast('Suite failed', false); }
-            finally { setBusy(false); logFn("runSelectedSuite", "finally exit"); }
-        }
-
-        async function runSelfHealUI() {
-            logFn("runSelfHealUI", "entry");
-            setBusy(true, 'Self-healing…');
-            try {
-                const rep = await gs('selfHeal');
-                renderDiagTable(rep); window.__lastDiagReport = rep;
-                toast(rep.ok ? 'Self-heal: OK' : 'Self-heal: ATTENTION', rep.ok);
-                await loadEvents(STATE.current?.eventId);
-                if (STATE.current && refreshShareLinks.flush) { logFn("runSelfHealUI", "flush share links"); refreshShareLinks.flush(); }
-            } catch (e) { logFn("runSelfHealUI", "catch " + (e?.message || e)); console.error(e); toast('Self-heal failed', false); }
-            finally { setBusy(false); logFn("runSelfHealUI", "finally exit"); }
-        }
-
-        async function runHardResetUI() {
-            logFn("runHardResetUI", "entry");
-            if (!confirm('This will back up the current Events sheet and create a fresh one.\nProceed?')) { logFn("runHardResetUI", "cancel"); return; }
-            setBusy(true, 'Hard reset…');
-            try {
-                const rep = await gs('hardResetEventsSheet');
-                renderDiagTable(rep); window.__lastDiagReport = rep;
-                toast('Events sheet reset', true);
-                await loadEvents();
-            } catch (e) { logFn("runHardResetUI", "catch " + (e?.message || e)); console.error(e); toast('Hard reset failed', false); }
-            finally { setBusy(false); logFn("runHardResetUI", "finally exit"); }
-        }
-
-        async function showStatusUI() {
-            logFn("showStatusUI", "entry");
-            setBusy(true, 'Status…');
-            try { const s = await gs('getStatus'); renderDiagTable(s); window.__lastDiagReport = s; }
-            catch (e) { logFn("showStatusUI", "catch " + (e?.message || e)); console.error(e); toast('Status failed', false); }
-            finally { setBusy(false); logFn("showStatusUI", "finally exit"); }
-        }
-
-        async function showLogsUI() {
-            logFn("showLogsUI", "entry");
-            setBusy(true, 'Logs…');
-            try {
-                const rows = await gs('getLogs', 100);
-                const tb = document.querySelector('#diagTable tbody'); tb.innerHTML = '';
-                for (const r of rows) {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${r.ts}</td><td>${r.level}</td><td>${r.msg}</td><td>${typeof r.json === 'object' ? JSON.stringify(r.json) : r.json || ''}</td>`;
-                    tb.appendChild(tr);
-                }
-                window.__lastDiagReport = rows;
-            } catch (e) { logFn("showLogsUI", "catch " + (e?.message || e)); console.error(e); toast('Logs failed', false); }
-            finally { setBusy(false); logFn("showLogsUI", "finally exit"); }
-        }
-
-        function copyReportUI() {
-            logFn("copyReportUI", "entry");
-            const data = window.__lastDiagReport || { info: 'No report yet' };
-            const txt = JSON.stringify(data, null, 2);
-            copyText(txt).then(ok => { logFn("copyReportUI", "copied? " + ok); toast(ok ? 'Report copied' : 'Copy failed', ok); });
-        }
-
-        /* ---------- Global event wiring (ONE place) ---------- */
-        document.addEventListener('DOMContentLoaded', () => {
-            logFn("DOMContentLoaded", "bind handlers");
-            // helper
-            const on = (id, type, fn) => {
-                const el = document.getElementById(id);
-                if (!el) { console.warn(`[bind] missing #${id}`); logFn("bind", "missing #" + id); return; }
-                el.addEventListener(type, fn);
-                logFn("bind", "ok #" + id + " → " + type);
-            };
-
-            // initial state + visibility
-            syncWeeksVisibility();
-            loadEvents().then(() => { logFn("DOMContentLoaded", "loadEvents ready"); });
-
-            // Create card
-            on('btnCreate', 'click', onCreateClick);
-            // FIX: Toggle the actual popover element, not the button
-            on('btnFlowHelp', 'click', () => { logFn("btnFlowHelp", "toggle popover"); document.getElementById('popFlowHelp')?.togglePopover?.(); });
-            // Live weeks visibility when Flow changes
-            on('evFlow', 'change', syncWeeksVisibility);
-
-            // Manage card
-            on('chooseEvent', 'change', (ev) => { logFn("chooseEvent", "change " + ev.currentTarget.value); setCurrent(ev.currentTarget.value); });
-            on('btnRefreshEvents', 'click', async (e) => {
-                logFn("btnRefreshEvents", "click");
-                const btn = e.currentTarget; if (STATE.loading) { logFn("btnRefreshEvents", "loading → bail"); return; }
-                btn.disabled = true;
-                try { await loadEvents(STATE.current?.eventId); }
-                catch (err) { console.error(err); toast(err?.message || 'Refresh failed', false); }
-                finally { btn.disabled = false; }
+            document.getElementById('btnRunSmoke').addEventListener('click', () => run('smoke'));
+            document.getElementById('btnRunDaily').addEventListener('click', () => run('daily'));
+            document.getElementById('btnRunFull').addEventListener('click', () => run('full'));
+            document.getElementById('btnCopyReport').addEventListener('click', () => {
+                if (!LAST) return toast('No report', 'err');
+                const text = JSON.stringify(LAST, null, 2);
+                navigator.clipboard?.writeText(text).then(() => toast('Copied', 'ok')).catch(() => toast('Copy failed', 'err'));
             });
-            on('btnSetDefault', 'click', async () => {
-                logFn("btnSetDefault", "click");
-                if (!STATE.current) return;
-                setBusy(true, 'Setting default…');
-                try { await gs('setDefaultEvent', STATE.current.eventId, true); toast('Default updated'); await loadEvents(STATE.current.eventId); }
-                catch (err) { toast(err?.message || 'Failed to set default', false); }
-                finally { setBusy(false); }
+            document.getElementById('btnLogReport').addEventListener('click', () => {
+                if (!LAST) return toast('No report', 'err');
+                google.script.run.withSuccessHandler(r => toast(r?.ok ? 'Logged' : 'Log failed', r?.ok ? 'ok' : 'err')).withFailureHandler(e => toast('Log failed', 'err')).log_test_report(LAST);
             });
-            on('btnOpenPublic', 'click', () => {
-                logFn("btnOpenPublic", "click");
-                if (!STATE.current) return;
-                setBusy(true, 'Opening…');
-                gs('getShareLinks', STATE.current.eventId)
-                    .then(links => { const url = links && links.publicUrl; if (url) window.open(url, '_blank'); else toast('No public link yet', false); })
-                    .catch(() => toast('Failed to open public page', false))
-                    .finally(() => setBusy(false));
-            });
-            on('btnOpenSheets', 'click', () => {
-                logFn("btnOpenSheets", "click");
-                if (!STATE.current) return;
-                setBusy(true, 'Opening Sheets…');
-                gs('openSheetUrl', STATE.current.eventId)
-                    .then(url => { if (url) window.open(url, '_blank'); else toast('Sheet not found', false); })
-                    .catch(err => toast(err?.message || 'Open Sheets failed', false))
-                    .finally(() => setBusy(false));
-            });
+        })();
 
-            // Signups
-            on('btnCreateForm', 'click', async () => {
-                logFn("btnCreateForm", "click");
-                if (!STATE.current) return;
-                const opts = { email: $('#optEmail').checked, phone: $('#optPhone').checked, notes: $('#optNotes').checked };
-                setBusy(true, 'Creating form…');
-                try {
-                    await gs('buildSignupForm', STATE.current.eventId, opts);
-                    toast('Signup form ready'); await loadEvents(STATE.current.eventId);
-                    refreshShareLinks.flush?.(); updateStickyCta();
-                } catch (err) { toast(err?.message || 'Form creation failed', false); }
-                finally { setBusy(false); }
-            });
-            on('btnAddSeedCol', 'click', async () => {
-                logFn("btnAddSeedCol", "click");
-                if (!STATE.current) return;
-                setBusy(true, 'Ensuring seed column…');
-                try { await gs('ensureSeedColumn', STATE.current.eventId); toast('Seed column ensured'); }
-                catch (err) { toast(err?.message || 'Failed to add Seed column', false); }
-                finally { setBusy(false); }
-            });
-
-            // Schedule
-            on('btnGenSchedule', 'click', async () => {
-                logFn("btnGenSchedule", "click");
-                if (!STATE.current) return;
-                const w = Number($('#weeksEdit').value || STATE.current.weeks || 0);
-                if (!w) { toast('Pick number of weeks', false); return; }
-                setBusy(true, 'Generating schedule…');
-                try { await gs('generateSchedule', STATE.current.eventId, w); toast('Schedule scaffold generated'); gs('refreshPublicCache', STATE.current.eventId); }
-                catch (err) { toast(err?.message || 'Failed to generate schedule', false); }
-                finally { setBusy(false); }
-            });
-
-            // Brackets
-            on('elimTypeEdit', 'change', () => { logFn("elimTypeEdit", "change"); $('#brktStatus').textContent = ''; });
-            on('seedModeEdit', 'change', () => { logFn("seedModeEdit", "change"); $('#brktStatus').textContent = ''; });
-            on('btnGenBrackets', 'click', async () => {
-                logFn("btnGenBrackets", "click");
-                if (!STATE.current) return;
-                const opts = { elimType: $('#elimTypeEdit').value, seedMode: $('#seedModeEdit').value };
-                setBusy(true, 'Generating bracket…');
-                try {
-                    const res = await gs('generateBrackets', STATE.current.eventId, opts);
-                    if (res && res.ok) {
-                        toast('Bracket generated'); $('#brktStatus').textContent = `Mode: ${opts.elimType} · Seeding: ${opts.seedMode}`;
-                        gs('refreshPublicCache', STATE.current.eventId);
-                    } else if (res && res.reason === 'missing_seeds') {
-                        if (confirm('Seeds are missing. Open Sheets to add 1..N seeds? (Cancel to generate Random)')) {
-                            $('#btnOpenSheets').click();
-                        } else {
-                            const r2 = await gs('generateBrackets', STATE.current.eventId, { elimType: opts.elimType, seedMode: 'RANDOM' });
-                            if (r2 && r2.ok) {
-                                toast('Bracket generated (Random)');
-                                $('#seedModeEdit').value = 'RANDOM';
-                                $('#brktStatus').textContent = `Mode: ${opts.elimType} · Seeding: RANDOM`;
-                                gs('refreshPublicCache', STATE.current.eventId);
-                            } else {
-                                toast('Failed to generate bracket', false);
-                            }
-                        }
-                    } else {
-                        toast('Failed to generate bracket', false);
-                    }
-                } catch (err) { toast(err?.message || 'Bracket generation failed', false); }
-                finally { setBusy(false); }
-            });
-            on('btnRefreshView', 'click', () => {
-                logFn("btnRefreshView", "click");
-                if (!STATE.current) return;
-                setBusy(true, 'Refreshing…');
-                gs('refreshPublicCache', STATE.current.eventId)
-                    .then(() => toast('Public cache refreshed'))
-                    .catch(() => toast('Refresh failed', false))
-                    .finally(() => setBusy(false));
-            });
-
-            // Diagnostics
-            on('btnRunSuite', 'click', runSelectedSuite);
-            on('btnSelfHeal', 'click', runSelfHealUI);
-            on('btnHardReset', 'click', runHardResetUI);
-            on('btnShowStatus', 'click', showStatusUI);
-            on('btnShowLogs', 'click', showLogsUI);
-            on('btnCopyReport', 'click', copyReportUI);
-
-            // Keep signup count fresh
-            setInterval(() => {
-                logFn("signupCountInterval", "tick");
-                if (!STATE.current) return;
-                gs('getSignupCount', STATE.current.eventId)
-                    .then(n => { if (typeof n === 'number') $('#signupCountTile').textContent = n; })
-                    .catch(() => { /* ignore */ });
-            }, 15000);
+        /******** Cache badge actions ********/
+        document.getElementById('btnForceReval').addEventListener('click', () => loadEvents({ force: true }));
+        document.getElementById('btnCopyDiag').addEventListener('click', () => {
+            const payload = { etag: STATE.etag, lastFetch: STATE.lastFetch, lastKind: STATE.lastKind, count: STATE.items.length };
+            const text = JSON.stringify(payload, null, 2);
+            navigator.clipboard?.writeText(text).then(() => toast('Diagnostics copied', 'ok')).catch(() => toast('Copy failed', 'err'));
         });
+
+        /******** Buttons wiring ********/
+        document.getElementById('btnCreateEvent').addEventListener('click', onCreate);
+        document.getElementById('chooseEvent').addEventListener('change', enableManageButtons);
+        document.getElementById('btnOpenWorkbook').addEventListener('click', () => openLink('workbook'));
+        document.getElementById('btnOpenAdmin').addEventListener('click', () => openLink('admin'));
+        document.getElementById('btnOpenDisplay').addEventListener('click', () => openLink('display'));
+        document.getElementById('btnOpenPublic').addEventListener('click', () => openLink('public'));
+        document.getElementById('btnOpenPoster').addEventListener('click', () => openLink('poster'));
+        document.getElementById('btnCopyLink').addEventListener('click', copySelectedLink);
+        document.getElementById('btnSaveForm').addEventListener('click', saveForm);
+
+        /******** UI Tests (client) incl. DOM coverage smoke ********/
+        (function uiTests() {
+            const T = {
+                now: () => performance.now(), sleep: (ms) => new Promise(r => setTimeout(r, ms)),
+                ok(c, m, x) { if (!c) throw { __assert: true, msg: m, ctx: x }; }, ge(a, b, m) { if (!(a >= b)) throw { __assert: true, msg: m, ctx: { a, b } }; }
+            };
+            function presence(id) { return !!document.getElementById(id); }
+            function minHeightOk(id, min = 44) { const el = document.getElementById(id); if (!el) return false; return (el.getBoundingClientRect().height >= min); }
+
+            async function suiteSmoke() {
+                const cases = [];
+                cases.push({
+                    name: 'DOM coverage (IDs present)', fn: async () => {
+                        const must = ['themeToggle', 'chooseEvent', 'btnCreateEvent', 'btnOpenWorkbook', 'btnOpenAdmin', 'btnOpenDisplay', 'btnOpenPublic', 'btnOpenPoster', 'btnCopyLink', 'btnSaveForm'];
+                        const missing = must.filter(id => !presence(id));
+                        T.ok(missing.length === 0, 'Missing DOM ids', { missing });
+                    }
+                });
+                cases.push({
+                    name: 'Tap targets ≥44px', fn: async () => {
+                        const ids = ['btnCreateEvent', 'btnOpenWorkbook', 'btnOpenAdmin', 'btnOpenDisplay', 'btnOpenPublic', 'btnOpenPoster'];
+                        const small = ids.filter(id => !minHeightOk(id, 44));
+                        T.ok(small.length === 0, 'Buttons too small', { small });
+                    }
+                });
+                cases.push({
+                    name: 'Viewport meta present', fn: async () => {
+                        const ok = !!document.querySelector('meta[name="viewport"]');
+                        T.ok(ok, 'No viewport meta');
+                    }
+                });
+                cases.push({ name: 'Toast host exists', fn: async () => { T.ok(!!document.querySelector('[data-toast-host]'), 'No toast host'); } });
+                return run('ui_smoke', cases);
+            }
+            async function suiteFull() {
+                const cases = [];
+                cases.push({
+                    name: 'Create button disables/enables (mock)', fn: async () => {
+                        const btn = document.getElementById('btnCreateEvent'); T.ok(btn, 'No create btn');
+                        const orig = google.script.run.createEvent;
+                        // mock minimal success
+                        google.script.run.createEvent = (payload) => ({ withSuccessHandler(h) { setTimeout(() => h({ ok: true, id: 'MOCK' }), 200); return this; }, withFailureHandler() { return this; } });
+                        btn.click(); await T.sleep(60); T.ok(btn.disabled, 'Not disabled'); await T.sleep(260); T.ok(!btn.disabled, 'Not re-enabled');
+                        google.script.run.createEvent = orig;
+                    }
+                });
+                return run('ui_full', cases);
+            }
+            function run(name, list) {
+                const out = { suite: name, cases: [], ms: 0, ok: true }; const t0 = performance.now();
+                return list.reduce((p, tc) => p.then(async () => {
+                    const r = { name: tc.name, ok: true, ms: 0, err: null }; const s = performance.now();
+                    try { await tc.fn(); } catch (e) { r.ok = false; r.err = (e && e.__assert) ? e : { msg: String(e) }; out.ok = false; }
+                    r.ms = performance.now() - s; out.cases.push(r);
+                }), Promise.resolve()).then(() => { out.ms = performance.now() - t0; render(out); return out; });
+            }
+            function render(rep) {
+                const body = document.getElementById('uiTestBody'); body.innerHTML = ''; const flat = rep.cases;
+                const total = flat.length, fail = flat.filter(x => !x.ok).length;
+                document.getElementById('uiTestSummary').textContent = `${rep.suite.toUpperCase()} • ${fail ? '❌ FAIL' : '✅ PASS'} • ${total - fail}/${total} passed • ${rep.ms.toFixed(0)} ms`;
+                flat.forEach(r => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `<td>${r.name}</td><td>${r.ok ? '✅' : '❌'}</td><td>${r.ms.toFixed(0)}</td><td><pre style="margin:0;white-space:pre-wrap">${r.err ? (r.err.msg || JSON.stringify(r.err)) || ''}</pre></td>`;
+                    body.appendChild(tr);
+                });
+            }
+            document.getElementById('btnUiSmoke').addEventListener('click', () => suiteSmoke().then(() => toast('UI smoke done', 'ok')));
+            document.getElementById('btnUiFull').addEventListener('click', () => suiteFull().then(() => toast('UI full done', 'ok')));
+            document.getElementById('btnUiCopy').addEventListener('click', () => {
+                const table = document.getElementById('uiTestBody'); const rows = [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent));
+                const text = JSON.stringify(rows); navigator.clipboard?.writeText(text).then(() => toast('UI report copied', 'ok')).catch(() => toast('Copy failed', 'err'));
+            });
+            // Expose minimal hooks if desired
+            window.renderEvents = window.renderEvents || function (items) { /* replaced above */ };
+        })();
+
+        /******** Boot ********/
+        window.addEventListener('DOMContentLoaded', () => { loadEvents(); });
     </script>
 </body>
 
