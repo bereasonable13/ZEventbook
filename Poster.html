@@ -2,128 +2,178 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>
-        <?= appTitle ?> · Poster
-    </title>
+    <title>NextUp · Poster</title>
     <?!= include('Styles'); ?>
     <style>
-        /* Poster-specific quick styles (builds on global tokens) */
+        /* Poster look: bold, clean, printable */
         :root {
-            --poster-max: 980px;
+            --pad: 16px;
         }
 
         body {
-            background: var(--bg);
+            background: #f7f8fb;
         }
 
-        header.appbar {
-            display: none;
+        .wrap {
+            max-width: 900px;
+            margin: 12px auto 24px;
+            padding: 0 var(--pad);
         }
 
-        /* chrome-free poster */
-        main.poster {
-            max-width: var(--poster-max);
-            margin: 24px auto 48px;
-            padding: 0 16px;
+        .poster {
+            background: #fff;
+            color: #0f172a;
+            border-radius: 16px;
+            padding: clamp(16px, 4vw, 28px);
+            box-shadow: 0 10px 26px rgba(0, 0, 0, .08);
+        }
+
+        header {
             text-align: center;
+            margin-bottom: clamp(16px, 3.5vw, 28px);
         }
 
-        #pTitle {
-            font-weight: 900;
-            line-height: 1.1;
-            letter-spacing: -0.02em;
-            margin: 8px 0 4px;
-            font-size: clamp(2rem, 4vw + 1rem, 3.5rem);
+        .eyebrow {
+            letter-spacing: .18em;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #334155;
+            font-size: clamp(10px, 1.8vw, 12px);
         }
 
-        #pDate {
-            font-size: clamp(1.1rem, 1.2rem + 0.5vw, 1.6rem);
-            color: var(--muted);
-            margin-bottom: 18px;
+        h1 {
+            font-size: clamp(28px, 7vw, 56px);
+            line-height: 1.02;
+            margin: .25em 0 .1em;
         }
 
-        #metaRow {
+        .sub {
+            color: #475569;
+            font-size: clamp(14px, 2.6vw, 18px);
+        }
+
+        .place {
+            font-weight: 600;
+        }
+
+        .hero {
+            margin: clamp(10px, 3vw, 20px) 0 clamp(18px, 4vw, 28px);
             display: flex;
+            gap: clamp(10px, 2vw, 16px);
+            align-items: center;
             justify-content: center;
-            gap: 18px;
             flex-wrap: wrap;
-            margin-bottom: 24px;
         }
 
-        .tile--soft {
-            background: var(--surface);
+        .art {
+            flex: 1 1 520px;
+            min-height: 220px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f3f4f6;
+            border-radius: 14px;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
         }
 
-        #qrRow {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 18px;
-            align-items: start;
-            justify-items: center;
+        .art img {
+            width: 100%;
+            height: auto;
+            display: block;
         }
 
-        .qr-block {
-            display: grid;
+        .art.empty {
+            background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 8px, #f3f4f6 8px, #f3f4f6 16px);
+            color: #94a3b8;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .qrrow {
+            display: flex;
+            gap: clamp(12px, 3vw, 24px);
+            justify-content: space-between;
+            align-items: flex-start;
+            flex-wrap: wrap;
+        }
+
+        .qrbox {
+            background: #0b1220;
+            color: #e6edf7;
+            border-radius: 12px;
+            padding: 12px;
+            box-shadow: 0 8px 22px rgba(2, 6, 23, .25);
+            min-width: 240px;
+            max-width: 300px;
+            flex: 1 1 260px;
+        }
+
+        .qrbox .label {
+            display: block;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        .qrbox img {
+            display: block;
+            width: 100%;
+            max-width: 260px;
+            height: auto;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .qrbox .hint {
+            color: #b6c2d1;
+            font-size: 12px;
+            margin-top: 6px;
+            word-break: break-all;
+        }
+
+        .buttons {
+            margin-top: 12px;
+            display: flex;
             gap: 8px;
-            justify-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
         }
 
-        .qr .qr-img {
-            width: 280px;
-            height: 280px;
-        }
-
-        .section-caption {
+        .btn {
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 0;
+            cursor: pointer;
+            background: #0f766e;
+            color: #fff;
             font-weight: 700;
         }
 
-        #publicUrl,
-        #formUrl {
-            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-            font-size: 0.98rem;
-            word-break: break-all;
-            max-width: 680px;
+        .btn.secondary {
+            background: #334155;
         }
 
-        @media (min-width: 760px) {
-            #qrRow {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
+        footer {
+            margin-top: clamp(14px, 3vw, 22px);
+            text-align: center;
+            color: #64748b;
+            font-size: 12px;
         }
 
+        /* Print */
         @media print {
             body {
                 background: #fff;
             }
 
-            main.poster {
-                margin: 0;
-                padding: 0;
-                max-width: 100%;
+            .poster {
+                box-shadow: none;
             }
 
-            #pTitle {
-                font-size: 3.6rem;
-            }
-
-            #pDate {
-                font-size: 1.6rem;
-            }
-
-            #qrRow {
-                grid-template-columns: repeat(2, 1fr);
-                gap: 16px;
-            }
-
-            .qr .qr-img {
-                width: 320px;
-                height: 320px;
-            }
-
-            .toast,
-            #busy {
+            .btn,
+            .buttons {
                 display: none !important;
             }
         }
@@ -131,154 +181,138 @@
 </head>
 
 <body>
-
-    <main class="poster">
-        <!-- Busy overlay (shares tokens with other views) -->
-        <div id="busy"
-            style="display:none; position:fixed; inset:0; display:none; place-items:center; z-index:4000; background:rgba(0,0,0,.45);">
-            <div class="card"
-                style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; gap:10px; align-items:center;">
-                <div class="spinner" style="font-size:1.6rem; line-height:1; display:flex; gap:8px;">
-                    <span>🏃‍♂️</span><span>🥎</span><span>🧶</span>
+    <div class="wrap">
+        <div class="poster">
+            <header>
+                <div class="eyebrow" id="tag">NEXTUP</div>
+                <div class="buttons" style="margin-top:8px;">
+                    <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
                 </div>
-                <div class="msg" style="font-weight:800;">Preparing poster…</div>
+                <h1 id="title">Event</h1>
+                <div class="sub">
+                    <span id="datePretty"></span>
+                    <span id="placeWrap"> · <span class="place" id="place"></span></span>
+                </div>
+            </header>
+
+            <section class="hero">
+                <div id="art" class="art empty">
+                    <span id="artPlaceholder">Poster image will appear here</span>
+                </div>
+            </section>
+
+            <section class="qrrow" id="qrRow">
+                <div class="qrbox" id="qrFormBox" style="display:none;">
+                    <span class="label">Sign Up</span>
+                    <img id="qrForm" alt="QR: Sign-up" />
+                    <div class="hint" id="formUrl"></div>
+                </div>
+                <div class="qrbox" id="qrPublicBox" style="display:none;">
+                    <span class="label">Event Page</span>
+                    <img id="qrPublic" alt="QR: Public page" />
+                    <div class="hint" id="publicUrl"></div>
+                </div>
+            </section>
+
+            <div class="buttons">
+                <button class="btn" id="btnOpenPublic" style="display:none;">Open Public Page</button>
+                <button class="btn secondary" id="btnOpenAdmin" style="display:none;">Open Admin</button>
             </div>
+
+            <footer>
+                Generated by NextUp · Poster is public-shareable; sensitive content belongs on the Display page.
+            </footer>
         </div>
-
-        <!-- Toast -->
-        <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
-
-        <!-- Title + date -->
-        <h1 id="pTitle">Event</h1>
-        <div id="pDate" aria-label="Event date"></div>
-
-        <!-- Optional mini stats row -->
-        <div id="metaRow" aria-label="Quick stats" style="display:none;">
-            <div class="tile tile--soft" id="mSignups" style="display:none;">0 signups</div>
-            <div class="tile tile--soft" id="mFlow" style="display:none;"></div>
-        </div>
-
-        <!-- QR blocks -->
-        <section id="qrRow" aria-label="QR codes">
-            <div class="qr-block" id="blockPublic">
-                <div class="qr" id="qrPublic"><!-- img injected --></div>
-                <div class="section-caption">Public link</div>
-                <div id="publicUrl" class="hint"></div>
-            </div>
-            <div class="qr-block" id="blockForm" style="display:none;">
-                <div class="qr" id="qrForm"><!-- img injected --></div>
-                <div class="section-caption">Signup form</div>
-                <div id="formUrl" class="hint"></div>
-            </div>
-        </section>
-
-        <!-- Footer hint -->
-        <p class="hint" style="margin-top:18px;">Tip: print and post this near courts/entrances — the QR updates as
-            links change.</p>
-    </main>
+    </div>
 
     <script>
-        // ---------- Utilities ----------
-        const $ = (s, p = document) => p.querySelector(s);
-        function toast(msg, ok = true) {
-            const t = $('#toast'); if (!t) return;
-            t.textContent = msg;
-            t.style.display = 'block';
-            t.className = 'toast ' + (ok ? 'ok' : 'danger');
-            setTimeout(() => t.style.display = 'none', 2400);
-        }
-        function setBusy(on, message) {
-            const ov = $('#busy'); if (!ov) return;
-            const m = ov.querySelector('.msg'); if (m && message) m.textContent = message;
-            ov.style.display = on ? 'grid' : 'none';
-        }
-        function setQR(el, url, size = 280) {
-            if (!el) return;
-            el.innerHTML = '';
-            if (!url) { el.classList.add('muted'); return; }
-            const img = new Image();
-            img.alt = 'QR';
-            img.width = size; img.height = size;
-            img.className = 'qr-img';
-            img.src = 'https://chart.googleapis.com/chart?cht=qr&chs=' + size + 'x' + size + '&chl=' + encodeURIComponent(url);
-            el.appendChild(img);
-        }
+        // Ensure theme toggle doesn't error if Styles.html hasn't provided it
+        window.NextUpTheme = window.NextUpTheme || { toggle() { document.documentElement.classList.toggle('theme--light'); } };
 
-        // ---------- Boot identity (eventId or slug) ----------
-        const URLQ = new URLSearchParams(location.search);
-        const SERVER_SLUG = "<?= slug ?>";
-        const BOOT_ID = 
-        (window.eventId && String(window.eventId).trim()) || 
-        URLQ.get('eventId') ||
-        URLQ.get('event') ||
-        URLQ.get('slug') ||
-        SERVER_SLUG || '');
+        const qs = new URLSearchParams(location.search);
+        const eventId = qs.get('event') || '';
 
-        // ---------- Renderers ----------
-        function renderMeta(bundle) {
-            const name = bundle?.eventMeta?.name || 'Event';
-            const date = bundle?.eventMeta?.date || '';
-            const flow = bundle?.eventMeta?.flow || '';
-            const signups = Number(bundle?.counts?.signups || 0);
-
-            $('#pTitle').textContent = name;
-            $('#pDate').textContent = date;
-
-            // optional stat chips
-            let any = false;
-            if ($('#mSignups')) {
-                $('#mSignups').style.display = '';
-                $('#mSignups').textContent = `${signups} signup${signups === 1 ? '' : 's'}`;
-                any = true;
-            }
-            if (flow && $('#mFlow')) {
-                const map = { 'SEASON_TOURNEY': 'Season → Tournament', 'SEASON_ONLY': 'Season only', 'TOURNEY_ONLY': 'Tournament only', 'REGISTRATION': 'Signups only' };
-                $('#mFlow').style.display = '';
-                $('#mFlow').textContent = map[flow] || flow;
-                any = true;
-            }
-            if (any) $('#metaRow').style.display = 'flex';
-        }
-
-        function renderLinks(links) {
-            const pUrl = links?.publicUrl || '';
-            const fUrl = links?.formUrl || '';
-
-            // Public
-            setQR($('#qrPublic'), pUrl, 280);
-            $('#publicUrl').textContent = pUrl || '';
-
-            // Form (optional)
-            if (fUrl) {
-                $('#blockForm').style.display = 'grid';
-                setQR($('#qrForm'), fUrl, 280);
-                $('#formUrl').textContent = fUrl || '';
-            } else {
-                $('#blockForm').style.display = 'none';
+        function setText(id, val, { hideParentIfEmpty = false, parentId } = {}) {
+            const el = document.getElementById(id); if (!el) return;
+            const v = String(val || '').trim();
+            el.textContent = v;
+            if (hideParentIfEmpty && parentId) {
+                const p = document.getElementById(parentId);
+                if (p) p.style.display = v ? '' : 'none';
             }
         }
 
-        function boot() {
-            if (!BOOT_ID) { toast('No event specified', false); return; }
-            setBusy(true, 'Loading…');
-            google.script.run
-                .withSuccessHandler(bundle => {
-                    try {
-                        renderMeta(bundle);
-                        // Use server canonical links (handles UTMs/shape)
-                        google.script.run
-                            .withSuccessHandler(renderLinks)
-                            .withFailureHandler(err => { console.error(err); toast('Link prep failed', false); })
-                            .getShareLinks(bundle?.eventMeta?.eventId || BOOT_ID);
-                    } finally {
-                        setBusy(false);
-                    }
-                })
-                .withFailureHandler(err => { console.error(err); toast('Load failed', false); setBusy(false); })
-                .getPublicBundle(BOOT_ID);
+        function setQr(blockId, imgId, urlTextId, qrUrl, rawUrl) {
+            const box = document.getElementById(blockId);
+            const img = document.getElementById(imgId);
+            const txt = document.getElementById(urlTextId);
+            const ok = !!qrUrl && !!rawUrl;
+            if (!ok) {
+                box.style.display = 'none'; img.removeAttribute('src'); txt.textContent = '';
+                return;
+            }
+            box.style.display = '';
+            img.src = qrUrl;
+            txt.textContent = rawUrl;
         }
 
-        document.addEventListener('DOMContentLoaded', boot);
+        async function loadPoster() {
+            try {
+                const res = await new Promise(resolve => {
+                    google.script.run
+                        .withSuccessHandler(resolve)
+                        .withFailureHandler(() => resolve(null))
+                        .getPosterBundle(eventId);
+                });
+
+                if (!res || !res.ok) {
+                    setText('title', 'Event not found');
+                    document.getElementById('qrRow').style.display = 'none';
+                    return;
+                }
+
+                // Header
+                setText('tag', res.eventTag || 'NEXTUP');
+                setText('title', res.title || 'Event');
+                setText('datePretty', res.datePretty || '');
+                setText('place', res.place || '', { hideParentIfEmpty: true, parentId: 'placeWrap' });
+
+                // Poster art
+                const artBox = document.getElementById('art');
+                const ph = document.getElementById('artPlaceholder');
+                const url = String(res.posterImageUrl || '').trim();
+                if (url) {
+                    const img = new Image();
+                    img.onload = () => { artBox.classList.remove('empty'); ph.style.display = 'none'; artBox.innerHTML = ''; artBox.appendChild(img); };
+                    img.onerror = () => { artBox.classList.add('empty'); ph.style.display = ''; artBox.innerHTML = ''; artBox.appendChild(ph); };
+                    img.src = url;
+                } else {
+                    artBox.classList.add('empty'); ph.style.display = ''; artBox.innerHTML = ''; artBox.appendChild(ph);
+                }
+
+                // QR blocks
+                setQr('qrFormBox', 'qrForm', 'formUrl', res.qr?.form || '', (res.adminUrl && res.adminUrl.replace('Admin', 'R')) || '');
+                setQr('qrPublicBox', 'qrPublic', 'publicUrl', res.qr?.public || '', res.publicUrl || '');
+
+                // Buttons
+                const bPub = document.getElementById('btnOpenPublic');
+                const bAdm = document.getElementById('btnOpenAdmin');
+                if (res.publicUrl) { bPub.style.display = 'inline-block'; bPub.onclick = () => window.open(res.publicUrl, '_blank'); }
+                else { bPub.style.display = 'none'; }
+                if (res.adminUrl) { bAdm.style.display = 'inline-block'; bAdm.onclick = () => window.open(res.adminUrl, '_blank'); }
+                else { bAdm.style.display = 'none'; }
+
+                // Hide entire QR row if nothing to show
+                const anyQr = !!(res.qr?.form) || !!(res.qr?.public);
+                document.getElementById('qrRow').style.display = anyQr ? '' : 'none';
+
+            } catch (e) {
+                setText('title', 'Error loading poster');
+                document.getElementById('qrRow').style.display = 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPoster);
     </script>
 </body>
 
