@@ -2,282 +2,230 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>
-        <?= appTitle ?> · Public
-    </title>
+    <title>NextUp · Public</title>
     <?!= include('Styles'); ?>
     <style>
-        /* View-specific light styling (builds on Styles.html tokens) */
-        header.appbar .appbar__title {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        /* Phone-first readability */
+        .container {
+            max-width: var(--container);
+            margin: 20px auto;
+            padding: 0 var(--gutter-x);
         }
 
-        .section {
-            margin: 14px 0 18px;
-        }
-
-        .section h2 {
-            margin: 0 0 8px;
-            font-size: 1.2rem;
-        }
-
-        .meta-row {
+        .hdr {
             display: flex;
-            gap: 10px;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
             flex-wrap: wrap;
-            align-items: center;
-            margin-top: 6px;
         }
 
-        .kv {
-            display: flex;
-            gap: 6px;
-            align-items: center;
+        h1 {
+            margin: 0;
+            font-size: clamp(30px, 7vw, 56px);
+            letter-spacing: .2px;
         }
 
-        .kv .k {
+        .muted {
+            font-size: clamp(15px, 3.2vw, 18px);
             color: var(--muted);
         }
 
-        .badge {
-            display: inline-block;
-            padding: 2px 6px;
-            border: 1px solid var(--border);
-            border-radius: 999px;
-            font-size: .8rem
+        .card h2 {
+            font-size: clamp(20px, 5vw, 30px);
         }
 
-        .table {
+        .links {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .links a {
+            color: var(--primary);
+        }
+
+        table {
             width: 100%;
             border-collapse: collapse;
+            font-size: clamp(18px, 4.4vw, 22px);
         }
 
-        .table th,
-        .table td {
-            border-top: 1px solid var(--border);
-            padding: 8px 6px;
+        thead th {
             text-align: left;
+            font-weight: 800;
+            letter-spacing: .2px;
+            border-bottom: 1px solid var(--border);
         }
 
-        .table th {
-            font-weight: 700;
+        th,
+        td {
+            padding: clamp(12px, 3.2vw, 18px) clamp(10px, 2.8vw, 16px);
+            border-bottom: 1px solid var(--border);
         }
 
-        .group {
-            margin-top: 10px;
+        tbody tr {
+            line-height: 1.45;
         }
 
-        .group h3 {
-            font-size: 1.05rem;
-            margin: 0 0 6px;
-        }
-
-        .status-final {
-            font-weight: 700;
+        .right {
+            text-align: right;
         }
 
         .nowrap {
             white-space: nowrap;
         }
 
-        .small {
-            font-size: .92rem;
-            color: var(--muted)
+        @media (prefers-color-scheme: dark) {
+
+            thead th,
+            td {
+                border-color: var(--border);
+            }
         }
 
-        #lastUpdated {
-            margin-left: 6px;
+        @media (min-width: 900px) {
+            table {
+                font-size: clamp(18px, 1.5vw, 22px);
+            }
         }
     </style>
 </head>
 
 <body>
-    <header class="appbar">
-        <div class="appbar__title">
-            <?= appTitle ?> · Public
-        </div>
-    </header>
-
     <main class="container">
-
-        <!-- Busy + Toast -->
-        <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
-        <div id="busy"
-            style="position:fixed; inset:0; display:none; place-items:center; z-index:3000; background:rgba(0,0,0,.45);">
-            <div class="card"
-                style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; gap:10px; align-items:center;">
-                <div style="font-size:1.6rem; display:flex; gap:8px;"><span>🏃‍♂️</span><span>🥎</span><span>🧶</span>
-                </div>
-                <div class="msg" style="font-weight:800;">Loading…</div>
+        <div class="hdr">
+            <h1 id="title">Loading…</h1>
+            <div class="links">
+                <a id="posterLink" target="_blank" rel="noopener" style="display:none;">Poster page</a>
+                <button class="btn" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
             </div>
         </div>
 
-        <!-- Hero -->
-        <section class="card section" id="hero">
-            <h1 class="card__title" id="evName">Event</h1>
-            <div class="meta-row">
-                <div class="kv"><span class="k">Date:</span><span id="evDate">—</span></div>
-                <div class="kv"><span class="k">Flow:</span><span id="evFlow">—</span></div>
-                <div class="kv"><span class="k">Signups:</span><span id="evSignups">0</span></div>
-                <div class="kv small"><span class="k">Updated:</span><span id="lastUpdated">—</span></div>
+        <div class="muted" id="date" aria-live="polite"></div>
+        <div class="muted" id="placeWrap" style="display:none;">Venue: <span id="place"></span></div>
+        <div class="muted" id="flowWrap" style="display:none;">Flow: <span id="flow"></span></div>
+        <div class="muted" id="elimWrap" style="display:none;">Elimination: <span id="elim"></span></div>
+        <div class="muted" id="seedWrap" style="display:none;"><span id="seed"></span></div>
+
+        <section class="card" id="scheduleCard" style="display:none;">
+            <h2>Schedule</h2>
+            <div class="scroll-x">
+                <table id="scheduleTbl">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Match</th>
+                            <th class="nowrap">Table</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </section>
 
-        <!-- Standings -->
-        <section class="card section" id="standingsSec" style="display:none;">
-            <h2 class="card__title">Standings</h2>
-            <table class="table" id="standingsTbl" aria-label="Standings table">
-                <thead>
-                    <tr>
-                        <th>Rank</th>
-                        <th>Team</th>
-                        <th>W</th>
-                        <th>L</th>
-                        <th class="nowrap">Pct</th>
-                        <th class="nowrap">PF</th>
-                        <th class="nowrap">PA</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-            <p class="hint">Ordering is authoritative (Win% → point diff → points for).</p>
+        <section class="card" id="standingsCard" style="display:none;">
+            <h2>Standings</h2>
+            <div class="scroll-x">
+                <table id="standingsTbl">
+                    <thead>
+                        <tr>
+                            <th>Team</th>
+                            <th class="right">Pts</th>
+                            <th class="right">TB</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
         </section>
-
-        <!-- Schedule -->
-        <section class="card section" id="scheduleSec" style="display:none;">
-            <h2 class="card__title">Schedule</h2>
-            <div id="schedWrap"></div>
-        </section>
-
-        <!-- Bracket -->
-        <section class="card section" id="bracketSec" style="display:none;">
-            <h2 class="card__title">Bracket</h2>
-            <div id="bracketWrap"></div>
-        </section>
-
     </main>
 
     <script>
-        // ---------- Utilities ----------
-        const $ = (s, p = document) => p.querySelector(s);
-        function toast(msg, ok = true) { const t = $('#toast'); if (!t) return; t.textContent = msg; t.style.display = 'block'; t.className = 'toast ' + (ok ? 'ok' : 'danger'); setTimeout(() => t.style.display = 'none', 2400); }
-        function setBusy(on, message) { const b = $('#busy'); if (!b) return; const m = b.querySelector('.msg'); if (m && message) m.textContent = message; b.style.display = on ? 'grid' : 'none'; }
+        // Fallback so the Toggle button never errors if Styles.html hasn’t defined NextUpTheme yet
+        window.NextUpTheme = window.NextUpTheme || { toggle() { document.documentElement.classList.toggle('theme--light'); } };
 
-        // ---------- Boot identity (eventId or slug) ----------
-        const URLQ = new URLSearchParams(location.search);
-        const SERVER_SLUG = "<?= slug ?>";
-        const BOOT_ID = 
-        (window.eventId && String(window.eventId).trim()) || 
-        URLQ.get('eventId') ||
-        URLQ.get('event') ||
-        URLQ.get('slug') ||
-        SERVER_SLUG || '');
+        const qs = new URLSearchParams(location.search);
+        const eventId = qs.get('event') || '';
 
-        let _poll = null;
-        function startPoll() { if (_poll) return; _poll = setInterval(() => fetchBundle(), 30000); }
-        function stopPoll() { if (_poll) { clearInterval(_poll); _poll = null; } }
-        document.addEventListener('visibilitychange', () => { document.hidden ? stopPoll() : startPoll(); });
-
-        // ---------- Renderers ----------
-        function renderHero(b) {
-            const meta = b?.eventMeta || {};
-            $('#evName').textContent = meta.name || 'Event';
-            $('#evDate').textContent = meta.date || '';
-            const flowMap = { SEASON_TOURNEY: 'Season → Tournament', SEASON_ONLY: 'Season only', TOURNEY_ONLY: 'Tournament only', REGISTRATION: 'Signups only' };
-            $('#evFlow').textContent = flowMap[meta.flow] || (meta.flow || '');
-            $('#evSignups').textContent = (b?.counts?.signups ?? 0);
-            $('#lastUpdated').textContent = b?.lastUpdated ? new Date(b.lastUpdated).toLocaleString() : '—';
+        function show(el, on) { if (el) el.style.display = on ? '' : 'none'; }
+        function setText(id, val, wrapId) {
+            const el = document.getElementById(id); if (!el) return false;
+            const v = String(val || '').trim();
+            el.textContent = v;
+            if (wrapId) show(document.getElementById(wrapId), !!v);
+            return !!v;
         }
 
-        function renderStandings(list) {
-            const sec = $('#standingsSec');
-            const tb = $('#standingsTbl tbody');
-            tb.innerHTML = '';
-            if (!Array.isArray(list) || !list.length) { sec.style.display = 'none'; return; }
-            // IMPORTANT: do not re-sort; trust server order
-            list.forEach(r => {
+        function render(res) {
+            // Header/meta
+            document.getElementById('title').textContent =
+                res.title || (res.eventMeta && res.eventMeta.name) || '(Event)';
+            document.getElementById('date').textContent =
+                res.datePretty || (res.eventMeta && res.eventMeta.startDateISO) || '';
+
+            // Optional details (Public bundle may not include these keys; keep graceful)
+            setText('place', res.place, 'placeWrap');
+            setText('flow', res.flow || (res.eventMeta && res.eventMeta.flow), 'flowWrap');
+            setText('elim', res.elimType || (res.eventMeta && res.eventMeta.elimType), 'elimWrap');
+            const seedTxt = res.seedMode ? `Seeding: ${res.seedMode}` :
+                ((res.eventMeta && res.eventMeta.seedMode) ? `Seeding: ${res.eventMeta.seedMode}` : '');
+            setText('seed', seedTxt, 'seedWrap');
+
+            // Links
+            const posterLink = document.getElementById('posterLink');
+            if (res.posterPageUrl) { posterLink.href = res.posterPageUrl; posterLink.style.display = 'inline'; }
+            else { posterLink.style.display = 'none'; }
+
+            // Schedule
+            const sch = Array.isArray(res.schedule) ? res.schedule : [];
+            const schBody = document.querySelector('#scheduleTbl tbody'); schBody.innerHTML = '';
+            sch.forEach(r => {
+                const time = r.time || r.when || '';
+                const match = r.match || r.activity || r.vs || '';
+                const table = r.table || '';
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${r.Rank ?? ''}</td><td>${r.Team ?? ''}</td><td>${r.W ?? 0}</td><td>${r.L ?? 0}</td>
-<td class="nowrap">${(r.Pct != null) ? (r.Pct * 100).toFixed(1) + '%' : ''}</td>
-<td class="nowrap">${r.PointsFor ?? 0}</td><td class="nowrap">${r.PointsAgainst ?? 0}</td>`;
-                tb.appendChild(tr);
+                tr.innerHTML = `<td class="nowrap">${time}</td><td>${match}</td><td class="nowrap">${table}</td>`;
+                schBody.appendChild(tr);
             });
-            sec.style.display = '';
+            show(document.getElementById('scheduleCard'), sch.length > 0);
+
+            // Standings (Public bundle exposes points/tiebreak)
+            const st = Array.isArray(res.standings) ? res.standings : [];
+            const stBody = document.querySelector('#standingsTbl tbody'); stBody.innerHTML = '';
+            st.forEach(r => {
+                const team = r.team || r.name || '';
+                const pts = (r.points != null ? r.points : (r.pts != null ? r.pts : ''));
+                const tb = (r.tiebreak != null ? r.tiebreak : (r.tb != null ? r.tb : ''));
+                const tr = document.createElement('tr');
+                tr.innerHTML = `<td>${team}</td><td class="right">${pts || ''}</td><td class="right">${tb || ''}</td>`;
+                stBody.appendChild(tr);
+            });
+            show(document.getElementById('standingsCard'), st.length > 0);
         }
 
-        function groupBy(arr, key) { const m = new Map(); (arr || []).forEach(o => { const k = o[key]; if (!m.has(k)) m.set(k, []); m.get(k).push(o); }); return m; }
-        function renderSchedule(rows) {
-            const sec = $('#scheduleSec'), wrap = $('#schedWrap');
-            wrap.innerHTML = '';
-            if (!Array.isArray(rows) || !rows.length) { sec.style.display = 'none'; return; }
-            // Group by Week
-            const byW = groupBy(rows, 'Week');
-            Array.from(byW.keys()).sort((a, b) => Number(a) - Number(b)).forEach(w => {
-                const grp = document.createElement('div'); grp.className = 'group';
-                grp.innerHTML = `<h3>Week ${w}</h3>`;
-                const tbl = document.createElement('table'); tbl.className = 'table';
-                tbl.innerHTML = `<thead><tr><th>Time</th><th>Court</th><th>Match</th><th>Score</th><th>Status</th></tr></thead><tbody></tbody>`;
-                const tb = tbl.querySelector('tbody');
-                (byW.get(w) || []).forEach(r => {
-                    const sc = (r['Score A'] || r['Score B']) != null ? `${r['Score A'] ?? ''}–${r['Score B'] ?? ''}` : '';
-                    const status = String(r.Status || '').toLowerCase() === 'final' ? '<span class="badge status-final">final</span>' : (r.Status || '');
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${r.Time || ''}</td><td>${r.Court || ''}</td><td>${r['Team A'] || ''} vs ${r['Team B'] || ''}</td><td>${sc}</td><td>${status}</td>`;
-                    tb.appendChild(tr);
+        async function loadBundle() {
+            try {
+                const res = await new Promise(resolve => {
+                    google.script.run
+                        .withSuccessHandler(resolve)
+                        .withFailureHandler(() => resolve(null))
+                        .getPublicBundle(eventId);
                 });
-                grp.appendChild(tbl);
-                wrap.appendChild(grp);
-            });
-            sec.style.display = '';
+                if (!res || !res.ok) {
+                    document.getElementById('title').textContent = 'Event not found';
+                    return;
+                }
+                render(res);
+            } catch (e) {
+                document.getElementById('title').textContent = 'Error loading event';
+            }
         }
 
-        function renderBracket(br) {
-            const sec = $('#bracketSec'), wrap = $('#bracketWrap');
-            wrap.innerHTML = '';
-            const rounds = br?.rounds || [];
-            if (!rounds.length) { sec.style.display = 'none'; return; }
-            rounds.forEach(r => {
-                const grp = document.createElement('div'); grp.className = 'group';
-                grp.innerHTML = `<h3>${r.name}</h3>`;
-                const tbl = document.createElement('table'); tbl.className = 'table';
-                tbl.innerHTML = `<thead><tr><th>Match</th><th>Slot</th><th>Seed</th><th>Team</th><th>Score</th><th>Status</th></tr></thead><tbody></tbody>`;
-                const tb = tbl.querySelector('tbody');
-                (r.matches || []).forEach(m => {
-                    (m.slots || []).forEach(s => {
-                        const tr = document.createElement('tr');
-                        tr.innerHTML = `<td>${m.match}</td><td>${s.slot}</td><td>${s.seed || ''}</td><td>${s.team || ''}</td><td>${s.score || ''}</td><td>${s.status || ''}</td>`;
-                        tb.appendChild(tr);
-                    });
-                });
-                grp.appendChild(tbl);
-                wrap.appendChild(grp);
-            });
-            sec.style.display = '';
-        }
-
-        function renderBundle(b) {
-            renderHero(b);
-            renderStandings(b?.standings || []);
-            renderSchedule(b?.schedule || []);
-            renderBracket(b?.bracket || { rounds: [] });
-        }
-
-        // ---------- Data fetch ----------
-        function fetchBundle(id = BOOT_ID) {
-            if (!id) { toast('No event specified', false); return; }
-            setBusy(true, 'Loading…');
-            google.script.run
-                .withSuccessHandler(b => { try { renderBundle(b); } finally { setBusy(false); } })
-                .withFailureHandler(err => { console.error(err); toast('Failed to load', false); setBusy(false); })
-                .getPublicBundle(id);
-        }
-
-        // ---------- Boot ----------
-        document.addEventListener('DOMContentLoaded', () => { fetchBundle(); startPoll(); });
+        document.addEventListener('DOMContentLoaded', loadBundle);
     </script>
 </body>
 
