@@ -1,319 +1,579 @@
-<!DOCTYPE html>
-<html lang="en">
+<!-- Styles.html — shared styles + theme toggle (drop in as a full file) -->
+<style>
+    /* =========================
+NextUp · Shared Styles (Round A + Quick Wins)
+========================= */
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>NextUp · Poster</title>
-    <?!= include('Styles'); ?>
-    <style>
-        /* Poster look: bold, clean, printable */
+    /* ---- CSS Variables (Light default) ---- */
+    :root {
+        --font-sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+        --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+
+        --bg: #0b0c0f;
+        --surface: #ffffff;
+        --text: #111318;
+        --muted: #5e6472;
+        --border: #e6e8ef;
+        --border-d: var(--border);
+        /* compat for pages that reference --border-d */
+
+        --primary: #2563eb;
+        /* blue-600 */
+        --primary-ink: #ffffff;
+        --ok: #0ea5a3;
+        /* teal-600-ish */
+        --danger: #dc2626;
+        --warn: #d97706;
+
+        --focus: 0 0 0 3px rgba(37, 99, 235, .35);
+
+        --radius: 12px;
+        --radius-sm: 10px;
+        --shadow-1: 0 8px 30px rgba(0, 0, 0, .06);
+        --shadow-2: 0 14px 40px rgba(0, 0, 0, .10);
+        --shadow: var(--shadow-1);
+        /* compat */
+
+        --gutter-x: max(16px, env(safe-area-inset-left));
+        --gutter-r: max(16px, env(safe-area-inset-right));
+        --gutter-b: max(16px, env(safe-area-inset-bottom));
+
+        --container: 1040px;
+
+        --btn-h: 48px;
+        --btn-h-xl: 56px;
+        --tap: 44px;
+        /* Apple HIG minimum */
+    }
+
+    /* ---- Dark mode palette (by preference) ---- */
+    @media (prefers-color-scheme: dark) {
         :root {
-            --pad: 16px;
-        }
+            --bg: #090a0f;
+            --surface: #121318;
+            --text: #eef1f6;
+            --muted: #a3a8b3;
+            --border: #282b33;
+            --border-d: var(--border);
 
-        body {
-            background: #f7f8fb;
-        }
+            --primary: #4f82ff;
+            --primary-ink: #0b1020;
+            --ok: #1fdbc7;
+            --danger: #ff5d5d;
+            --warn: #ffb44a;
 
-        .wrap {
-            max-width: 900px;
-            margin: 12px auto 24px;
-            padding: 0 var(--pad);
+            --shadow-1: 0 8px 30px rgba(0, 0, 0, .25);
+            --shadow-2: 0 14px 40px rgba(0, 0, 0, .35);
+            --shadow: var(--shadow-1);
+            --focus: 0 0 0 3px rgba(79, 130, 255, .45);
         }
+    }
 
-        .poster {
-            background: #fff;
-            color: #0f172a;
-            border-radius: 16px;
-            padding: clamp(16px, 4vw, 28px);
-            box-shadow: 0 10px 26px rgba(0, 0, 0, .08);
+    /* ---- Explicit theme overrides (manual toggle) ---- */
+    .theme--light {
+        --bg: #0b0c0f;
+        --surface: #ffffff;
+        --text: #111318;
+        --muted: #5e6472;
+        --border: #e6e8ef;
+        --border-d: var(--border);
+        --primary: #2563eb;
+        --primary-ink: #ffffff;
+        --ok: #0ea5a3;
+        --danger: #dc2626;
+        --warn: #d97706;
+        --shadow-1: 0 8px 30px rgba(0, 0, 0, .06);
+        --shadow-2: 0 14px 40px rgba(0, 0, 0, .10);
+        --shadow: var(--shadow-1);
+        --focus: 0 0 0 3px rgba(37, 99, 235, .35);
+    }
+
+    .theme--dark {
+        --bg: #090a0f;
+        --surface: #121318;
+        --text: #eef1f6;
+        --muted: #a3a8b3;
+        --border: #282b33;
+        --border-d: var(--border);
+        --primary: #4f82ff;
+        --primary-ink: #0b1020;
+        --ok: #1fdbc7;
+        --danger: #ff5d5d;
+        --warn: #ffb44a;
+        --shadow-1: 0 8px 30px rgba(0, 0, 0, .25);
+        --shadow-2: 0 14px 40px rgba(0, 0, 0, .35);
+        --shadow: var(--shadow-1);
+        --focus: 0 0 0 3px rgba(79, 130, 255, .45);
+    }
+
+    /* ---- Reset / Base ---- */
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+
+    html,
+    body {
+        height: 100%;
+    }
+
+    html {
+        scrollbar-gutter: stable both-edges;
+    }
+
+    body {
+        margin: 0;
+        font-family: var(--font-sans);
+        color: var(--text);
+        background: linear-gradient(180deg, rgba(0, 0, 0, .12), rgba(0, 0, 0, .06)), var(--bg);
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        font-size: clamp(15px, 1.8vw, 16px);
+        line-height: 1.35;
+    }
+
+    img {
+        max-width: 100%;
+        display: block;
+    }
+
+    a {
+        color: var(--primary);
+        text-decoration: none;
+    }
+
+    a:hover {
+        text-decoration: underline;
+    }
+
+    :focus-visible {
+        outline: none;
+        box-shadow: var(--focus);
+        border-radius: 8px;
+    }
+
+    /* Motion-reduction */
+    @media (prefers-reduced-motion: reduce) {
+        * {
+            animation: none !important;
+            transition: none !important;
         }
+    }
 
-        header {
-            text-align: center;
-            margin-bottom: clamp(16px, 3.5vw, 28px);
+    /* ---- Appbar ---- */
+    .appbar {
+        position: sticky;
+        top: 0;
+        z-index: 2000;
+        background: color-mix(in oklab, var(--surface) 92%, transparent);
+        backdrop-filter: saturate(1.2) blur(8px);
+        border-bottom: 1px solid var(--border);
+    }
+
+    .appbar__title {
+        max-width: var(--container);
+        margin: 0 auto;
+        padding: 12px var(--gutter-x);
+        font-weight: 800;
+        letter-spacing: -0.015em;
+        font-size: clamp(1rem, 2.6vw, 1.2rem);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ---- Layout ---- */
+    .container {
+        max-width: var(--container);
+        margin: 16px auto 40px;
+        padding: 0 var(--gutter-x);
+    }
+
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 14px 16px;
+        box-shadow: var(--shadow-1);
+    }
+
+    .card__title {
+        margin: 0 0 10px 0;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        font-size: clamp(1.1rem, 1rem + 0.8vw, 1.6rem);
+    }
+
+    /* ---- Grid & Rows ---- */
+    .grid {
+        display: grid;
+        gap: 10px;
+    }
+
+    .grid--compact {
+        gap: 10px;
+    }
+
+    @media (min-width: 760px) {
+        .grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
+    }
 
-        .eyebrow {
-            letter-spacing: .18em;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: #334155;
-            font-size: clamp(10px, 1.8vw, 12px);
-        }
+    .row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+    }
 
-        h1 {
-            font-size: clamp(28px, 7vw, 56px);
-            line-height: 1.02;
-            margin: .25em 0 .1em;
-        }
+    .row--justify {
+        justify-content: space-between;
+    }
 
-        .sub {
-            color: #475569;
-            font-size: clamp(14px, 2.6vw, 18px);
-        }
+    /* ---- Inputs ---- */
+    .input {
+        appearance: none;
+        width: 100%;
+        min-height: var(--tap);
+        background: var(--surface);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 12px 12px;
+        font-size: 1rem;
+        box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+    }
 
-        .place {
-            font-weight: 600;
-        }
+    .input:focus-visible {
+        border-color: color-mix(in oklab, var(--primary) 55%, var(--border));
+        box-shadow: var(--focus);
+    }
 
-        .hero {
-            margin: clamp(10px, 3vw, 20px) 0 clamp(18px, 4vw, 28px);
-            display: flex;
-            gap: clamp(10px, 2vw, 16px);
-            align-items: center;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+    .input[disabled] {
+        opacity: .6;
+        cursor: not-allowed;
+    }
 
-        .art {
-            flex: 1 1 520px;
-            min-height: 220px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #f3f4f6;
-            border-radius: 14px;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
-        }
+    .input--select {
+        padding-right: 30px;
+    }
 
-        .art img {
-            width: 100%;
-            height: auto;
+    .input--lg {
+        font-size: 1.05rem;
+        padding-block: 14px;
+    }
+
+    /* Invalid states */
+    .input:invalid {
+        border-color: color-mix(in oklab, var(--danger) 60%, var(--border));
+    }
+
+    form:has(:invalid) .form-hint-invalid {
+        display: block;
+        color: var(--danger);
+    }
+
+    /* ---- Buttons ---- */
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        min-height: var(--btn-h);
+        padding: 0 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--text);
+        font-weight: 800;
+        cursor: pointer;
+        user-select: none;
+        text-align: center;
+        touch-action: manipulation;
+    }
+
+    .btn:hover {
+        filter: brightness(0.98);
+    }
+
+    .btn:active {
+        transform: translateY(0.5px);
+    }
+
+    .btn[disabled] {
+        opacity: .6;
+        cursor: not-allowed;
+    }
+
+    .btn--primary {
+        background: linear-gradient(180deg, color-mix(in oklab, var(--primary) 94%, white), var(--primary));
+        border-color: color-mix(in oklab, var(--primary) 55%, var(--border));
+        color: var(--primary-ink);
+    }
+
+    .btn--ghost {
+        background: transparent;
+        border-color: var(--border);
+    }
+
+    .btn--ok {
+        background: linear-gradient(180deg, color-mix(in oklab, var(--ok) 92%, white), var(--ok));
+        border-color: color-mix(in oklab, var(--ok) 55%, var(--border));
+        color: #052b29;
+    }
+
+    .btn--danger {
+        background: linear-gradient(180deg, color-mix(in oklab, var(--danger) 92%, white), var(--danger));
+        border-color: color-mix(in oklab, var(--danger) 55%, var(--border));
+        color: #2b0505;
+    }
+
+    .btn--icon {
+        width: var(--btn-h);
+        padding: 0;
+        font-weight: 900;
+    }
+
+    .btn--xl {
+        min-height: var(--btn-h-xl);
+    }
+
+    .btn-block {
+        width: 100%;
+    }
+
+    .tap-xl {
+        min-height: var(--btn-h-xl);
+        padding-inline: 18px;
+    }
+
+    /* Compat aliases for older markup */
+    .btn.secondary {
+        background: transparent;
+        border-color: var(--border);
+    }
+
+    /* maps to ghost */
+    .btn-xl {
+        min-height: var(--btn-h-xl);
+    }
+
+    /* alias */
+
+    /* ---- Feedback ---- */
+    .hint {
+        color: var(--muted);
+        font-size: .95rem;
+    }
+
+    .tile {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px 12px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-weight: 800;
+        background: color-mix(in oklab, var(--surface) 82%, transparent);
+        min-height: var(--tap);
+    }
+
+    .qr {
+        width: 200px;
+        height: 200px;
+        display: grid;
+        place-items: center;
+        border: 1px dashed var(--border);
+        border-radius: var(--radius);
+        background: color-mix(in oklab, var(--surface) 75%, transparent);
+    }
+
+    .qr.muted {
+        opacity: .6;
+    }
+
+    .toast {
+        position: fixed;
+        top: 16px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 10px 14px;
+        border-radius: 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-2);
+        z-index: 3500;
+    }
+
+    /* ---- Tables ---- */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table th,
+    .table td {
+        border-top: 1px solid var(--border);
+        padding: 8px 6px;
+        text-align: left;
+        vertical-align: top;
+        word-break: break-word;
+    }
+
+    .table th {
+        font-weight: 800;
+    }
+
+    /* Mobile table helper */
+    .scroll-x {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .scroll-x>.table {
+        min-width: 560px;
+    }
+
+    /* ---- Badges ---- */
+    .badge {
+        display: inline-block;
+        padding: 2px 6px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        font-size: .8rem;
+    }
+
+    /* ---- A11y helpers ---- */
+    .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    /* ---- Utilities ---- */
+    .mt-1 {
+        margin-top: 6px;
+    }
+
+    .mt-2 {
+        margin-top: 12px;
+    }
+
+    .mt-3 {
+        margin-top: 18px;
+    }
+
+    .nowrap {
+        white-space: nowrap;
+    }
+
+    /* ---- Popover (native) ---- */
+    [popover] {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: var(--shadow-2);
+    }
+
+    .popover-title {
+        font-weight: 800;
+        margin-bottom: 6px;
+    }
+
+    .popover-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+    }
+
+    /* ---- Sticky CTA (mobile) ---- */
+    .mobile-only {
+        display: none;
+    }
+
+    @media (max-width: 760px) {
+        .mobile-only {
             display: block;
         }
+    }
 
-        .art.empty {
-            background: repeating-linear-gradient(45deg, #f9fafb, #f9fafb 8px, #f3f4f6 8px, #f3f4f6 16px);
-            color: #94a3b8;
-            font-weight: 600;
+    .sticky-cta {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        padding: 12px var(--gutter-x) calc(12px + var(--gutter-b));
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, color-mix(in oklab, var(--surface) 96%, transparent) 38%);
+        backdrop-filter: saturate(1.2) blur(10px);
+        z-index: 3000;
+    }
+
+    #stickyCta.hidden {
+        display: none !important;
+    }
+
+    body.is-busy #stickyCta {
+        display: none !important;
+    }
+
+    #stickyCta .btn {
+        min-height: var(--btn-h-xl);
+    }
+
+    /* ---- TV mode helpers (Display.html) ---- */
+    body.is-tv .appbar {
+        display: none;
+    }
+
+    body.is-tv .container {
+        max-width: 100%;
+        font-size: 1.08rem;
+    }
+
+    /* ---- Print ---- */
+    @media print {
+        body {
+            background: #fff;
             font-size: 14px;
         }
 
-        .qrrow {
-            display: flex;
-            gap: clamp(12px, 3vw, 24px);
-            justify-content: space-between;
-            align-items: flex-start;
-            flex-wrap: wrap;
+        .appbar,
+        .toast {
+            display: none !important;
         }
 
-        .qrbox {
-            background: #0b1220;
-            color: #e6edf7;
-            border-radius: 12px;
-            padding: 12px;
-            box-shadow: 0 8px 22px rgba(2, 6, 23, .25);
-            min-width: 240px;
-            max-width: 300px;
-            flex: 1 1 260px;
+        .card {
+            box-shadow: none;
         }
 
-        .qrbox .label {
-            display: block;
-            font-weight: 700;
-            margin-bottom: 6px;
+        .sticky-cta {
+            display: none !important;
         }
+    }
+</style>
 
-        .qrbox img {
-            display: block;
-            width: 100%;
-            max-width: 260px;
-            height: auto;
-            border-radius: 8px;
-            background: #fff;
+<script>
+    /* NextUpTheme — resilient theme toggler (works even if not pre-defined) */
+    window.NextUpTheme = window.NextUpTheme || {
+        toggle() {
+            const el = document.documentElement;
+            const hasDark = el.classList.contains('theme--dark');
+            const hasLight = el.classList.contains('theme--light');
+            if (hasDark) { el.classList.remove('theme--dark'); el.classList.add('theme--light'); return; }
+            if (hasLight) { el.classList.remove('theme--light'); el.classList.add('theme--dark'); return; }
+            // If no explicit theme set, pick opposite of system preference
+            const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            el.classList.add(prefersDark ? 'theme--light' : 'theme--dark');
         }
-
-        .qrbox .hint {
-            color: #b6c2d1;
-            font-size: 12px;
-            margin-top: 6px;
-            word-break: break-all;
-        }
-
-        .buttons {
-            margin-top: 12px;
-            display: flex;
-            gap: 8px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .btn {
-            padding: 10px 14px;
-            border-radius: 10px;
-            border: 0;
-            cursor: pointer;
-            background: #0f766e;
-            color: #fff;
-            font-weight: 700;
-        }
-
-        .btn.secondary {
-            background: #334155;
-        }
-
-        footer {
-            margin-top: clamp(14px, 3vw, 22px);
-            text-align: center;
-            color: #64748b;
-            font-size: 12px;
-        }
-
-        /* Print */
-        @media print {
-            body {
-                background: #fff;
-            }
-
-            .poster {
-                box-shadow: none;
-            }
-
-            .btn,
-            .buttons {
-                display: none !important;
-            }
-        }
-    </style>
-</head>
-
-<body>
-    <div class="wrap">
-        <div class="poster">
-            <header>
-                <div class="eyebrow" id="tag">NEXTUP</div>
-                <div class="buttons" style="margin-top:8px;">
-                    <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
-                </div>
-                <h1 id="title">Event</h1>
-                <div class="sub">
-                    <span id="datePretty"></span>
-                    <span id="placeWrap"> · <span class="place" id="place"></span></span>
-                </div>
-            </header>
-
-            <section class="hero">
-                <div id="art" class="art empty">
-                    <span id="artPlaceholder">Poster image will appear here</span>
-                </div>
-            </section>
-
-            <section class="qrrow" id="qrRow">
-                <div class="qrbox" id="qrFormBox" style="display:none;">
-                    <span class="label">Sign Up</span>
-                    <img id="qrForm" alt="QR: Sign-up" />
-                    <div class="hint" id="formUrl"></div>
-                </div>
-                <div class="qrbox" id="qrPublicBox" style="display:none;">
-                    <span class="label">Event Page</span>
-                    <img id="qrPublic" alt="QR: Public page" />
-                    <div class="hint" id="publicUrl"></div>
-                </div>
-            </section>
-
-            <div class="buttons">
-                <button class="btn" id="btnOpenPublic" style="display:none;">Open Public Page</button>
-                <button class="btn secondary" id="btnOpenAdmin" style="display:none;">Open Admin</button>
-            </div>
-
-            <footer>
-                Generated by NextUp · Poster is public-shareable; sensitive content belongs on the Display page.
-            </footer>
-        </div>
-    </div>
-
-    <script>
-        // Ensure theme toggle doesn't error if Styles.html hasn't provided it
-        window.NextUpTheme = window.NextUpTheme || { toggle() { document.documentElement.classList.toggle('theme--light'); } };
-
-        const qs = new URLSearchParams(location.search);
-        const eventId = qs.get('event') || '';
-
-        function setText(id, val, { hideParentIfEmpty = false, parentId } = {}) {
-            const el = document.getElementById(id); if (!el) return;
-            const v = String(val || '').trim();
-            el.textContent = v;
-            if (hideParentIfEmpty && parentId) {
-                const p = document.getElementById(parentId);
-                if (p) p.style.display = v ? '' : 'none';
-            }
-        }
-
-        function setQr(blockId, imgId, urlTextId, qrUrl, rawUrl) {
-            const box = document.getElementById(blockId);
-            const img = document.getElementById(imgId);
-            const txt = document.getElementById(urlTextId);
-            const ok = !!qrUrl && !!rawUrl;
-            if (!ok) {
-                box.style.display = 'none'; img.removeAttribute('src'); txt.textContent = '';
-                return;
-            }
-            box.style.display = '';
-            img.src = qrUrl;
-            txt.textContent = rawUrl;
-        }
-
-        async function loadPoster() {
-            try {
-                const res = await new Promise(resolve => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(() => resolve(null))
-                        .getPosterBundle(eventId);
-                });
-
-                if (!res || !res.ok) {
-                    setText('title', 'Event not found');
-                    document.getElementById('qrRow').style.display = 'none';
-                    return;
-                }
-
-                // Header
-                setText('tag', res.eventTag || 'NEXTUP');
-                setText('title', res.title || 'Event');
-                setText('datePretty', res.datePretty || '');
-                setText('place', res.place || '', { hideParentIfEmpty: true, parentId: 'placeWrap' });
-
-                // Poster art
-                const artBox = document.getElementById('art');
-                const ph = document.getElementById('artPlaceholder');
-                const url = String(res.posterImageUrl || '').trim();
-                if (url) {
-                    const img = new Image();
-                    img.onload = () => { artBox.classList.remove('empty'); ph.style.display = 'none'; artBox.innerHTML = ''; artBox.appendChild(img); };
-                    img.onerror = () => { artBox.classList.add('empty'); ph.style.display = ''; artBox.innerHTML = ''; artBox.appendChild(ph); };
-                    img.src = url;
-                } else {
-                    artBox.classList.add('empty'); ph.style.display = ''; artBox.innerHTML = ''; artBox.appendChild(ph);
-                }
-
-                // QR blocks
-                setQr('qrFormBox', 'qrForm', 'formUrl', res.qr?.form || '', (res.adminUrl && res.adminUrl.replace('Admin', 'R')) || '');
-                setQr('qrPublicBox', 'qrPublic', 'publicUrl', res.qr?.public || '', res.publicUrl || '');
-
-                // Buttons
-                const bPub = document.getElementById('btnOpenPublic');
-                const bAdm = document.getElementById('btnOpenAdmin');
-                if (res.publicUrl) { bPub.style.display = 'inline-block'; bPub.onclick = () => window.open(res.publicUrl, '_blank'); }
-                else { bPub.style.display = 'none'; }
-                if (res.adminUrl) { bAdm.style.display = 'inline-block'; bAdm.onclick = () => window.open(res.adminUrl, '_blank'); }
-                else { bAdm.style.display = 'none'; }
-
-                // Hide entire QR row if nothing to show
-                const anyQr = !!(res.qr?.form) || !!(res.qr?.public);
-                document.getElementById('qrRow').style.display = anyQr ? '' : 'none';
-
-            } catch (e) {
-                setText('title', 'Error loading poster');
-                document.getElementById('qrRow').style.display = 'none';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', loadPoster);
-    </script>
-</body>
-
-</html>
+    };
+</script>
