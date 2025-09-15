@@ -2,294 +2,276 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>
-        <?= appTitle ?> · Display
-    </title>
+    <title>NextUp · Display</title>
     <?!= include('Styles'); ?>
     <style>
-        /* TV-first layout; toggled by body.is-tv */
-        header.appbar {
-            display: none;
+        /* TV-first readability */
+        body {
+            background: var(--bg);
+            color: var(--text);
         }
 
-        body:not(.is-tv) header.appbar {
-            display: block;
+        .container {
+            max-width: 1400px;
+            margin: 12px auto;
+            padding: 0 var(--gutter-x);
         }
 
-        .board {
-            display: grid;
-            gap: 14px;
-            grid-template-columns: 1fr;
+        .headline {
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
         }
 
-        @media (min-width: 980px) {
-            .board {
-                grid-template-columns: 1.2fr .8fr;
-            }
-        }
-
-        .panel {
-            padding: 12px;
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            background: var(--surface);
-        }
-
-        .panel h2 {
-            margin: 0 0 8px;
-            font-size: 1.25rem;
-        }
-
-        .big {
-            font-size: clamp(1.1rem, 2.2vw, 1.6rem);
-            line-height: 1.25;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        .table th,
-        .table td {
-            border-top: 1px solid var(--border);
-            padding: 8px 6px;
-            text-align: left;
-        }
-
-        .table th {
-            font-weight: 700;
-        }
-
-        .small {
-            color: var(--muted);
-            font-size: .95rem;
+        .headline h1 {
+            font-size: clamp(40px, 6.8vw, 76px);
+            margin: 0;
+            letter-spacing: .3px;
         }
 
         .badge {
             display: inline-block;
-            padding: 2px 6px;
-            border: 1px solid var(--border);
+            padding: 8px 12px;
             border-radius: 999px;
-            font-size: .8rem
+            background: color-mix(in oklab, var(--surface) 10%, #1f2937);
+            font-size: clamp(14px, 2vw, 18px);
         }
 
-        header.tvbar {
+        .kpi {
             display: flex;
-            gap: 12px;
-            align-items: baseline;
-            justify-content: space-between;
-            margin: 8px 0 12px;
-        }
-
-        #evName {
-            font-weight: 900;
-            font-size: clamp(1.2rem, 3.2vw, 2rem);
-            letter-spacing: -.02em;
-        }
-
-        #meta {
-            display: flex;
-            gap: 12px;
+            gap: 14px;
             flex-wrap: wrap;
+            align-items: center;
+            margin-top: 6px;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: clamp(16px, 2.4vw, 22px);
+        }
+
+        .kpi a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: clamp(16px, 2.4vw, 22px);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        @media (min-width: 980px) {
+            .grid {
+                grid-template-columns: 1.1fr .9fr;
+            }
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+            box-shadow: var(--shadow-1);
+        }
+
+        .card h2 {
+            margin: .2rem 0 .6rem;
+            font-size: clamp(24px, 3.8vw, 38px);
+            letter-spacing: .2px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: clamp(20px, 3.6vw, 26px);
+        }
+
+        th,
+        td {
+            padding: clamp(14px, 2.8vw, 20px) clamp(12px, 2.4vw, 18px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        thead th {
+            text-align: left;
+            color: var(--muted);
+            font-weight: 800;
+            letter-spacing: .15px;
+        }
+
+        tbody tr:nth-child(even) {
+            background: color-mix(in oklab, var(--surface) 92%, transparent);
+        }
+
+        .nowrap {
+            white-space: nowrap;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        /* Big-room boost for very large TVs */
+        @media (min-width: 1600px) {
+            .headline h1 {
+                font-size: clamp(56px, 5vw, 92px);
+            }
+
+            table {
+                font-size: clamp(24px, 2.4vw, 30px);
+            }
+
+            .card h2 {
+                font-size: clamp(28px, 3vw, 42px);
+            }
+        }
+
+        /* Optional TV niceties */
+        @media (pointer: none) {
+
+            html,
+            body {
+                cursor: none;
+            }
         }
     </style>
 </head>
 
 <body>
-    <header class="appbar">
-        <div class="appbar__title">
-            <?= appTitle ?> · Display
-        </div>
-    </header>
-
     <main class="container">
+        <div class="headline">
+            <h1 id="title">Loading…</h1>
+            <span id="tag" class="badge"></span>
+            <button class="btn" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
+        </div>
 
-        <!-- Toast + Busy -->
-        <div id="toast" class="toast" style="display:none;" role="status" aria-live="polite"></div>
-        <div id="busy"
-            style="position:fixed; inset:0; display:none; place-items:center; z-index:3000; background:rgba(0,0,0,.45);">
-            <div class="card"
-                style="background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:14px 16px; display:flex; gap:10px; align-items:center;">
-                <div style="font-size:1.6rem; display:flex; gap:8px;"><span>🏃‍♂️</span><span>🥎</span><span>🧶</span>
+        <div class="kpi" aria-live="polite">
+            <span id="date" class="muted"></span>
+            <span id="place" class="muted"></span>
+            <span class="muted" aria-hidden="true">·</span>
+            <a id="publicLink" target="_blank" rel="noopener" style="display:none;">Public page</a>
+            <span class="muted" aria-hidden="true">·</span>
+            <a id="posterLink" target="_blank" rel="noopener" style="display:none;">Poster page</a>
+        </div>
+
+        <section class="grid">
+            <div class="card" id="scheduleCard" style="display:none;">
+                <h2>Schedule</h2>
+                <div class="scroll-x">
+                    <table id="scheduleTbl">
+                        <thead>
+                            <tr>
+                                <th class="nowrap">Time</th>
+                                <th>Match</th>
+                                <th class="nowrap right">Table</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
                 </div>
-                <div class="msg" style="font-weight:800;">Refreshing…</div>
             </div>
-        </div>
 
-        <!-- TV header -->
-        <header class="tvbar">
-            <div id="evName">Event</div>
-            <div id="meta" class="small">
-                <span id="evDate"></span>
-                <span>•</span>
-                <span id="evFlow"></span>
-                <span>•</span>
-                <span>Signups: <b id="evSignups">0</b></span>
-                <span>•</span>
-                <span id="lastUpdated"></span>
-            </div>
-        </header>
-
-        <div class="board">
-
-            <!-- Standings -->
-            <section class="panel" id="standingsSec" style="display:none;">
+            <div class="card" id="standingsCard" style="display:none;">
                 <h2>Standings</h2>
-                <table class="table big" id="standingsTbl" aria-label="Standings">
-                    <thead>
-                        <tr>
-                            <th>Rank</th>
-                            <th>Team</th>
-                            <th>W</th>
-                            <th>L</th>
-                            <th>Pct</th>
-                            <th>PF</th>
-                            <th>PA</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-                <div class="small">Order from server (Win% → point diff → PF)</div>
-            </section>
-
-            <!-- Upcoming / Live -->
-            <section class="panel" id="upcomingSec" style="display:none;">
-                <h2>Upcoming & Live</h2>
-                <table class="table big" id="upcomingTbl" aria-label="Upcoming">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Court</th>
-                            <th>Match</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </section>
-
-            <!-- Bracket (compact) -->
-            <section class="panel" id="bracketSec" style="display:none;">
-                <h2>Bracket</h2>
-                <div id="bracketWrap" class="big"></div>
-            </section>
-
-        </div>
+                <div class="scroll-x">
+                    <table id="standingsTbl">
+                        <thead>
+                            <tr>
+                                <th>Team</th>
+                                <th class="right">Pts</th>
+                                <th class="right">TB</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
     </main>
 
     <script>
-        // ---------- Utilities ----------
-        const $ = (s, p = document) => p.querySelector(s);
-        function toast(msg, ok = true) { const t = $('#toast'); if (!t) return; t.textContent = msg; t.style.display = 'block'; t.className = 'toast ' + (ok ? 'ok' : 'danger'); setTimeout(() => t.style.display = 'none', 2000); }
-        function setBusy(on, message) { const b = $('#busy'); if (!b) return; const m = b.querySelector('.msg'); if (m && message) m.textContent = message; b.style.display = on ? 'grid' : 'none'; }
+        // Theme fallback (in case Styles.html didn’t define NextUpTheme yet)
+        window.NextUpTheme = window.NextUpTheme || { toggle() { document.documentElement.classList.toggle('theme--light'); } };
 
-        // ---------- Boot identity + tv mode ----------
-        const URLQ = new URLSearchParams(location.search);
-        const SERVER_SLUG = "<?= slug ?>";
-        const BOOT_ID = 
-        (window.eventId && String(window.eventId).trim()) || 
-        URLQ.get('eventId') ||
-        URLQ.get('event') ||
-        URLQ.get('slug') ||
-        SERVER_SLUG || '');
-        const TVMODE = URLQ.get('tv') === '1';
-        document.addEventListener('DOMContentLoaded', () => document.body.classList.toggle('is-tv', TVMODE));
+        const qs = new URLSearchParams(location.search);
+        const eventId = qs.get('event') || '';
 
-        let _poll = null;
-        function startPoll() { if (_poll) return; _poll = setInterval(fetchBundle, 20000); }
-        function stopPoll() { if (_poll) { clearInterval(_poll); _poll = null; } }
-        document.addEventListener('visibilitychange', () => { document.hidden ? stopPoll() : startPoll(); });
-
-        // ---------- Renderers ----------
-        function renderHeader(b) {
-            const meta = b?.eventMeta || {};
-            $('#evName').textContent = meta.name || 'Event';
-            $('#evDate').textContent = meta.date || '';
-            const flowMap = { SEASON_TOURNEY: 'Season → Tournament', SEASON_ONLY: 'Season only', TOURNEY_ONLY: 'Tournament only', REGISTRATION: 'Signups only' };
-            $('#evFlow').textContent = flowMap[meta.flow] || (meta.flow || '');
-            $('#evSignups').textContent = (b?.counts?.signups ?? 0);
-            $('#lastUpdated').textContent = b?.lastUpdated ? new Date(b.lastUpdated).toLocaleTimeString() : '';
+        let refreshHandle = null;
+        function show(el, on) { if (el) el.style.display = on ? '' : 'none'; }
+        function setText(id, val) {
+            const el = document.getElementById(id); if (!el) return;
+            el.textContent = String(val || '').trim();
         }
 
-        function renderStandings(list) {
-            const sec = $('#standingsSec'), tb = $('#standingsTbl tbody');
-            tb.innerHTML = '';
-            if (!Array.isArray(list) || !list.length) { sec.style.display = 'none'; return; }
-            // IMPORTANT: Keep server order
-            list.forEach(r => {
+        function render(bundle) {
+            // Header
+            setText('title', bundle.title || bundle.eventMeta?.name || '(Event)');
+            setText('tag', bundle.eventTag || '');
+            setText('date', bundle.datePretty || bundle.eventMeta?.startDateISO || '');
+            setText('place', bundle.place ? `· ${bundle.place}` : '');
+
+            const pub = document.getElementById('publicLink');
+            const pst = document.getElementById('posterLink');
+            if (bundle.publicUrl) { pub.href = bundle.publicUrl; pub.style.display = 'inline'; } else { pub.style.display = 'none'; }
+            if (bundle.posterPageUrl) { pst.href = bundle.posterPageUrl; pst.style.display = 'inline'; } else { pst.style.display = 'none'; }
+
+            // Schedule
+            const schT = document.querySelector('#scheduleTbl tbody'); schT.innerHTML = '';
+            const schedule = Array.isArray(bundle.schedule) ? bundle.schedule : [];
+            schedule.forEach(r => {
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${r.Rank ?? ''}</td><td>${r.Team ?? ''}</td><td>${r.W ?? 0}</td><td>${r.L ?? 0}</td>
-<td>${(r.Pct != null) ? (r.Pct * 100).toFixed(1) + '%' : ''}</td><td>${r.PointsFor ?? 0}</td><td>${r.PointsAgainst ?? 0}</td>`;
-                tb.appendChild(tr);
+                const time = r.time || r.when || '';
+                const match = r.match || r.activity || r.vs || '';
+                const table = r.table || '';
+                tr.innerHTML = `<td class="nowrap">${time}</td><td>${match}</td><td class="right nowrap">${table}</td>`;
+                schT.appendChild(tr);
             });
-            sec.style.display = '';
-        }
+            show(document.getElementById('scheduleCard'), schedule.length > 0);
 
-        function renderUpcoming(rows) {
-            const sec = $('#upcomingSec'), tb = $('#upcomingTbl tbody'); tb.innerHTML = '';
-            if (!Array.isArray(rows) || !rows.length) { sec.style.display = 'none'; return; }
-            // Show non-final first; then most recent finals (few)
-            const nonFinal = rows.filter(r => String(r.Status || '').toLowerCase() !== 'final');
-            const finals = rows.filter(r => String(r.Status || '').toLowerCase() === 'final').slice(-4); // last few
-            const show = nonFinal.concat(finals);
-            if (!show.length) { sec.style.display = 'none'; return; }
-            show.forEach(r => {
-                const status = String(r.Status || '');
+            // Standings
+            const stT = document.querySelector('#standingsTbl tbody'); stT.innerHTML = '';
+            const standings = Array.isArray(bundle.standings) ? bundle.standings : [];
+            standings.forEach(r => {
+                const team = r.team || r.name || '';
+                const pts = (r.points != null ? r.points : (r.pts != null ? r.pts : ''));
+                const tb = (r.tiebreak != null ? r.tiebreak : (r.tb != null ? r.tb : ''));
                 const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${r.Time || ''}</td><td>${r.Court || ''}</td><td>${r['Team A'] || ''} vs ${r['Team B'] || ''}</td>
-<td>${status.toLowerCase() === 'final' ? '<span class="badge">final</span>' : status}</td>`;
-                tb.appendChild(tr);
+                tr.innerHTML = `<td>${team}</td><td class="right">${pts || ''}</td><td class="right">${tb || ''}</td>`;
+                stT.appendChild(tr);
             });
-            sec.style.display = '';
+            show(document.getElementById('standingsCard'), standings.length > 0);
         }
 
-        function renderBracket(br) {
-            const sec = $('#bracketSec'), wrap = $('#bracketWrap'); wrap.innerHTML = '';
-            const rounds = br?.rounds || [];
-            if (!rounds.length) { sec.style.display = 'none'; return; }
-            // Compact list per round
-            rounds.forEach(r => {
-                const div = document.createElement('div');
-                div.style.marginBottom = '12px';
-                const title = document.createElement('div'); title.style.fontWeight = '800'; title.textContent = r.name;
-                div.appendChild(title);
-                (r.matches || []).forEach(m => {
-                    const line = document.createElement('div');
-                    const a = m.slots?.find(s => s.slot === 1), b = m.slots?.find(s => s.slot === 2);
-                    const tA = a ? (a.team || `Seed ${a.seed || ''}`) : '—';
-                    const tB = b ? (b.team || `Seed ${b.seed || ''}`) : '—';
-                    const scA = a?.score || '', scB = b?.score || '';
-                    const st = a?.status || b?.status || '';
-                    line.textContent = `M${m.match}: ${tA} ${scA ? `(${scA})` : ''} vs ${tB} ${scB ? `(${scB})` : ''} ${st ? `· ${st}` : ''}`;
-                    div.appendChild(line);
+        async function fetchBundle() {
+            try {
+                const res = await new Promise(resolve => {
+                    google.script.run
+                        .withSuccessHandler(resolve)
+                        .withFailureHandler(() => resolve(null))
+                        .getDisplayBundle(eventId);
                 });
-                wrap.appendChild(div);
+                if (!res || !res.ok) return;
+                render(res);
+            } catch (e) { /* silent for display screens */ }
+        }
+
+        function boot() {
+            fetchBundle();
+            // gentle polling for venue screens
+            refreshHandle = setInterval(fetchBundle, 20000);
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) { if (refreshHandle) { clearInterval(refreshHandle); refreshHandle = null; } }
+                else if (!refreshHandle) { fetchBundle(); refreshHandle = setInterval(fetchBundle, 20000); }
             });
-            sec.style.display = '';
         }
 
-        function renderBundle(b) {
-            renderHeader(b);
-            renderStandings(b?.standings || []);
-            renderUpcoming(b?.schedule || []);
-            renderBracket(b?.bracket || { rounds: [] });
-        }
-
-        // ---------- Data fetch ----------
-        function fetchBundle(id = BOOT_ID) {
-            if (!id) { toast('No event specified', false); return; }
-            setBusy(true, 'Refreshing…');
-            google.script.run
-                .withSuccessHandler(b => { try { renderBundle(b); } finally { setBusy(false); } })
-                .withFailureHandler(err => { console.error(err); toast('Failed to refresh', false); setBusy(false); })
-                .getPublicBundle(id);
-        }
-
-        // ---------- Boot ----------
-        document.addEventListener('DOMContentLoaded', () => { if (BOOT_ID) { fetchBundle(); startPoll(); } else { toast('No event specified', false); } });
+        document.addEventListener('DOMContentLoaded', boot);
     </script>
 </body>
 
