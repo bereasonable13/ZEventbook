@@ -1,232 +1,171 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>NextUp · Public</title>
-    <?!= include('Styles'); ?>
-    <style>
-        /* Phone-first readability */
-        .container {
-            max-width: var(--container);
-            margin: 20px auto;
-            padding: 0 var(--gutter-x);
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>NextUp · Public</title>
+  <?!= include('Styles'); ?>
+  <style>
+    /* Phone-first readability */
+    .container { max-width: var(--container); margin: 20px auto; padding: 0 var(--gutter-x); }
 
-        .hdr {
-            display: flex;
-            align-items: baseline;
-            justify-content: space-between;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
+    .hdr { display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+    h1 { margin:0; font-size: clamp(30px, 7vw, 56px); letter-spacing:.2px; }
 
-        h1 {
-            margin: 0;
-            font-size: clamp(30px, 7vw, 56px);
-            letter-spacing: .2px;
-        }
+    .muted { font-size: clamp(15px, 3.2vw, 18px); color: var(--muted); }
 
-        .muted {
-            font-size: clamp(15px, 3.2vw, 18px);
-            color: var(--muted);
-        }
+    .card { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-1); }
+    .card h2 { font-size: clamp(20px, 5vw, 30px); margin: .2rem 0 .6rem; }
 
-        .card h2 {
-            font-size: clamp(20px, 5vw, 30px);
-        }
+    .links { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    .links a { color: var(--primary); }
 
-        .links {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-            flex-wrap: wrap;
-        }
+    table { width:100%; border-collapse:collapse; font-size: clamp(18px, 4.4vw, 22px); }
+    thead th { text-align:left; font-weight:800; letter-spacing:.2px; border-bottom:1px solid var(--border); }
+    th, td { padding: clamp(12px, 3.2vw, 18px) clamp(10px, 2.8vw, 16px); border-bottom:1px solid var(--border); }
+    tbody tr { line-height:1.45; }
+    .right { text-align:right; }
+    .nowrap { white-space:nowrap; }
 
-        .links a {
-            color: var(--primary);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: clamp(18px, 4.4vw, 22px);
-        }
-
-        thead th {
-            text-align: left;
-            font-weight: 800;
-            letter-spacing: .2px;
-            border-bottom: 1px solid var(--border);
-        }
-
-        th,
-        td {
-            padding: clamp(12px, 3.2vw, 18px) clamp(10px, 2.8vw, 16px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        tbody tr {
-            line-height: 1.45;
-        }
-
-        .right {
-            text-align: right;
-        }
-
-        .nowrap {
-            white-space: nowrap;
-        }
-
-        @media (prefers-color-scheme: dark) {
-
-            thead th,
-            td {
-                border-color: var(--border);
-            }
-        }
-
-        @media (min-width: 900px) {
-            table {
-                font-size: clamp(18px, 1.5vw, 22px);
-            }
-        }
-    </style>
+    @media (prefers-color-scheme: dark){
+      thead th, td { border-color: var(--border); }
+    }
+    @media (min-width:900px){
+      table { font-size: clamp(18px, 1.5vw, 22px); }
+    }
+  </style>
 </head>
-
 <body>
-    <main class="container">
-        <div class="hdr">
-            <h1 id="title">Loading…</h1>
-            <div class="links">
-                <a id="posterLink" target="_blank" rel="noopener" style="display:none;">Poster page</a>
-                <button class="btn" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
-            </div>
-        </div>
+  <main class="container">
+    <div class="hdr">
+      <h1 id="title">Loading…</h1>
+      <div class="links">
+        <a id="posterLink" target="_blank" rel="noopener" style="display:none;">Poster page</a>
+        <button class="btn" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
+      </div>
+    </div>
 
-        <div class="muted" id="date" aria-live="polite"></div>
-        <div class="muted" id="placeWrap" style="display:none;">Venue: <span id="place"></span></div>
-        <div class="muted" id="flowWrap" style="display:none;">Flow: <span id="flow"></span></div>
-        <div class="muted" id="elimWrap" style="display:none;">Elimination: <span id="elim"></span></div>
-        <div class="muted" id="seedWrap" style="display:none;"><span id="seed"></span></div>
+    <div class="muted" id="date" aria-live="polite"></div>
+    <div class="muted" id="placeWrap" style="display:none;">Venue: <span id="place"></span></div>
+    <div class="muted" id="flowWrap"  style="display:none;">Flow: <span id="flow"></span></div>
+    <div class="muted" id="elimWrap"  style="display:none;">Elimination: <span id="elim"></span></div>
+    <div class="muted" id="seedWrap"  style="display:none;"><span id="seed"></span></div>
 
-        <section class="card" id="scheduleCard" style="display:none;">
-            <h2>Schedule</h2>
-            <div class="scroll-x">
-                <table id="scheduleTbl">
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Match</th>
-                            <th class="nowrap">Table</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </section>
+    <section class="card" id="scheduleCard" style="display:none;">
+      <h2>Schedule</h2>
+      <div class="scroll-x">
+        <table id="scheduleTbl">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Match</th>
+              <th class="nowrap">Table</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
 
-        <section class="card" id="standingsCard" style="display:none;">
-            <h2>Standings</h2>
-            <div class="scroll-x">
-                <table id="standingsTbl">
-                    <thead>
-                        <tr>
-                            <th>Team</th>
-                            <th class="right">Pts</th>
-                            <th class="right">TB</th>
-                        </tr>
-                    </thead>
-                    <tbody></tbody>
-                </table>
-            </div>
-        </section>
-    </main>
+    <section class="card" id="standingsCard" style="display:none;">
+      <h2>Standings</h2>
+      <div class="scroll-x">
+        <table id="standingsTbl">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th class="right">Pts</th>
+              <th class="right">TB</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
 
-    <script>
-        // Fallback so the Toggle button never errors if Styles.html hasn’t defined NextUpTheme yet
-        window.NextUpTheme = window.NextUpTheme || { toggle() { document.documentElement.classList.toggle('theme--light'); } };
+  <script>
+    // Fallback so the Toggle button never errors if Styles hasn't defined NextUpTheme yet
+    window.NextUpTheme = window.NextUpTheme || { toggle(){ document.documentElement.classList.toggle('theme--light'); } };
 
-        const qs = new URLSearchParams(location.search);
-        const eventId = qs.get('event') || '';
+    const qs = new URLSearchParams(location.search);
+    const eventId = qs.get('event') || '';
 
-        function show(el, on) { if (el) el.style.display = on ? '' : 'none'; }
-        function setText(id, val, wrapId) {
-            const el = document.getElementById(id); if (!el) return false;
-            const v = String(val || '').trim();
-            el.textContent = v;
-            if (wrapId) show(document.getElementById(wrapId), !!v);
-            return !!v;
+    function show(el, on){ if(el) el.style.display = on ? '' : 'none'; }
+    function setText(id, val, wrapId){
+      const el = document.getElementById(id); if(!el) return false;
+      const v = String(val || '').trim();
+      el.textContent = v;
+      if (wrapId) show(document.getElementById(wrapId), !!v);
+      return !!v;
+    }
+
+    function render(res){
+      // Header/meta — “Eventbook” copy, same contract
+      document.getElementById('title').textContent =
+        res.title || (res.eventMeta && res.eventMeta.name) || '(Eventbook)';
+      document.getElementById('date').textContent =
+        res.datePretty || (res.eventMeta && res.eventMeta.startDateISO) || '';
+
+      // Optional details
+      setText('place', res.place, 'placeWrap');
+      setText('flow',  res.flow     || (res.eventMeta && res.eventMeta.flow), 'flowWrap');
+      setText('elim',  res.elimType || (res.eventMeta && res.eventMeta.elimType), 'elimWrap');
+      const seedTxt = res.seedMode ? `Seeding: ${res.seedMode}` :
+        ((res.eventMeta && res.eventMeta.seedMode) ? `Seeding: ${res.eventMeta.seedMode}` : '');
+      setText('seed', seedTxt, 'seedWrap');
+
+      // Links
+      const posterLink = document.getElementById('posterLink');
+      if(res.posterPageUrl){ posterLink.href = res.posterPageUrl; posterLink.style.display = 'inline'; }
+      else { posterLink.style.display = 'none'; }
+
+      // Schedule
+      const sch = Array.isArray(res.schedule) ? res.schedule : [];
+      const schBody = document.querySelector('#scheduleTbl tbody'); schBody.innerHTML = '';
+      sch.forEach(r=>{
+        const time = r.time || r.when || '';
+        const match = r.match || r.activity || r.vs || '';
+        const table = r.table || '';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td class="nowrap">${time}</td><td>${match}</td><td class="nowrap">${table}</td>`;
+        schBody.appendChild(tr);
+      });
+      show(document.getElementById('scheduleCard'), sch.length > 0);
+
+      // Standings
+      const st = Array.isArray(res.standings) ? res.standings : [];
+      const stBody = document.querySelector('#standingsTbl tbody'); stBody.innerHTML = '';
+      st.forEach(r=>{
+        const team = r.team || r.name || '';
+        const pts = (r.points != null ? r.points : (r.pts != null ? r.pts : ''));
+        const tb  = (r.tiebreak != null ? r.tiebreak : (r.tb  != null ? r.tb  : ''));
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${team}</td><td class="right">${pts || ''}</td><td class="right">${tb || ''}</td>`;
+        stBody.appendChild(tr);
+      });
+      show(document.getElementById('standingsCard'), st.length > 0);
+    }
+
+    async function loadBundle(){
+      try{
+        const res = await new Promise(resolve=>{
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(()=>resolve(null))
+            .getPublicBundle(eventId);
+        });
+        if(!res || !res.ok){
+          document.getElementById('title').textContent = 'Event not found';
+          return;
         }
+        render(res);
+      }catch(e){
+        document.getElementById('title').textContent = 'Error loading event';
+      }
+    }
 
-        function render(res) {
-            // Header/meta
-            document.getElementById('title').textContent =
-                res.title || (res.eventMeta && res.eventMeta.name) || '(Event)';
-            document.getElementById('date').textContent =
-                res.datePretty || (res.eventMeta && res.eventMeta.startDateISO) || '';
-
-            // Optional details (Public bundle may not include these keys; keep graceful)
-            setText('place', res.place, 'placeWrap');
-            setText('flow', res.flow || (res.eventMeta && res.eventMeta.flow), 'flowWrap');
-            setText('elim', res.elimType || (res.eventMeta && res.eventMeta.elimType), 'elimWrap');
-            const seedTxt = res.seedMode ? `Seeding: ${res.seedMode}` :
-                ((res.eventMeta && res.eventMeta.seedMode) ? `Seeding: ${res.eventMeta.seedMode}` : '');
-            setText('seed', seedTxt, 'seedWrap');
-
-            // Links
-            const posterLink = document.getElementById('posterLink');
-            if (res.posterPageUrl) { posterLink.href = res.posterPageUrl; posterLink.style.display = 'inline'; }
-            else { posterLink.style.display = 'none'; }
-
-            // Schedule
-            const sch = Array.isArray(res.schedule) ? res.schedule : [];
-            const schBody = document.querySelector('#scheduleTbl tbody'); schBody.innerHTML = '';
-            sch.forEach(r => {
-                const time = r.time || r.when || '';
-                const match = r.match || r.activity || r.vs || '';
-                const table = r.table || '';
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td class="nowrap">${time}</td><td>${match}</td><td class="nowrap">${table}</td>`;
-                schBody.appendChild(tr);
-            });
-            show(document.getElementById('scheduleCard'), sch.length > 0);
-
-            // Standings (Public bundle exposes points/tiebreak)
-            const st = Array.isArray(res.standings) ? res.standings : [];
-            const stBody = document.querySelector('#standingsTbl tbody'); stBody.innerHTML = '';
-            st.forEach(r => {
-                const team = r.team || r.name || '';
-                const pts = (r.points != null ? r.points : (r.pts != null ? r.pts : ''));
-                const tb = (r.tiebreak != null ? r.tiebreak : (r.tb != null ? r.tb : ''));
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${team}</td><td class="right">${pts || ''}</td><td class="right">${tb || ''}</td>`;
-                stBody.appendChild(tr);
-            });
-            show(document.getElementById('standingsCard'), st.length > 0);
-        }
-
-        async function loadBundle() {
-            try {
-                const res = await new Promise(resolve => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(() => resolve(null))
-                        .getPublicBundle(eventId);
-                });
-                if (!res || !res.ok) {
-                    document.getElementById('title').textContent = 'Event not found';
-                    return;
-                }
-                render(res);
-            } catch (e) {
-                document.getElementById('title').textContent = 'Error loading event';
-            }
-        }
-
-        document.addEventListener('DOMContentLoaded', loadBundle);
-    </script>
+    document.addEventListener('DOMContentLoaded', loadBundle);
+  </script>
 </body>
-
 </html>
