@@ -1,813 +1,645 @@
-<!doctype html>
-<html lang="en" >
+<!DOCTYPE html>
+<html lang="en">
 
 <head>
-    <meta charset="utf-8">
-    <title>
-        <?= appTitle || 'NextUp' ?>
-    </title>
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>NextUp · Admin</title>
+    <?!= include('Styles'); ?>
     <style>
-        :root {
-            color-scheme: light dark;
-            --bg: #ffffff;
-            --fg: #0b1324;
-            --muted: #6a7280;
-            --card: #f6f8fb;
-            --line: #e7edf5;
-            --ok: #16a34a;
-            --warn: #f59e0b;
-            --err: #ef4444;
-            --link: #2563eb;
-            --btn: #111827;
-            --btnfg: #ffffff;
+        /* Phone-first readability for Admin */
+        .container {
+            max-width: 980px;
+            margin: 20px auto;
+            padding: 0 16px;
         }
 
-        html[data-theme="dark"] {
-            --bg: #0b1020;
-            --fg: #e6ecff;
-            --muted: #9fb1d1;
-            --card: #151b2e;
-            --line: #263251;
-            --ok: #22c55e;
-            --warn: #fbbf24;
-            --err: #f87171;
-            --link: #93c5fd;
-            --btn: #1f2937;
-            --btnfg: #e6ecff;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji";
-            background: var(--bg);
-            color: var(--fg);
-        }
-
-        a {
-            color: var(--link);
-            text-decoration: none;
-        }
-
-        .appbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 16px;
-            border-bottom: 1px solid var(--line);
-            position: sticky;
-            top: 0;
-            background: var(--bg);
-            z-index: 10;
-        }
-
-        .title {
-            font-weight: 700;
+        h1 {
+            font-size: clamp(22px, 6vw, 32px);
             letter-spacing: .2px;
+        }
+
+        .card {
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        .card h2 {
+            font-size: clamp(18px, 5vw, 24px);
+            margin: .25rem 0 .6rem;
         }
 
         .row {
             display: flex;
-            gap: 10px;
+            flex-wrap: wrap;
+            gap: 12px;
             align-items: center;
         }
 
-        .col {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .wrap {
-            padding: 16px;
-            display: grid;
-            gap: 16px;
-            grid-template-columns: repeat(12, 1fr);
-        }
-
-        .card {
-            background: var(--card);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            padding: 14px;
-            grid-column: span 12;
-        }
-
-        .card-title {
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        @media(min-width:960px) {
-            .span-6 {
-                grid-column: span 6;
-            }
-
-            .span-4 {
-                grid-column: span 4;
-            }
-
-            .span-8 {
-                grid-column: span 8;
-            }
-        }
-
-        label {
-            font-size: 12px;
-            color: var(--muted);
-        }
-
-        input[type="text"],
-        input[type="date"],
-        select {
-            width: 100%;
+        .input-lg {
+            min-width: 260px;
             padding: 10px 12px;
-            border-radius: 10px;
-            border: 1px solid var(--line);
-            background: var(--bg);
-            color: var(--fg);
-            font-size: 16px;
+            font-size: clamp(16px, 4.4vw, 18px);
         }
 
-        button.btn {
-            padding: 12px 14px;
-            min-height: 44px;
-            border-radius: 10px;
-            border: 1px solid var(--line);
-            background: var(--btn);
-            color: var(--btnfg);
-            cursor: pointer;
+        .btn,
+        .btn-xl {
+            font-size: clamp(16px, 4.6vw, 18px);
+            min-height: 48px;
         }
 
-        button.btn[disabled] {
-            opacity: .5;
-            cursor: not-allowed;
-        }
-
-        .btn-ghost {
-            background: transparent;
-            color: var(--fg);
-        }
-
-        .kpi {
-            font-weight: 700;
-        }
-
-        .table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
-
-        .table th,
-        .table td {
-            border-top: 1px solid var(--line);
-            padding: 6px 8px;
-            vertical-align: top;
+        .label-inline {
+            font-weight: 600;
+            margin-right: 8px;
+            font-size: clamp(14px, 3.8vw, 16px);
         }
 
         .muted {
-            color: var(--muted);
-        }
-
-        .pill {
-            padding: 4px 8px;
-            border-radius: 999px;
-            background: rgba(0, 0, 0, .06);
-        }
-
-        /* Toast */
-        #toastHost {
-            position: fixed;
-            left: 0;
-            right: 0;
-            bottom: 14px;
-            display: flex;
-            justify-content: center;
-            pointer-events: none;
-            z-index: 99;
-        }
-
-        .toast {
-            background: var(--card);
-            color: var(--fg);
-            border: 1px solid var(--line);
-            padding: 10px 12px;
-            border-radius: 10px;
-            box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
-            pointer-events: auto;
-        }
-
-        .toast.ok {
-            border-color: var(--ok);
-        }
-
-        .toast.err {
-            border-color: var(--err);
-        }
-
-        .toast.info {
-            border-color: var(--warn);
-        }
-
-        /* Events Cache Badge */
-        #eventsCacheBadge {
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 6px 10px;
-            border-radius: 999px;
-            background: rgba(0, 0, 0, .06);
-        }
-
-        #eventsCacheBadge .dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: #aaa;
-        }
-
-        #eventsCacheBadge .panel {
-            position: absolute;
-            top: 120%;
-            right: 0;
-            width: min(92vw, 420px);
-            background: var(--bg);
-            color: var(--fg);
-            border: 1px solid var(--line);
-            border-radius: 12px;
-            box-shadow: 0 10px 28px rgba(0, 0, 0, .18);
-            padding: 12px;
-            opacity: 0;
-            pointer-events: none;
-            transform: translateY(6px);
-            transition: .15s ease;
-            z-index: 50;
-        }
-
-        #eventsCacheBadge:hover .panel {
-            opacity: 1;
-            pointer-events: auto;
-            transform: translateY(0);
-        }
-
-        .grid2 {
-            display: grid;
-            grid-template-columns: 120px 1fr;
-            gap: 8px;
+            font-size: clamp(12px, 3.6vw, 14px);
         }
 
         .mono {
-            font-family: ui-monospace, Menlo, Consolas, monospace;
-            word-break: break-all;
+            font-family: var(--font-mono);
+            font-size: clamp(12px, 3.6vw, 14px);
         }
 
-        /* Status ribbons */
-        .ribbon {
-            padding: 8px 12px;
-            border-radius: 8px;
-            background: rgba(0, 0, 0, .06);
-            font-size: 13px;
+        /* QR grid */
+        .qrgrid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+
+        .qrbox {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            width: 240px;
+            max-width: calc(50% - 14px);
+            flex: 1 1 240px;
+        }
+
+        @media (min-width: 920px) {
+            .qrbox {
+                max-width: 240px;
+            }
+        }
+
+        .qrbox img {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            object-fit: contain;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            display: none;
+            background: #fff;
+        }
+
+        .qrbox .muted {
+            display: block;
+            margin-top: 6px;
+        }
+
+        .qrbox .row {
+            gap: 8px;
+            margin-top: 8px;
         }
     </style>
 </head>
 
 <body>
-    <header class="appbar">
-        <div class="row">
-            <div class="title">NextUp · Admin</div>
-            <div id="eventsCacheBadge" aria-live="polite">
-                <span class="dot" id="ecbDot" title="green=fresh, amber=304, red=error"></span>
-                <span class="muted">Events Cache</span>
-                <div class="panel">
-                    <div class="grid2">
-                        <div>ETag</div>
-                        <div class="mono" id="ecbEtag">—</div>
-                        <div>Last</div>
-                        <div id="ecbLast">—</div>
-                        <div>Age</div>
-                        <div id="ecbAge">—</div>
-                        <div>Last Result</div>
-                        <div id="ecbKind">—</div>
-                    </div>
-                    <div style="margin-top:8px; border-top:1px solid var(--line); padding-top:8px" class="muted">
-                        <div><b>ETag</b> is the server’s fingerprint of Events. If your ETag matches, the server may
-                            return <b>304</b> and the UI keeps its list.</div>
-                        <div><b>Never-blank rule</b>: after writes, if a fetch comes back empty, we keep the last good
-                            list and retry with backoff.</div>
-                    </div>
-                    <div class="row" style="margin-top:8px; flex-wrap:wrap">
-                        <button type="button" class="btn btn-ghost" id="btnForceReval">Force revalidate</button>
-                        <button type="button" class="btn btn-ghost" id="btnCopyDiag">Copy diagnostics</button>
-                    </div>
-                </div>
-            </div>
+    <main class="container">
+        <div class="row" style="justify-content: space-between; align-items: baseline;">
+            <h1>Admin</h1>
+            <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
         </div>
-        <div class="row">
-            <button class="btn btn-ghost" id="themeToggle" aria-label="Toggle theme">🌓</button>
-        </div>
-    </header>
 
-    <div class="wrap">
         <!-- Create -->
-        <section class="card span-6">
-            <div class="card-title">Create Event</div>
-            <div class="row" style="flex-wrap:wrap">
-                <div class="col" style="flex:1 1 220px; min-width:220px">
-                    <label>Event Name</label>
-                    <input type="text" id="inpName" placeholder="e.g., Fall Open 2025">
-                </div>
-                <div class="col" style="width:200px">
-                    <label>Start Date</label>
-                    <input type="date" id="inpDate">
-                </div>
-                <div class="col" style="width:160px">
-                    <label>Seed Mode</label>
-                    <select id="inpSeed">
-                        <option value="random">random</option>
-                        <option value="seeded">seeded</option>
-                    </select>
-                </div>
-                <div class="col" style="width:160px">
-                    <label>Elimination</label>
-                    <select id="inpElim">
-                        <option value="none">none</option>
-                        <option value="single">single</option>
-                        <option value="double">double</option>
-                    </select>
-                </div>
+        <section class="card" aria-labelledby="h-create">
+            <h2 id="h-create">Create Event</h2>
+            <div class="row">
+                <input id="eventName" class="input-lg" type="text" placeholder="Event name" />
+                <input id="eventDate" class="input-lg" type="date" />
+
+                <label class="label-inline" for="eventFlow">Pick event type</label>
+                <select id="eventFlow" class="input-lg" aria-label="Event type">
+                    <option value="" selected disabled>Pick event type…</option>
+                    <option value="event-only">Event Only (no schedule)</option>
+                    <option value="tourney-only">Tourney Only</option>
+                    <option value="season">Season</option>
+                    <option value="season-plus-tourney">Season + Tourney</option>
+                </select>
+
+                <label class="label-inline" for="seedMode">Seeding</label>
+                <select id="seedMode" class="input-lg" aria-label="Seeding">
+                    <option value="random" selected>Random</option>
+                    <option value="seeded">Seeded</option>
+                </select>
+
+                <button id="btnCreateEvent" class="btn btn-xl">Create</button>
             </div>
-            <div class="row" style="margin-top:10px">
-                <button class="btn" id="btnCreateEvent">Create</button>
-                <div class="ribbon" id="createStatus">Ready</div>
-            </div>
+            <div class="muted" style="margin-top:6px;">Name and Date are required.</div>
         </section>
 
         <!-- Manage -->
-        <section class="card span-6">
-            <div class="card-title">Manage Event</div>
-            <div class="col" style="gap:6px">
-                <label>Choose</label>
-                <select id="chooseEvent"></select>
-            </div>
-            <div class="row" style="flex-wrap:wrap; margin-top:10px">
-                <button class="btn" id="btnOpenWorkbook" disabled>Open Workbook</button>
-                <button class="btn" id="btnOpenAdmin" disabled>Open Admin</button>
-                <button class="btn" id="btnOpenDisplay" disabled>Open Display</button>
-                <button class="btn" id="btnOpenPublic" disabled>Open Public</button>
-                <button class="btn" id="btnOpenPoster" disabled>Open Poster</button>
-                <button class="btn btn-ghost" id="btnCopyLink" disabled>Copy Link</button>
+        <section class="card" aria-labelledby="h-manage">
+            <h2 id="h-manage">Manage</h2>
+            <label for="chooseEvent" class="label-inline">
+                Choose Event
+                <span id="synclabel" class="muted"></span>
+            </label>
+            <select id="chooseEvent" class="input-lg" aria-label="Choose Event"></select>
+
+            <div class="row" style="margin-top:10px;">
+                <button id="btnOpenWorkbook" class="btn" disabled>Open Workbook</button>
             </div>
 
-            <div class="card" style="margin-top:12px">
-                <div class="card-title">Form</div>
-                <div class="row" style="flex-wrap:wrap">
-                    <input type="text" id="inpForm" placeholder="Paste Google Form URL or ID"
-                        style="flex:1 1 280px; min-width:240px">
-                    <button class="btn" id="btnSaveForm" disabled>Save Form</button>
-                    <a id="lnkFormView" class="btn btn-ghost" target="_blank" rel="noopener" style="display:none">View
-                        Form</a>
-                    <a id="lnkFormEdit" class="btn btn-ghost" target="_blank" rel="noopener" style="display:none">Edit
-                        Form</a>
+            <div class="row" style="margin-top:8px;">
+                <button id="btnLinkForm" class="btn" disabled>Create/Link Form…</button>
+                <button id="btnImportSignups" class="btn" disabled>Import Signups…</button>
+            </div>
+
+            <div id="eventMeta" class="mono muted" style="margin-top:8px;"></div>
+        </section>
+
+        <!-- Share -->
+        <section class="card" id="shareCard" style="display:none;" aria-labelledby="h-share">
+            <h2 id="h-share">Share</h2>
+            <div class="qrgrid">
+                <!-- Form -->
+                <div class="qrbox">
+                    <div><strong>Form</strong> <span class="muted">(if linked)</span></div>
+                    <img id="qrForm" alt="QR: Form" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenFormQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyFormUrl" disabled title="No form linked">Copy URL</button>
+                    </div>
+                </div>
+                <!-- Display (org) -->
+                <div class="qrbox">
+                    <div><strong>Display (org)</strong></div>
+                    <img id="qrDisplay" alt="QR: Display (org)" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenDisplayQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyDisplayUrl" disabled title="Org sign-in required">Copy
+                            URL</button>
+                    </div>
+                </div>
+                <!-- Public (anyone) -->
+                <div class="qrbox">
+                    <div><strong>Public (anyone)</strong></div>
+                    <img id="qrPublic" alt="QR: Public" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPublicQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPublicUrl" disabled>Copy URL</button>
+                    </div>
+                </div>
+                <!-- Poster (sheet) -->
+                <div class="qrbox">
+                    <div><strong>Poster (sheet)</strong> <span class="muted">(if PosterConfig exists)</span></div>
+                    <img id="qrPoster" alt="QR: Poster Sheet" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPosterQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPosterUrl" disabled title="No poster sheet">Copy URL</button>
+                    </div>
+                </div>
+                <!-- Poster Image (art) -->
+                <div class="qrbox">
+                    <div><strong>Poster Image</strong> <span class="muted">(direct art)</span></div>
+                    <img id="qrPosterImage" alt="QR: Poster Image" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPosterImageQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPosterImageUrl" disabled title="No poster image">Copy
+                            URL</button>
+                    </div>
+                </div>
+                <!-- Poster Page (public) -->
+                <div class="qrbox">
+                    <div><strong>Poster Page</strong> <span class="muted">(public poster)</span></div>
+                    <img id="qrPosterPage" alt="QR: Poster Page" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPosterPageQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPosterPageUrl" disabled>Copy URL</button>
+                    </div>
                 </div>
             </div>
         </section>
 
-        <!-- Diagnostics -->
-        <section class="card span-8">
-            <div class="card-title">Diagnostics</div>
-            <div class="row" style="flex-wrap:wrap; gap:8px">
-                <button class="btn btn-ghost" id="dxPing">Ping</button>
-                <button class="btn btn-ghost" id="dxIdentity">Identity</button>
-                <button class="btn btn-ghost" id="dxProps">Props</button>
-                <button class="btn btn-ghost" id="dxControl">Control</button>
-                <button class="btn btn-ghost" id="dxIdx">Events Index</button>
-                <button class="btn btn-ghost" id="dxEcho">Echo</button>
-                <button class="btn btn-ghost" id="dxCreateArchive">Create→Archive</button>
+        <!-- Players -->
+        <section class="card" id="playersCard" style="display:none;" aria-labelledby="h-players">
+            <h2 id="h-players">Players</h2>
+            <div class="row">
+                <button class="btn" id="btnOpenSignupsSheet" disabled title="Workbook not ready yet">Open Signups
+                    Sheet</button>
             </div>
-            <pre id="dxOut"
-                style="margin-top:10px; max-height:38vh; overflow:auto; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:10px;">—</pre>
         </section>
+    </main>
 
-        <!-- Server Test Runner -->
-        <section class="card span-4">
-            <div class="card-title">Server Test Runner</div>
-            <div class="row" style="flex-wrap:wrap; gap:8px">
-                <button class="btn" id="btnRunSmoke">Run Smoke</button>
-                <button class="btn" id="btnRunDaily">Run Daily</button>
-                <button class="btn" id="btnRunFull">Run Full</button>
-                <button class="btn btn-ghost" id="btnCopyReport">Copy JSON</button>
-                <button class="btn btn-ghost" id="btnLogReport">Log to Sheet</button>
-            </div>
-            <div id="testSummary" class="kpi" style="margin-top:8px"></div>
-            <table class="table" style="margin-top:8px">
-                <thead>
-                    <tr>
-                        <th>Suite</th>
-                        <th>Test</th>
-                        <th>OK</th>
-                        <th>ms</th>
-                        <th>Error</th>
-                    </tr>
-                </thead>
-                <tbody id="testTbody"></tbody>
-            </table>
-        </section>
-
-        <!-- UI Tests (Client) -->
-        <section class="card span-12" id="uiTestsCard">
-            <div class="card-title">UI Tests (Client-Side)</div>
-            <div class="row" style="flex-wrap:wrap; gap:8px">
-                <button class="btn" id="btnUiSmoke">Run UI Smoke</button>
-                <button class="btn" id="btnUiFull">Run UI Full</button>
-                <button class="btn btn-ghost" id="btnUiCopy">Copy Report</button>
-            </div>
-            <div id="uiTestSummary" class="kpi" style="margin-top:8px"></div>
-            <table class="table" style="margin-top:8px">
-                <thead>
-                    <tr>
-                        <th>Test</th>
-                        <th>OK</th>
-                        <th>ms</th>
-                        <th>Detail</th>
-                    </tr>
-                </thead>
-                <tbody id="uiTestBody"></tbody>
-            </table>
-        </section>
-    </div>
-
-    <!-- Toast host -->
-    <div id="toastHost" data-toast-host></div>
+    <div id="toast" aria-live="polite" role="status"></div>
 
     <script>
-        /******** Theme ********/
-        /******** Theme (dark by default, toggle persists) ********/
-(() => {
-  const KEY = 'nu.theme';
+        // ===== Theme fallback (never error) =====
+        window.NextUpTheme = window.NextUpTheme || {
+            toggle() { document.documentElement.classList.toggle('theme--light'); }
+        };
 
-  // Read saved preference (if any)
-  let stored = null;
-  try { stored = localStorage.getItem(KEY); } catch (_) {}
+/******** Unbreakable Toast ********/
+(function ensureToast() {
+    const HOST_ID = 'toastHost';
 
-  const valid = stored === 'light' || stored === 'dark';
-  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+    function ensureHost() {
+        let host = document.getElementById(HOST_ID);
+        if (!host) {
+            host = document.createElement('div');
+            host.id = HOST_ID;
+            host.setAttribute('data-toast-host', '');
+            host.style.position = 'fixed';
+            host.style.left = '0'; host.style.right = '0'; host.style.bottom = '14px';
+            host.style.display = 'flex';
+            host.style.justifyContent = 'center';
+            host.style.pointerEvents = 'none';
+            host.style.zIndex = '999';
+            document.body.appendChild(host);
+        }
+        return host;
+    }
 
-  // Always default to dark; honor saved preference when valid
-  const initial = valid ? stored : (prefersDark ? 'dark' : 'dark');
+    const Q = [];
+    let showing = false;
 
-  function apply(theme) {
-    document.documentElement.setAttribute('data-theme', theme);
-    try { localStorage.setItem(KEY, theme); } catch (_) {}
-  }
+    window.toast = function toast(msg, kind) {
+        try {
+            const text = (msg == null) ? '' : (typeof msg === 'string' ? msg : JSON.stringify(msg));
+            Q.push({ text, kind: kind || 'ok' });
+            if (!showing) drain();
+        } catch (e) {
+            // Last-resort fallback
+            try { console && console.error && console.error('toast error', e); } catch (_) { }
+            try { alert(String(msg)); } catch (_) { }
+        }
+    };
 
-  // Apply on load
-  apply(initial);
+    function drain() {
+        if (!Q.length) { showing = false; return; }
+        showing = true;
 
-  // Toggle handler
-  document.getElementById('themeToggle')?.addEventListener('click', () => {
-    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
-    apply(cur === 'dark' ? 'light' : 'dark');
-  });
+        const host = ensureHost();
+        const { text, kind } = Q.shift();
+
+        const el = document.createElement('div');
+        el.className = 'toast ' + kind;
+        el.setAttribute('role', 'status'); // screen readers
+        el.setAttribute('aria-live', 'polite');
+        el.style.background = 'var(--card)';
+        el.style.color = 'var(--fg)';
+        el.style.border = '1px solid var(--line)';
+        el.style.padding = '10px 12px';
+        el.style.borderRadius = '10px';
+        el.style.boxShadow = '0 8px 28px rgba(0,0,0,.18)';
+        el.style.pointerEvents = 'auto';
+        el.style.maxWidth = '92vw';
+        el.style.fontSize = '14px';
+        el.style.whiteSpace = 'pre-wrap';
+
+        // Visual border hint by type (uses your CSS vars)
+        el.style.borderColor =
+            kind === 'err' ? 'var(--err)' :
+                kind === 'info' ? 'var(--warn)' : 'var(--ok)';
+
+        el.textContent = text;
+        host.appendChild(el);
+
+        setTimeout(() => {
+            try { el.remove(); } catch (_) { }
+            drain();
+        }, 2600);
+    }
+
+    // Self-heal if the host is later removed.
+    const mo = new MutationObserver(() => { ensureHost(); });
+    mo.observe(document.documentElement, { childList: true, subtree: true });
 })();
 
-        /******** Toast ********/
-        function toast(msg, kind) {
-            const host = document.getElementById('toastHost');
-            const el = document.createElement('div');
-            el.className = 'toast ' + (kind || 'ok');
-            el.textContent = msg;
-            host.appendChild(el);
-            setTimeout(() => { el.remove(); }, 2600);
+        function showToast(msg, type = 'success', dur = 2600) {
+            const el = ensureToastHost();
+            el.textContent = msg || '';
+            el.className = (type === 'error') ? 'error show' : 'show';
+            // Backward-compat for pages not using shared NextUpToast classes:
+            el.style.background = (type === 'error') ? '#b3261e' : '#0a7a2f';
+            el.style.display = 'block';
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => { el.style.display = 'none'; el.classList.remove('show'); }, dur);
         }
 
-        /******** State + Cache badge ********/
-        const STATE = { etag: null, items: [], lastFetch: 0, lastKind: 'idle', lastWriteAt: 0, loading: false, poller: null };
-        function setDot(kind) { document.getElementById('ecbDot').style.background = ({ fresh: '#16a34a', notmod: '#f59e0b', error: '#ef4444', idle: '#aaa' })[kind] || '#aaa'; }
-        function updBadge() {
-            const age = STATE.lastFetch ? ((Date.now() - STATE.lastFetch) / 1000 | 0) + 's' : '—';
-            document.getElementById('ecbEtag').textContent = STATE.etag || '—';
-            document.getElementById('ecbLast').textContent = STATE.lastFetch ? new Date(STATE.lastFetch).toLocaleString() : '—';
-            document.getElementById('ecbAge').textContent = age;
-            document.getElementById('ecbKind').textContent = STATE.lastKind;
-            setDot(STATE.lastKind === 'fresh' ? 'fresh' : STATE.lastKind === 'notmod' ? 'notmod' : STATE.lastKind === 'error' ? 'error' : 'idle');
+        // ===== State (sticky + SWR) =====
+        const NU_EVT_LS_KEY = 'events_index_v1';
+        const STATE = { items: [], etag: null, lastSync: 0, selectedId: null };
+        let _syncTimer = null, _syncInflight = false, _failCount = 0, _lastErrToastAt = 0;
+
+        function hydrateFromLocal() {
+            try {
+                const raw = localStorage.getItem(NU_EVT_LS_KEY);
+                if (raw) {
+                    const cached = JSON.parse(raw);
+                    STATE.items = Array.isArray(cached.items) ? cached.items : [];
+                    STATE.etag = cached.etag || null;
+                    STATE.lastSync = cached.savedAt || 0;
+                    STATE.selectedId = cached.selectedId || null;
+                }
+                paintDropdown(STATE.items);
+                paintSyncLabel();
+                updateWorkbookButtonForSelected();
+                refreshQuickLinks();
+            } catch { paintLoading(); }
+        }
+        function persistLocal() {
+            try {
+                localStorage.setItem(NU_EVT_LS_KEY, JSON.stringify({
+                    items: STATE.items, etag: STATE.etag, generatedAt: Date.now(), savedAt: Date.now(), selectedId: STATE.selectedId
+                }));
+            } catch { }
         }
 
-        /******** Render ********/
-        function labelOf(ev) {
-            const n = (ev.name || ev.slug || ev.id || '(unnamed)').toString().trim();
-            const d = (ev.startDateISO || '').toString().slice(0, 10);
-            return d ? `${n} (${d})` : n;
-        }
-        function renderEvents(items) {
-            // Keep selection if possible
-            const sel = document.getElementById('chooseEvent');
-            const prev = sel.value;
+        // ===== UI painters =====
+        function paintLoading() {
+            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
             sel.innerHTML = '';
-            items.forEach(ev => {
+            const opt = document.createElement('option');
+            opt.disabled = true; opt.selected = true; opt.textContent = 'Loading events…';
+            sel.appendChild(opt);
+            sel.disabled = true;
+        }
+        function paintOfflineMessage() {
+            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
+            sel.innerHTML = '';
+            const opt = document.createElement('option');
+            opt.disabled = true; opt.selected = true; opt.textContent = 'Unable to load events (offline)';
+            sel.appendChild(opt);
+            sel.disabled = true;
+            showToast('Offline or server error', 'error', 2500);
+        }
+        function paintSyncLabel() {
+            const el = document.getElementById('synclabel'); if (!el) return;
+            if (!STATE.lastSync) { el.textContent = ''; return; }
+            const age = Math.round((Date.now() - STATE.lastSync) / 1000);
+            el.textContent = `synced ${age}s ago`;
+        }
+        function buildEventLabel(it) {
+            const pretty = (it.name && String(it.name).trim()) || it.slug || it.id || '(unnamed)';
+            const dt = it.startDateISO ? ` (${String(it.startDateISO).slice(0, 10)})` : '';
+            const tag = it.eventTag ? ` · ${it.eventTag}` : '';
+            return pretty + dt + tag + (it.isDefault ? ' ★' : '');
+        }
+        function normalizeEvents(items) {
+            return items.map(it => ({ ...it, name: it.name || '', slug: it.slug || '', id: it.id || it.slug || it.name || '' }))
+                .sort((a, b) => (b.isDefault - a.isDefault) || String(b.startDateISO).localeCompare(String(a.startDateISO)));
+        }
+        function paintDropdown(items) {
+            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
+            if (sel._len === items.length && sel._firstId === (items[0]?.id || null)) return; // avoid churn
+            const keep = STATE.selectedId || sel.value || null;
+            sel.innerHTML = '';
+            if (!items || !items.length) {
                 const opt = document.createElement('option');
-                opt.value = ev.id; opt.textContent = (ev.isDefault ? '★ ' : '') + labelOf(ev);
-                opt.dataset.ssUrl = ev.eventSpreadsheetUrl || '';
+                opt.disabled = true; opt.selected = true; opt.textContent = '(no events yet — create above)';
+                sel.appendChild(opt); sel.disabled = true;
+                document.getElementById('eventMeta').textContent = '';
+                updateWorkbookButtonForSelected();
+                return;
+            }
+            items.forEach(it => {
+                const opt = document.createElement('option');
+                opt.value = it.id || it.slug || it.name || '(unnamed)';
+                opt.textContent = buildEventLabel(it);
                 sel.appendChild(opt);
             });
-            if (items.length && items.some(e => e.id === prev)) sel.value = prev;
-            enableManageButtons();
+            sel.disabled = false;
+            if (keep && items.some(x => x.id === keep || x.slug === keep)) { sel.value = keep; STATE.selectedId = keep; }
+            else { const firstId = items[0]?.id || items[0]?.slug || null; if (firstId) { sel.value = firstId; STATE.selectedId = firstId; } }
+            sel._len = items.length; sel._firstId = items[0]?.id || null;
+            const selected = items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId) || items[0];
+            document.getElementById('eventMeta').textContent = selected ? JSON.stringify(selected) : '';
+            updateWorkbookButtonForSelected(); persistLocal();
         }
-        function enableManageButtons() {
-            const sel = document.getElementById('chooseEvent');
-            const id = sel.value || '';
-            const ev = STATE.items.find(e => e.id === id);
-            const has = !!ev;
-            const hasWB = !!(ev && ev.eventSpreadsheetUrl);
-            const set = (id, on) => { const b = document.getElementById(id); if (b) b.disabled = !on; };
-            set('btnOpenWorkbook', hasWB);
-            set('btnOpenAdmin', has);
-            set('btnOpenDisplay', has);
-            set('btnOpenPublic', has);
-            set('btnOpenPoster', has);
-            set('btnCopyLink', has);
-            set('btnSaveForm', has);
-            // Form links
-            if (ev && ev.formId) {
-                const view = `https://docs.google.com/forms/d/${ev.formId}/viewform`;
-                const edit = `https://docs.google.com/forms/d/${ev.formId}/edit`;
-                const l1 = document.getElementById('lnkFormView');
-                const l2 = document.getElementById('lnkFormEdit');
-                l1.href = view; l1.style.display = 'inline-flex';
-                l2.href = edit; l2.style.display = 'inline-flex';
+
+        // ===== Background sync with backoff =====
+        async function backgroundSync() {
+            if (_syncInflight) return; _syncInflight = true;
+            try {
+                const res = await api.getEventsSafe({ etag: STATE.etag });
+                _failCount = 0;
+                if (res && res.ok && res.status !== 304 && Array.isArray(res.items)) {
+                    const oldFirst = STATE.items[0]?.id, oldLen = STATE.items.length;
+                    STATE.items = normalizeEvents(res.items);
+                    STATE.etag = res.etag || null; STATE.lastSync = Date.now();
+                    persistLocal(); paintSyncLabel();
+                    const changed = (oldLen !== STATE.items.length) || (oldFirst !== STATE.items[0]?.id);
+                    if (changed) paintDropdown(STATE.items);
+                    updateWorkbookButtonForSelected();
+                    refreshQuickLinks();
+                }
+            } catch (e) {
+                _failCount = Math.min(_failCount + 1, 5);
+                if (!STATE.items.length) paintOfflineMessage();
+                const now = Date.now();
+                if (now - _lastErrToastAt > 10000) { showToast('Event sync failed — retrying…', 'error', 2600); _lastErrToastAt = now; }
+            } finally {
+                _syncInflight = false;
+                const jitter = Math.floor(Math.random() * 3000);
+                const next = _failCount ? Math.min(30000, 1000 * Math.pow(2, _failCount)) : (20000 + jitter);
+                clearTimeout(_syncTimer); _syncTimer = setTimeout(backgroundSync, next);
+            }
+        }
+        function bootAdminEvents() {
+            if (bootAdminEvents._didBoot) return; bootAdminEvents._didBoot = true;
+            hydrateFromLocal(); if (!STATE.items.length) paintLoading();
+            backgroundSync();
+        }
+
+        // ===== Manage actions =====
+        function updateWorkbookButtonForSelected() {
+            const event = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            const btn = document.getElementById('btnOpenWorkbook'); if (!btn) return;
+            if (event && event.eventSpreadsheetUrl) {
+                btn.disabled = false;
+                btn.textContent = event.eventTag ? `Open Workbook (${event.eventTag})` : 'Open Workbook';
+                btn.onclick = () => window.open(event.eventSpreadsheetUrl, '_blank');
             } else {
-                document.getElementById('lnkFormView').style.display = 'none';
-                document.getElementById('lnkFormEdit').style.display = 'none';
+                btn.disabled = true; btn.textContent = 'Open Workbook'; btn.onclick = null;
             }
+            const linkBtn = document.getElementById('btnLinkForm');
+            const impBtn = document.getElementById('btnImportSignups');
+            const enable = !!event;[linkBtn, impBtn].forEach(b => { if (b) b.disabled = !enable; });
         }
 
-        /******** Poller (single instance) ********/
-        function schedulePoll(ms) { if (STATE.poller) clearTimeout(STATE.poller); STATE.poller = setTimeout(loadEvents, ms || 0); }
-        function loadEvents(options) {
-            if (STATE.loading) return;
-            STATE.loading = true;
-            google.script.run
-                .withSuccessHandler(res => {
-                    STATE.loading = false;
-                    if (!res || !res.ok) { STATE.lastKind = 'error'; STATE.lastFetch = Date.now(); updBadge(); return; }
-                    STATE.etag = res.etag || STATE.etag;
-                    STATE.lastFetch = Date.now();
-                    if (res.status === 304) {
-                        STATE.lastKind = 'notmod'; updBadge();
-                        // Do not re-render; keep the UI; schedule next poll
-                        schedulePoll(3000);
-                        return;
-                    }
-                    const items = Array.isArray(res.items) ? res.items : [];
-                    // Never-blank rule: if we recently wrote and got empty, keep old and retry
-                    if (STATE.lastWriteAt && (Date.now() - STATE.lastWriteAt < 5000) && items.length === 0 && STATE.items.length) {
-                        STATE.lastKind = 'notmod'; updBadge(); schedulePoll(1200); return;
-                    }
-                    STATE.items = items;
-                    STATE.lastKind = 'fresh'; updBadge();
-                    renderEvents(items);
-                    schedulePoll(3000);
-                })
-                .withFailureHandler(err => {
-                    STATE.loading = false;
-                    STATE.lastKind = 'error'; STATE.lastFetch = Date.now(); updBadge();
-                    console.error(err); toast('Failed to load events', 'err'); schedulePoll(2000);
-                })
-                .getEventsSafe(STATE.etag);
-        }
+        // Create
+        document.getElementById('btnCreateEvent').addEventListener('click', async () => {
+            const name = (document.getElementById('eventName').value || '').trim();
+            const date = document.getElementById('eventDate').value || '';
+            const flowSel = document.getElementById('eventFlow');
+            const flow = flowSel.value || '';
+            const seedMode = document.getElementById('seedMode').value || 'random';
+            if (!name || !date) { showToast('Name and Date are required', 'error', 2600); return; }
+            if (!flow) { showToast('Pick an event type', 'error', 2200); flowSel.focus(); return; }
 
-        /******** Create flow ********/
-        async function onCreate() {
-            const btn = document.getElementById('btnCreateEvent');
-            const name = document.getElementById('inpName').value.trim();
-            const date = document.getElementById('inpDate').value.trim();
-            const seed = document.getElementById('inpSeed').value;
-            const elim = document.getElementById('inpElim').value;
-            if (!name || !date) { toast('Name and Date required', 'err'); return; }
-            btn.disabled = true; document.getElementById('createStatus').textContent = 'Creating…';
-            STATE.lastWriteAt = Date.now();
-            google.script.run
-                .withSuccessHandler(res => {
-                    btn.disabled = false;
-                    if (!res || !res.ok) { toast('Create failed', 'err'); document.getElementById('createStatus').textContent = 'Failed'; return; }
-                    toast('Event created', 'ok'); document.getElementById('createStatus').textContent = 'Created';
-                    // Optimistic insert stub (keeps dropdown non-empty)
-                    STATE.items = [{ id: res.id, name, slug: name.toLowerCase(), startDateISO: date, eventSpreadsheetUrl: '', formId: '', isDefault: false }].concat(STATE.items);
-                    renderEvents(STATE.items);
-                    schedulePoll(400); // reconcile soon
-                })
-                .withFailureHandler(err => {
-                    btn.disabled = false; document.getElementById('createStatus').textContent = 'Failed';
-                    console.error(err); toast('Create failed', 'err');
-                })
-                .createEvent({ name, startDateISO: date, seedMode: seed, elimType: elim });
-        }
-
-        /******** Quick links ********/
-        function withSelectedEvent(fn) {
-            const sel = document.getElementById('chooseEvent'); const id = sel.value;
-            if (!id) { toast('Pick an event', 'err'); return; }
-            const ev = STATE.items.find(e => e.id === id); fn(ev, id);
-        }
-        function openLink(which) {
-            withSelectedEvent((ev) => {
-                // Prefer workbook for "Open Workbook"
-                if (which === 'workbook' && ev.eventSpreadsheetUrl) { window.open(ev.eventSpreadsheetUrl, '_blank'); return; }
-                google.script.run
-                    .withSuccessHandler(r => {
-                        if (!r || !r.ok) { toast('No links', 'err'); return; }
-                        const map = {
-                            admin: r.adminUrl, display: r.displayUrl, public: r.publicUrl, poster: r.posterPageUrl
-                        };
-                        const url = which === 'admin' ? map.admin : which === 'display' ? map.display : which === 'public' ? map.public : which === 'poster' ? map.poster : ev.eventSpreadsheetUrl;
-                        if (url) window.open(url, '_blank'); else toast('Link unavailable', 'err');
-                    })
-                    .withFailureHandler(e => { console.error(e); toast('Failed to fetch links', 'err'); })
-                    .getEventQuickLinks(ev.id);
-            });
-        }
-        function copySelectedLink() {
-            withSelectedEvent((ev) => {
-                google.script.run
-                    .withSuccessHandler(r => {
-                        const url = r?.publicUrl || '';
-                        if (!url) { toast('No public link', 'err'); return; }
-                        navigator.clipboard?.writeText(url).then(() => toast('Copied public link', 'ok')).catch(() => toast('Copy failed', 'err'));
-                    })
-                    .withFailureHandler(e => { console.error(e); toast('Failed', 'err'); })
-                    .getEventQuickLinks(ev.id);
-            });
-        }
-
-        /******** Form save ********/
-        function saveForm() {
-            const s = document.getElementById('inpForm').value.trim();
-            withSelectedEvent((ev) => {
-                google.script.run
-                    .withSuccessHandler(r => {
-                        if (r?.ok) { toast('Form saved', 'ok'); loadEvents(); }
-                        else toast('Save failed', 'err');
-                    })
-                    .withFailureHandler(e => { console.error(e); toast('Save failed', 'err'); })
-                    .setEventFormId(ev.id, s);
-            });
-        }
-
-        /******** Diagnostics ********/
-        (function diag() {
-            const out = () => document.getElementById('dxOut');
-            function show(x) { out().textContent = (typeof x === 'string') ? x : JSON.stringify(x, null, 2); }
-            function bind(id, fn) {
-                const el = document.getElementById(id); if (!el) return; el.addEventListener('click', () => {
-                    show('Running ' + fn + ' …');
-                    google.script.run.withSuccessHandler(show).withFailureHandler(e => show({ ok: false, err: String(e) }))[fn]();
-                });
+            // optimistic row
+            const lite = { id: 'temp-' + Math.random().toString(36).slice(2, 8), slug: null, name, startDateISO: date, isDefault: false };
+            STATE.items = [lite, ...STATE.items]; persistLocal(); paintDropdown(STATE.items);
+            try {
+                const payload = { name, startDateISO: date, flow, seedMode };
+                const res = await api.createEvent(payload);
+                if (res && res.ok) { showToast('Event created', 'success', 2200); backgroundSync(); }
+                else {
+                    STATE.items = STATE.items.filter(x => x.id !== lite.id); paintDropdown(STATE.items); persistLocal();
+                    showToast(res?.error || 'Create failed', 'error', 3200);
+                }
+            } catch {
+                STATE.items = STATE.items.filter(x => x.id !== lite.id); paintDropdown(STATE.items); persistLocal();
+                showToast('Create error — check network', 'error', 3200);
             }
-            bind('dxPing', 'dx_ping'); bind('dxIdentity', 'dx_identity'); bind('dxProps', 'dx_props'); bind('dxControl', 'dx_control'); bind('dxIdx', 'dx_events_index');
-            document.getElementById('dxEcho')?.addEventListener('click', () => {
-                google.script.run.withSuccessHandler(show).withFailureHandler(e => show({ ok: false, err: String(e) })).dx_echo({ client: Date.now(), rnd: Math.random().toString(36).slice(2, 7) });
-            });
-            document.getElementById('dxCreateArchive')?.addEventListener('click', () => {
-                google.script.run.withSuccessHandler(show).withFailureHandler(e => show({ ok: false, err: String(e) })).dx_create_archive_cycle();
-            });
-        })();
-
-        /******** Server Test Runner ********/
-        (function tests() {
-            let LAST = null;
-            function render(rep) {
-                LAST = rep;
-                const tb = document.getElementById('testTbody'); tb.innerHTML = '';
-                const flat = rep.flat || [];
-                const total = flat.length, pass = flat.filter(x => x.ok).length, fail = total - pass;
-                document.getElementById('testSummary').textContent = `${rep.mode.toUpperCase()} • ${rep.ok ? '✅ PASS' : '❌ FAIL'} • ${pass}/${total} passed • ${rep.ms} ms`;
-                flat.forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${r.suite}</td><td>${r.name}</td><td>${r.ok ? '✅' : '❌'}</td><td>${r.ms}</td><td><pre style="white-space:pre-wrap;margin:0">${r.err ? (r.err.msg || JSON.stringify(r.err)) || ''}</pre></td>`;
-                    tb.appendChild(tr);
-                });
-            }
-            function run(mode) {
-                toast('Running ' + mode + '…', 'info');
-                google.script.run.withSuccessHandler(r => { render(r); toast('Done', 'ok'); }).withFailureHandler(e => toast('Runner failed', 'err')).run_test_suite(mode);
-            }
-            document.getElementById('btnRunSmoke').addEventListener('click', () => run('smoke'));
-            document.getElementById('btnRunDaily').addEventListener('click', () => run('daily'));
-            document.getElementById('btnRunFull').addEventListener('click', () => run('full'));
-            document.getElementById('btnCopyReport').addEventListener('click', () => {
-                if (!LAST) return toast('No report', 'err');
-                const text = JSON.stringify(LAST, null, 2);
-                navigator.clipboard?.writeText(text).then(() => toast('Copied', 'ok')).catch(() => toast('Copy failed', 'err'));
-            });
-            document.getElementById('btnLogReport').addEventListener('click', () => {
-                if (!LAST) return toast('No report', 'err');
-                google.script.run.withSuccessHandler(r => toast(r?.ok ? 'Logged' : 'Log failed', r?.ok ? 'ok' : 'err')).withFailureHandler(e => toast('Log failed', 'err')).log_test_report(LAST);
-            });
-        })();
-
-        /******** Cache badge actions ********/
-        document.getElementById('btnForceReval').addEventListener('click', () => loadEvents({ force: true }));
-        document.getElementById('btnCopyDiag').addEventListener('click', () => {
-            const payload = { etag: STATE.etag, lastFetch: STATE.lastFetch, lastKind: STATE.lastKind, count: STATE.items.length };
-            const text = JSON.stringify(payload, null, 2);
-            navigator.clipboard?.writeText(text).then(() => toast('Diagnostics copied', 'ok')).catch(() => toast('Copy failed', 'err'));
         });
 
-        /******** Buttons wiring ********/
-        document.getElementById('btnCreateEvent').addEventListener('click', onCreate);
-        document.getElementById('chooseEvent').addEventListener('change', enableManageButtons);
-        document.getElementById('btnOpenWorkbook').addEventListener('click', () => openLink('workbook'));
-        document.getElementById('btnOpenAdmin').addEventListener('click', () => openLink('admin'));
-        document.getElementById('btnOpenDisplay').addEventListener('click', () => openLink('display'));
-        document.getElementById('btnOpenPublic').addEventListener('click', () => openLink('public'));
-        document.getElementById('btnOpenPoster').addEventListener('click', () => openLink('poster'));
-        document.getElementById('btnCopyLink').addEventListener('click', copySelectedLink);
-        document.getElementById('btnSaveForm').addEventListener('click', saveForm);
+        // Sticky selection
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'chooseEvent') {
+                STATE.selectedId = e.target.value; persistLocal();
+                updateWorkbookButtonForSelected();
+                refreshQuickLinks();
+            }
+        });
 
-        /******** UI Tests (client) incl. DOM coverage smoke ********/
-        (function uiTests() {
-            const T = {
-                now: () => performance.now(), sleep: (ms) => new Promise(r => setTimeout(r, ms)),
-                ok(c, m, x) { if (!c) throw { __assert: true, msg: m, ctx: x }; }, ge(a, b, m) { if (!(a >= b)) throw { __assert: true, msg: m, ctx: { a, b } }; }
-            };
-            function presence(id) { return !!document.getElementById(id); }
-            function minHeightOk(id, min = 44) { const el = document.getElementById(id); if (!el) return false; return (el.getBoundingClientRect().height >= min); }
+        // Form link
+        document.getElementById('btnLinkForm').addEventListener('click', async () => {
+            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            if (!ev) { showToast('Choose an event first', 'error'); return; }
+            const url = prompt('Paste the Google Form link (or leave empty to clear):', ev.formId ? `https://docs.google.com/forms/d/${ev.formId}/edit` : '');
+            if (url === null) return;
+            const formId = (url || '').match(/\/d\/([^/]+)/)?.[1] || (url || '').trim();
+            const res = await api.setEventFormId(ev.id, formId || '');
+            if (res && res.ok) { showToast(formId ? 'Form linked' : 'Form cleared', 'success'); backgroundSync(); refreshQuickLinks(); }
+            else { showToast('Could not update form link', 'error'); }
+        });
 
-            async function suiteSmoke() {
-                const cases = [];
-                cases.push({
-                    name: 'DOM coverage (IDs present)', fn: async () => {
-                        const must = ['themeToggle', 'chooseEvent', 'btnCreateEvent', 'btnOpenWorkbook', 'btnOpenAdmin', 'btnOpenDisplay', 'btnOpenPublic', 'btnOpenPoster', 'btnCopyLink', 'btnSaveForm'];
-                        const missing = must.filter(id => !presence(id));
-                        T.ok(missing.length === 0, 'Missing DOM ids', { missing });
-                    }
-                });
-                cases.push({
-                    name: 'Tap targets ≥44px', fn: async () => {
-                        const ids = ['btnCreateEvent', 'btnOpenWorkbook', 'btnOpenAdmin', 'btnOpenDisplay', 'btnOpenPublic', 'btnOpenPoster'];
-                        const small = ids.filter(id => !minHeightOk(id, 44));
-                        T.ok(small.length === 0, 'Buttons too small', { small });
-                    }
-                });
-                cases.push({
-                    name: 'Viewport meta present', fn: async () => {
-                        const ok = !!document.querySelector('meta[name="viewport"]');
-                        T.ok(ok, 'No viewport meta');
-                    }
-                });
-                cases.push({ name: 'Toast host exists', fn: async () => { T.ok(!!document.querySelector('[data-toast-host]'), 'No toast host'); } });
-                return run('ui_smoke', cases);
+        // Import
+        document.getElementById('btnImportSignups').addEventListener('click', async () => {
+            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            if (!ev) { showToast('Choose an event first', 'error'); return; }
+            const mode = prompt('Type "csv" to paste CSV, or "sheet" for Google Sheet range:', 'csv');
+            if (mode === null) return;
+            if (String(mode).toLowerCase() === 'csv') {
+                const csv = prompt('Paste CSV with headers (e.g., name,email,team):', 'name,email\nJane,j@x.com\nJohn,j@y.com'); if (csv === null) return;
+                const res = await api.importSignupsCsv(ev.id, csv);
+                res && res.ok ? showToast(`Imported ${res.count} signups`, 'success') : showToast('Import failed', 'error');
+            } else {
+                const sheetId = prompt('Google Sheet ID (from URL):', ''); if (sheetId === null) return;
+                const rangeA1 = prompt('Range A1 (e.g., Sheet1!A:C):', 'Sheet1!A:C'); if (rangeA1 === null) return;
+                const res = await api.importSignupsFromSheet(ev.id, sheetId, rangeA1);
+                res && res.ok ? showToast(`Imported ${res.count} signups`, 'success') : showToast('Import failed', 'error');
             }
-            async function suiteFull() {
-                const cases = [];
-                cases.push({
-                    name: 'Create button disables/enables (mock)', fn: async () => {
-                        const btn = document.getElementById('btnCreateEvent'); T.ok(btn, 'No create btn');
-                        const orig = google.script.run.createEvent;
-                        // mock minimal success
-                        google.script.run.createEvent = (payload) => ({ withSuccessHandler(h) { setTimeout(() => h({ ok: true, id: 'MOCK' }), 200); return this; }, withFailureHandler() { return this; } });
-                        btn.click(); await T.sleep(60); T.ok(btn.disabled, 'Not disabled'); await T.sleep(260); T.ok(!btn.disabled, 'Not re-enabled');
-                        google.script.run.createEvent = orig;
-                    }
-                });
-                return run('ui_full', cases);
-            }
-            function run(name, list) {
-                const out = { suite: name, cases: [], ms: 0, ok: true }; const t0 = performance.now();
-                return list.reduce((p, tc) => p.then(async () => {
-                    const r = { name: tc.name, ok: true, ms: 0, err: null }; const s = performance.now();
-                    try { await tc.fn(); } catch (e) { r.ok = false; r.err = (e && e.__assert) ? e : { msg: String(e) }; out.ok = false; }
-                    r.ms = performance.now() - s; out.cases.push(r);
-                }), Promise.resolve()).then(() => { out.ms = performance.now() - t0; render(out); return out; });
-            }
-            function render(rep) {
-                const body = document.getElementById('uiTestBody'); body.innerHTML = ''; const flat = rep.cases;
-                const total = flat.length, fail = flat.filter(x => !x.ok).length;
-                document.getElementById('uiTestSummary').textContent = `${rep.suite.toUpperCase()} • ${fail ? '❌ FAIL' : '✅ PASS'} • ${total - fail}/${total} passed • ${rep.ms.toFixed(0)} ms`;
-                flat.forEach(r => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `<td>${r.name}</td><td>${r.ok ? '✅' : '❌'}</td><td>${r.ms.toFixed(0)}</td><td><pre style="margin:0;white-space:pre-wrap">${r.err ? (r.err.msg || JSON.stringify(r.err)) || ''}</pre></td>`;
-                    body.appendChild(tr);
-                });
-            }
-            document.getElementById('btnUiSmoke').addEventListener('click', () => suiteSmoke().then(() => toast('UI smoke done', 'ok')));
-            document.getElementById('btnUiFull').addEventListener('click', () => suiteFull().then(() => toast('UI full done', 'ok')));
-            document.getElementById('btnUiCopy').addEventListener('click', () => {
-                const table = document.getElementById('uiTestBody'); const rows = [...table.querySelectorAll('tr')].map(tr => [...tr.children].map(td => td.textContent));
-                const text = JSON.stringify(rows); navigator.clipboard?.writeText(text).then(() => toast('UI report copied', 'ok')).catch(() => toast('Copy failed', 'err'));
+        });
+
+        // ===== Quick Links / QR binding =====
+        const LINKS = {
+            formUrl: '', displayUrl: '', publicUrl: '', posterUrl: '',
+            posterImageUrl: '', posterPageUrl: '',
+            workbookUrl: '', signupsUrl: '',
+            qr: { form: '', display: '', public: '', poster: '', posterImage: '', posterPage: '' }
+        };
+        let _linksFetchToken = 0;
+
+        async function refreshQuickLinks() {
+            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            const shareCard = document.getElementById('shareCard');
+            const playersCard = document.getElementById('playersCard');
+            if (!ev) { shareCard.style.display = 'none'; playersCard.style.display = 'none'; return; }
+            shareCard.style.display = 'block'; playersCard.style.display = 'block';
+            renderCards({ loading: true });
+
+            const myToken = ++_linksFetchToken;
+            const res = await api.getEventQuickLinks(ev.id);
+            if (myToken !== _linksFetchToken) return; // cancelled by newer request
+            if (!res || !res.ok) { renderCards({ error: true }); showToast('Could not load quick links', 'error'); return; }
+
+            Object.assign(LINKS, {
+                formUrl: res.formUrlView || '',
+                displayUrl: res.displayUrl || '',
+                publicUrl: res.publicUrl || '',
+                posterUrl: res.posterUrl || '',
+                posterImageUrl: res.posterImageUrl || '',
+                posterPageUrl: res.posterPageUrl || '',
+                workbookUrl: res.workbookUrl || '',
+                signupsUrl: res.signupsUrl || '',
+                qr: Object.assign({ form: '', display: '', public: '', poster: '', posterImage: '', posterPage: '' }, res.qr || {})
             });
-            // Expose minimal hooks if desired
-            window.renderEvents = window.renderEvents || function (items) { /* replaced above */ };
-        })();
+            renderCards();
+        }
 
-        /******** Boot ********/
-        window.addEventListener('DOMContentLoaded', () => { loadEvents(); });
+        function renderCards(opts = {}) {
+            const loading = !!opts.loading, errored = !!opts.error;
+
+            bindQrBlock({ img: 'qrForm', copyBtn: 'btnCopyFormUrl', openBtn: 'btnOpenFormQr', url: LINKS.formUrl, qr: LINKS.qr.form, loading, errored, copyMsg: 'Form URL copied' });
+            bindQrBlock({ img: 'qrDisplay', copyBtn: 'btnCopyDisplayUrl', openBtn: 'btnOpenDisplayQr', url: LINKS.displayUrl, qr: LINKS.qr.display, loading, errored, copyMsg: 'Display URL copied' });
+            bindQrBlock({ img: 'qrPublic', copyBtn: 'btnCopyPublicUrl', openBtn: 'btnOpenPublicQr', url: LINKS.publicUrl, qr: LINKS.qr.public, loading, errored, copyMsg: 'Public URL copied' });
+            bindQrBlock({ img: 'qrPoster', copyBtn: 'btnCopyPosterUrl', openBtn: 'btnOpenPosterQr', url: LINKS.posterUrl, qr: LINKS.qr.poster, loading, errored, requireUrl: true, copyMsg: 'Poster Sheet URL copied' });
+            bindQrBlock({ img: 'qrPosterImage', copyBtn: 'btnCopyPosterImageUrl', openBtn: 'btnOpenPosterImageQr', url: LINKS.posterImageUrl, qr: LINKS.qr.posterImage, loading, errored, requireUrl: true, copyMsg: 'Poster Image URL copied' });
+            bindQrBlock({ img: 'qrPosterPage', copyBtn: 'btnCopyPosterPageUrl', openBtn: 'btnOpenPosterPageQr', url: LINKS.posterPageUrl, qr: LINKS.qr.posterPage, loading, errored, copyMsg: 'Poster Page URL copied' });
+
+            const btnOpenSignups = document.getElementById('btnOpenSignupsSheet');
+            if (loading || errored || (!LINKS.signupsUrl && !LINKS.workbookUrl)) { btnOpenSignups.disabled = true; btnOpenSignups.onclick = null; }
+            else { btnOpenSignups.disabled = false; btnOpenSignups.onclick = () => window.open(LINKS.signupsUrl || LINKS.workbookUrl, '_blank'); }
+        }
+
+        function bindQrBlock({ img, copyBtn, openBtn, url, qr, loading, errored, requireUrl = false, copyMsg = 'Copied' }) {
+            const imgEl = document.getElementById(img);
+            const btnCopy = document.getElementById(copyBtn);
+            const btnOpen = document.getElementById(openBtn);
+            const ok = !loading && !errored && (!!qr) && (!requireUrl || !!url);
+
+            if (!ok) {
+                if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
+                if (btnCopy) { btnCopy.disabled = true; btnCopy.onclick = null; }
+                if (btnOpen) { btnOpen.disabled = true; btnOpen.onclick = null; }
+                return;
+            }
+            if (imgEl) { imgEl.src = qr; imgEl.style.display = 'block'; }
+            if (btnCopy) { btnCopy.disabled = false; btnCopy.onclick = () => copyToClipboard(url, copyMsg); }
+            if (btnOpen) { btnOpen.disabled = false; btnOpen.onclick = () => window.open(qr, '_blank'); }
+        }
+
+        async function copyToClipboard(text, msg) {
+            try { await navigator.clipboard.writeText(text); showToast(msg || 'Copied', 'success'); }
+            catch { window.prompt('Copy to clipboard:', text); }
+        }
+
+        window.addEventListener('beforeunload', () => { if (_syncTimer) clearTimeout(_syncTimer); });
+
+        // ===== API adapter (Apps Script) =====
+        const api = {
+            getEventsSafe: ({ etag }) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve(null)).getEventsSafe(etag || null);
+            }),
+            createEvent: (payload) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).createEvent(payload);
+            }),
+            setEventFormId: (eventId, formId) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).setEventFormId(eventId, formId);
+            }),
+            importSignupsCsv: (eventId, csv) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).importSignupsCsv(eventId, csv);
+            }),
+            importSignupsFromSheet: (eventId, sheetId, rangeA1) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).importSignupsFromSheet(eventId, sheetId, rangeA1);
+            }),
+            getEventQuickLinks: (eventId) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).getEventQuickLinks(eventId);
+            })
+        };
+
+        // Boot
+        document.addEventListener('DOMContentLoaded', bootAdminEvents);
     </script>
 </body>
 
