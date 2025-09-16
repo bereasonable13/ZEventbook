@@ -447,15 +447,34 @@
 
     <script>
         /******** Theme ********/
-        (() => {
-            const key = 'nu.theme';
-            function apply(t) { document.documentElement.setAttribute('data-theme', t); localStorage.setItem(key, t); }
-            document.getElementById('themeToggle').addEventListener('click', () => {
-                const cur = document.documentElement.getAttribute('data-theme') || 'light';
-                apply(cur === 'light' ? 'dark' : 'light');
-            });
-            apply(localStorage.getItem(key) || 'light');
-        })();
+        /******** Theme (dark by default, toggle persists) ********/
+(() => {
+  const KEY = 'nu.theme';
+
+  // Read saved preference (if any)
+  let stored = null;
+  try { stored = localStorage.getItem(KEY); } catch (_) {}
+
+  const valid = stored === 'light' || stored === 'dark';
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+
+  // Always default to dark; honor saved preference when valid
+  const initial = valid ? stored : (prefersDark ? 'dark' : 'dark');
+
+  function apply(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    try { localStorage.setItem(KEY, theme); } catch (_) {}
+  }
+
+  // Apply on load
+  apply(initial);
+
+  // Toggle handler
+  document.getElementById('themeToggle')?.addEventListener('click', () => {
+    const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+    apply(cur === 'dark' ? 'light' : 'dark');
+  });
+})();
 
         /******** Toast ********/
         function toast(msg, kind) {
