@@ -1,278 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>NextUp · Display</title>
-    <?!= include('Styles'); ?>
-    <style>
-        /* TV-first readability */
-        body {
-            background: var(--bg);
-            color: var(--text);
-        }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+  <title>NextUp · Display</title>
+  <?!= include('Styles'); ?>
+  <style>
+    /* TV-first readability */
+    body { background: var(--bg); color: var(--text); }
+    .container { max-width: 1400px; margin: 12px auto; padding: 0 var(--gutter-x); }
 
-        .container {
-            max-width: 1400px;
-            margin: 12px auto;
-            padding: 0 var(--gutter-x);
-        }
+    .headline { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+    .headline h1 { font-size: clamp(40px, 6.8vw, 76px); margin:0; letter-spacing:.3px; }
+    .badge { display:inline-block; padding:8px 12px; border-radius:999px;
+      background: color-mix(in oklab, var(--surface) 10%, #1f2937); font-size: clamp(14px, 2vw, 18px); }
 
-        .headline {
-            display: flex;
-            align-items: baseline;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
+    .kpi { display:flex; gap:14px; flex-wrap:wrap; align-items:center; margin-top:6px; }
+    .muted { color: var(--muted); font-size: clamp(16px, 2.4vw, 22px); }
+    .kpi a { color: var(--primary); text-decoration:none; font-size: clamp(16px, 2.4vw, 22px); }
 
-        .headline h1 {
-            font-size: clamp(40px, 6.8vw, 76px);
-            margin: 0;
-            letter-spacing: .3px;
-        }
+    .grid { display:grid; grid-template-columns:1fr; gap:16px; margin-top:16px; }
+    @media (min-width:980px){ .grid { grid-template-columns: 1.1fr .9fr; } }
 
-        .badge {
-            display: inline-block;
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: color-mix(in oklab, var(--surface) 10%, #1f2937);
-            font-size: clamp(14px, 2vw, 18px);
-        }
+    .card { background: var(--surface); border:1px solid var(--border); border-radius: var(--radius);
+      padding:18px; box-shadow: var(--shadow-1); }
+    .card h2 { margin:.2rem 0 .6rem; font-size: clamp(24px, 3.8vw, 38px); letter-spacing:.2px; }
 
-        .kpi {
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-            align-items: center;
-            margin-top: 6px;
-        }
+    table { width:100%; border-collapse:collapse; font-size: clamp(20px, 3.6vw, 26px); }
+    th, td { padding: clamp(14px, 2.8vw, 20px) clamp(12px, 2.4vw, 18px); border-bottom:1px solid var(--border); }
+    thead th { text-align:left; color:var(--muted); font-weight:800; letter-spacing:.15px; }
+    tbody tr:nth-child(even){ background: color-mix(in oklab, var(--surface) 92%, transparent); }
 
-        .muted {
-            color: var(--muted);
-            font-size: clamp(16px, 2.4vw, 22px);
-        }
+    .nowrap { white-space:nowrap; }
+    .right { text-align:right; }
 
-        .kpi a {
-            color: var(--primary);
-            text-decoration: none;
-            font-size: clamp(16px, 2.4vw, 22px);
-        }
+    /* Big-room boost */
+    @media (min-width:1600px){
+      .headline h1 { font-size: clamp(56px, 5vw, 92px); }
+      table { font-size: clamp(24px, 2.4vw, 30px); }
+      .card h2 { font-size: clamp(28px, 3vw, 42px); }
+    }
 
-        .grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 16px;
-            margin-top: 16px;
-        }
-
-        @media (min-width: 980px) {
-            .grid {
-                grid-template-columns: 1.1fr .9fr;
-            }
-        }
-
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 18px;
-            box-shadow: var(--shadow-1);
-        }
-
-        .card h2 {
-            margin: .2rem 0 .6rem;
-            font-size: clamp(24px, 3.8vw, 38px);
-            letter-spacing: .2px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: clamp(20px, 3.6vw, 26px);
-        }
-
-        th,
-        td {
-            padding: clamp(14px, 2.8vw, 20px) clamp(12px, 2.4vw, 18px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        thead th {
-            text-align: left;
-            color: var(--muted);
-            font-weight: 800;
-            letter-spacing: .15px;
-        }
-
-        tbody tr:nth-child(even) {
-            background: color-mix(in oklab, var(--surface) 92%, transparent);
-        }
-
-        .nowrap {
-            white-space: nowrap;
-        }
-
-        .right {
-            text-align: right;
-        }
-
-        /* Big-room boost for very large TVs */
-        @media (min-width: 1600px) {
-            .headline h1 {
-                font-size: clamp(56px, 5vw, 92px);
-            }
-
-            table {
-                font-size: clamp(24px, 2.4vw, 30px);
-            }
-
-            .card h2 {
-                font-size: clamp(28px, 3vw, 42px);
-            }
-        }
-
-        /* Optional TV niceties */
-        @media (pointer: none) {
-
-            html,
-            body {
-                cursor: none;
-            }
-        }
-    </style>
+    /* Optional TV niceties */
+    @media (pointer:none){ html,body{ cursor:none; } }
+  </style>
 </head>
-
 <body>
-    <main class="container">
-        <div class="headline">
-            <h1 id="title">Loading…</h1>
-            <span id="tag" class="badge"></span>
-            <button class="btn" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
+  <main class="container">
+    <div class="headline">
+      <h1 id="title">Loading…</h1>
+      <span id="tag" class="badge"></span>
+      <button class="btn" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
+    </div>
+
+    <div class="kpi" aria-live="polite">
+      <span id="date" class="muted"></span>
+      <span id="place" class="muted"></span>
+      <span class="muted" aria-hidden="true">·</span>
+      <a id="publicLink" target="_blank" rel="noopener" style="display:none;">Public page</a>
+      <span class="muted" aria-hidden="true">·</span>
+      <a id="posterLink" target="_blank" rel="noopener" style="display:none;">Poster page</a>
+    </div>
+
+    <section class="grid">
+      <div class="card" id="scheduleCard" style="display:none;">
+        <h2>Schedule</h2>
+        <div class="scroll-x">
+          <table id="scheduleTbl">
+            <thead>
+              <tr>
+                <th class="nowrap">Time</th>
+                <th>Match</th>
+                <th class="nowrap right">Table</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+      </div>
 
-        <div class="kpi" aria-live="polite">
-            <span id="date" class="muted"></span>
-            <span id="place" class="muted"></span>
-            <span class="muted" aria-hidden="true">·</span>
-            <a id="publicLink" target="_blank" rel="noopener" style="display:none;">Public page</a>
-            <span class="muted" aria-hidden="true">·</span>
-            <a id="posterLink" target="_blank" rel="noopener" style="display:none;">Poster page</a>
+      <div class="card" id="standingsCard" style="display:none;">
+        <h2>Standings</h2>
+        <div class="scroll-x">
+          <table id="standingsTbl">
+            <thead>
+              <tr>
+                <th>Team</th>
+                <th class="right">Pts</th>
+                <th class="right">TB</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
         </div>
+      </div>
+    </section>
+  </main>
 
-        <section class="grid">
-            <div class="card" id="scheduleCard" style="display:none;">
-                <h2>Schedule</h2>
-                <div class="scroll-x">
-                    <table id="scheduleTbl">
-                        <thead>
-                            <tr>
-                                <th class="nowrap">Time</th>
-                                <th>Match</th>
-                                <th class="nowrap right">Table</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
+  <script>
+    // Theme fallback (if Styles didn't define NextUpTheme yet)
+    window.NextUpTheme = window.NextUpTheme || {
+      toggle(){ document.documentElement.classList.toggle('theme--light'); }
+    };
 
-            <div class="card" id="standingsCard" style="display:none;">
-                <h2>Standings</h2>
-                <div class="scroll-x">
-                    <table id="standingsTbl">
-                        <thead>
-                            <tr>
-                                <th>Team</th>
-                                <th class="right">Pts</th>
-                                <th class="right">TB</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
-    </main>
+    const qs = new URLSearchParams(location.search);
+    const eventId = qs.get('event') || '';
 
-    <script>
-        // Theme fallback (in case Styles.html didn’t define NextUpTheme yet)
-        window.NextUpTheme = window.NextUpTheme || { toggle() { document.documentElement.classList.toggle('theme--light'); } };
+    let refreshHandle = null;
+    function show(el, on){ if(el) el.style.display = on ? '' : 'none'; }
+    function setText(id, val){
+      const el = document.getElementById(id); if(!el) return;
+      el.textContent = String(val || '').trim();
+    }
 
-        const qs = new URLSearchParams(location.search);
-        const eventId = qs.get('event') || '';
+    function render(bundle){
+      // Header
+      setText('title', bundle.title || bundle.eventMeta?.name || '(Eventbook)');
+      setText('tag', bundle.eventTag || '');
+      setText('date', bundle.datePretty || bundle.eventMeta?.startDateISO || '');
+      setText('place', bundle.place ? `· ${bundle.place}` : '');
 
-        let refreshHandle = null;
-        function show(el, on) { if (el) el.style.display = on ? '' : 'none'; }
-        function setText(id, val) {
-            const el = document.getElementById(id); if (!el) return;
-            el.textContent = String(val || '').trim();
-        }
+      const pub = document.getElementById('publicLink');
+      const pst = document.getElementById('posterLink');
+      if (bundle.publicUrl) { pub.href = bundle.publicUrl; pub.style.display = 'inline'; } else { pub.style.display = 'none'; }
+      if (bundle.posterPageUrl) { pst.href = bundle.posterPageUrl; pst.style.display = 'inline'; } else { pst.style.display = 'none'; }
 
-        function render(bundle) {
-            // Header
-            setText('title', bundle.title || bundle.eventMeta?.name || '(Event)');
-            setText('tag', bundle.eventTag || '');
-            setText('date', bundle.datePretty || bundle.eventMeta?.startDateISO || '');
-            setText('place', bundle.place ? `· ${bundle.place}` : '');
+      // Schedule
+      const schT = document.querySelector('#scheduleTbl tbody'); schT.innerHTML = '';
+      const schedule = Array.isArray(bundle.schedule) ? bundle.schedule : [];
+      schedule.forEach(r=>{
+        const tr = document.createElement('tr');
+        const time = r.time || r.when || '';
+        const match = r.match || r.activity || r.vs || '';
+        const table = r.table || '';
+        tr.innerHTML = `<td class="nowrap">${time}</td><td>${match}</td><td class="right nowrap">${table}</td>`;
+        schT.appendChild(tr);
+      });
+      show(document.getElementById('scheduleCard'), schedule.length > 0);
 
-            const pub = document.getElementById('publicLink');
-            const pst = document.getElementById('posterLink');
-            if (bundle.publicUrl) { pub.href = bundle.publicUrl; pub.style.display = 'inline'; } else { pub.style.display = 'none'; }
-            if (bundle.posterPageUrl) { pst.href = bundle.posterPageUrl; pst.style.display = 'inline'; } else { pst.style.display = 'none'; }
+      // Standings
+      const stT = document.querySelector('#standingsTbl tbody'); stT.innerHTML = '';
+      const standings = Array.isArray(bundle.standings) ? bundle.standings : [];
+      standings.forEach(r=>{
+        const team = r.team || r.name || '';
+        const pts = (r.points != null ? r.points : (r.pts != null ? r.pts : ''));
+        const tb  = (r.tiebreak != null ? r.tiebreak : (r.tb  != null ? r.tb  : ''));
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${team}</td><td class="right">${pts || ''}</td><td class="right">${tb || ''}</td>`;
+        stT.appendChild(tr);
+      });
+      show(document.getElementById('standingsCard'), standings.length > 0);
+    }
 
-            // Schedule
-            const schT = document.querySelector('#scheduleTbl tbody'); schT.innerHTML = '';
-            const schedule = Array.isArray(bundle.schedule) ? bundle.schedule : [];
-            schedule.forEach(r => {
-                const tr = document.createElement('tr');
-                const time = r.time || r.when || '';
-                const match = r.match || r.activity || r.vs || '';
-                const table = r.table || '';
-                tr.innerHTML = `<td class="nowrap">${time}</td><td>${match}</td><td class="right nowrap">${table}</td>`;
-                schT.appendChild(tr);
-            });
-            show(document.getElementById('scheduleCard'), schedule.length > 0);
+    async function fetchBundle(){
+      try{
+        const res = await new Promise(resolve=>{
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(()=>resolve(null))
+            .getDisplayBundle(eventId);
+        });
+        if(!res || !res.ok) return;
+        render(res);
+      }catch(e){ /* silent for venue screens */ }
+    }
 
-            // Standings
-            const stT = document.querySelector('#standingsTbl tbody'); stT.innerHTML = '';
-            const standings = Array.isArray(bundle.standings) ? bundle.standings : [];
-            standings.forEach(r => {
-                const team = r.team || r.name || '';
-                const pts = (r.points != null ? r.points : (r.pts != null ? r.pts : ''));
-                const tb = (r.tiebreak != null ? r.tiebreak : (r.tb != null ? r.tb : ''));
-                const tr = document.createElement('tr');
-                tr.innerHTML = `<td>${team}</td><td class="right">${pts || ''}</td><td class="right">${tb || ''}</td>`;
-                stT.appendChild(tr);
-            });
-            show(document.getElementById('standingsCard'), standings.length > 0);
-        }
+    function boot(){
+      fetchBundle();
+      // venue-friendly gentle polling
+      refreshHandle = setInterval(fetchBundle, 20000);
+      document.addEventListener('visibilitychange', ()=>{
+        if(document.hidden){ if(refreshHandle){ clearInterval(refreshHandle); refreshHandle = null; } }
+        else if(!refreshHandle){ fetchBundle(); refreshHandle = setInterval(fetchBundle, 20000); }
+      });
+    }
 
-        async function fetchBundle() {
-            try {
-                const res = await new Promise(resolve => {
-                    google.script.run
-                        .withSuccessHandler(resolve)
-                        .withFailureHandler(() => resolve(null))
-                        .getDisplayBundle(eventId);
-                });
-                if (!res || !res.ok) return;
-                render(res);
-            } catch (e) { /* silent for display screens */ }
-        }
-
-        function boot() {
-            fetchBundle();
-            // gentle polling for venue screens
-            refreshHandle = setInterval(fetchBundle, 20000);
-            document.addEventListener('visibilitychange', () => {
-                if (document.hidden) { if (refreshHandle) { clearInterval(refreshHandle); refreshHandle = null; } }
-                else if (!refreshHandle) { fetchBundle(); refreshHandle = setInterval(fetchBundle, 20000); }
-            });
-        }
-
-        document.addEventListener('DOMContentLoaded', boot);
-    </script>
+    document.addEventListener('DOMContentLoaded', boot);
+  </script>
 </body>
-
 </html>
