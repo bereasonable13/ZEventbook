@@ -1,488 +1,576 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>NextUp · Admin</title>
-  <?!= include('Styles'); ?>
-  <style>
-    /* Phone-first readability for Admin */
-    .container{max-width:980px;margin:20px auto;padding:0 16px}
-    h1{font-size:clamp(22px,6vw,32px);letter-spacing:.2px}
-    .card{border-radius:12px;padding:16px;box-shadow:var(--shadow)}
-    .card h2{font-size:clamp(18px,5vw,24px);margin:.25rem 0 .6rem}
-    .row{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
-    .input-lg{min-width:260px;padding:10px 12px;font-size:clamp(16px,4.4vw,18px)}
-    .btn,.btn-xl{font-size:clamp(16px,4.6vw,18px);min-height:48px}
-    .label-inline{font-weight:600;margin-right:8px;font-size:clamp(14px,3.8vw,16px)}
-    .muted{font-size:clamp(12px,3.6vw,14px)}
-    .mono{font-family:var(--font-mono);font-size:clamp(12px,3.6vw,14px)}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>NextUp · Admin</title>
+    <?!= include('Styles'); ?>
+    <style>
+        /* Phone-first readability for Admin */
+        .container {
+            max-width: 980px;
+            margin: 20px auto;
+            padding: 0 16px
+        }
 
-    /* QR grid */
-    .qrgrid{display:flex;flex-wrap:wrap;gap:14px}
-    .qrbox{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px;width:240px;max-width:calc(50% - 14px);flex:1 1 240px}
-    @media (min-width:920px){.qrbox{max-width:240px}}
-    .qrbox img{width:100%;height:auto;aspect-ratio:1/1;object-fit:contain;border:1px solid #eee;border-radius:10px;display:none;background:#fff}
-    .qrbox .muted{display:block;margin-top:6px}
-    .qrbox .row{gap:8px;margin-top:8px}
-  </style>
+        h1 {
+            font-size: clamp(22px, 6vw, 32px);
+            letter-spacing: .2px
+        }
+
+        .card {
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: var(--shadow)
+        }
+
+        .card h2 {
+            font-size: clamp(18px, 5vw, 24px);
+            margin: .25rem 0 .6rem
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center
+        }
+
+        .input-lg {
+            min-width: 260px;
+            padding: 10px 12px;
+            font-size: clamp(16px, 4.4vw, 18px)
+        }
+
+        .btn,
+        .btn-xl {
+            font-size: clamp(16px, 4.6vw, 18px);
+            min-height: 48px
+        }
+
+        .label-inline {
+            font-weight: 600;
+            margin-right: 8px;
+            font-size: clamp(14px, 3.8vw, 16px)
+        }
+
+        .muted {
+            font-size: clamp(12px, 3.6vw, 14px)
+        }
+
+        .mono {
+            font-family: var(--font-mono);
+            font-size: clamp(12px, 3.6vw, 14px)
+        }
+
+        /* QR grid */
+        .qrgrid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px
+        }
+
+        .qrbox {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            width: 240px;
+            max-width: calc(50% - 14px);
+            flex: 1 1 240px
+        }
+
+        @media (min-width:920px) {
+            .qrbox {
+                max-width: 240px
+            }
+        }
+
+        .qrbox img {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            object-fit: contain;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            display: none;
+            background: #fff
+        }
+
+        .qrbox .muted {
+            display: block;
+            margin-top: 6px
+        }
+
+        .qrbox .row {
+            gap: 8px;
+            margin-top: 8px
+        }
+    </style>
 </head>
+
 <body>
-  <main class="container">
-    <div class="row" style="justify-content:space-between;align-items:baseline;">
-      <h1>Admin</h1>
-      <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
-    </div>
-
-    <!-- Create -->
-    <section class="card" aria-labelledby="h-create">
-      <h2 id="h-create">Create Event</h2>
-      <div class="row">
-        <input id="eventName" class="input-lg" type="text" placeholder="Event name" />
-        <input id="eventDate" class="input-lg" type="date" />
-
-        <label class="label-inline" for="eventFlow">Pick event type</label>
-        <select id="eventFlow" class="input-lg" aria-label="Event type">
-          <option value="" selected disabled>Pick event type…</option>
-          <option value="event-only">Event Only (no schedule)</option>
-          <option value="tourney-only">Tourney Only</option>
-          <option value="season">Season</option>
-          <option value="season-plus-tourney">Season + Tourney</option>
-        </select>
-
-        <label class="label-inline" for="seedMode">Seeding</label>
-        <select id="seedMode" class="input-lg" aria-label="Seeding">
-          <option value="random" selected>Random</option>
-          <option value="seeded">Seeded</option>
-        </select>
-
-        <button id="btnCreateEvent" class="btn btn-xl">Create</button>
-      </div>
-      <div class="muted" style="margin-top:6px;">Name and Date are required.</div>
-    </section>
-
-    <!-- Manage -->
-    <section class="card" aria-labelledby="h-manage">
-      <h2 id="h-manage">Manage</h2>
-      <label for="chooseEvent" class="label-inline">
-        Choose Event
-        <span id="synclabel" class="muted"></span>
-      </label>
-      <select id="chooseEvent" class="input-lg" aria-label="Choose Event"></select>
-
-      <div class="row" style="margin-top:10px;">
-        <button id="btnOpenWorkbook" class="btn" disabled>Open Workbook</button>
-      </div>
-
-      <div class="row" style="margin-top:8px;">
-        <button id="btnLinkForm" class="btn" disabled>Create/Link Form…</button>
-        <button id="btnImportSignups" class="btn" disabled>Import Signups…</button>
-      </div>
-
-      <div id="eventMeta" class="mono muted" style="margin-top:8px;"></div>
-    </section>
-
-    <!-- Share -->
-    <section class="card" id="shareCard" style="display:none;" aria-labelledby="h-share">
-      <h2 id="h-share">Share</h2>
-      <div class="qrgrid">
-        <!-- Form -->
-        <div class="qrbox">
-          <div><strong>Form</strong> <span class="muted">(if linked)</span></div>
-          <img id="qrForm" alt="QR: Form" />
-          <div class="row">
-            <button class="btn" id="btnOpenFormQr" disabled title="No QR yet">Open QR</button>
-            <button class="btn" id="btnCopyFormUrl" disabled title="No form linked">Copy URL</button>
-          </div>
+    <main class="container">
+        <div class="row" style="justify-content:space-between;align-items:baseline;">
+            <h1>Admin</h1>
+            <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
         </div>
-        <!-- Display (org) -->
-        <div class="qrbox">
-          <div><strong>Display (org)</strong></div>
-          <img id="qrDisplay" alt="QR: Display (org)" />
-          <div class="row">
-            <button class="btn" id="btnOpenDisplayQr" disabled title="No QR yet">Open QR</button>
-            <button class="btn" id="btnCopyDisplayUrl" disabled title="Org sign-in required">Copy URL</button>
-          </div>
-        </div>
-        <!-- Public (anyone) -->
-        <div class="qrbox">
-          <div><strong>Public (anyone)</strong></div>
-          <img id="qrPublic" alt="QR: Public" />
-          <div class="row">
-            <button class="btn" id="btnOpenPublicQr" disabled title="No QR yet">Open QR</button>
-            <button class="btn" id="btnCopyPublicUrl" disabled>Copy URL</button>
-          </div>
-        </div>
-        <!-- Poster (sheet) -->
-        <div class="qrbox">
-          <div><strong>Poster (sheet)</strong> <span class="muted">(if PosterConfig exists)</span></div>
-          <img id="qrPoster" alt="QR: Poster Sheet" />
-          <div class="row">
-            <button class="btn" id="btnOpenPosterQr" disabled title="No QR yet">Open QR</button>
-            <button class="btn" id="btnCopyPosterUrl" disabled title="No poster sheet">Copy URL</button>
-          </div>
-        </div>
-        <!-- Poster Image (art) -->
-        <div class="qrbox">
-          <div><strong>Poster Image</strong> <span class="muted">(direct art)</span></div>
-          <img id="qrPosterImage" alt="QR: Poster Image" />
-          <div class="row">
-            <button class="btn" id="btnOpenPosterImageQr" disabled title="No QR yet">Open QR</button>
-            <button class="btn" id="btnCopyPosterImageUrl" disabled title="No poster image">Copy URL</button>
-          </div>
-        </div>
-        <!-- Poster Page (public) -->
-        <div class="qrbox">
-          <div><strong>Poster Page</strong> <span class="muted">(public poster)</span></div>
-          <img id="qrPosterPage" alt="QR: Poster Page" />
-          <div class="row">
-            <button class="btn" id="btnOpenPosterPageQr" disabled title="No QR yet">Open QR</button>
-            <button class="btn" id="btnCopyPosterPageUrl" disabled>Copy URL</button>
-          </div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Players -->
-    <section class="card" id="playersCard" style="display:none;" aria-labelledby="h-players">
-      <h2 id="h-players">Players</h2>
-      <div class="row">
-        <button class="btn" id="btnOpenSignupsSheet" disabled title="Workbook not ready yet">Open Signups
-          Sheet</button>
-      </div>
-    </section>
-  </main>
+        <!-- Create -->
+        <section class="card" aria-labelledby="h-create">
+            <h2 id="h-create">Create Event</h2>
+            <div class="row">
+                <input id="eventName" class="input-lg" type="text" placeholder="Event name" />
+                <input id="eventDate" class="input-lg" type="date" />
 
-  <!-- resilient toast host (kept empty; JS fills) -->
-  <div id="toast" aria-live="polite" role="status"></div>
+                <label class="label-inline" for="eventFlow">Pick event type</label>
+                <select id="eventFlow" class="input-lg" aria-label="Event type">
+                    <option value="" selected disabled>Pick event type…</option>
+                    <option value="event-only">Event Only (no schedule)</option>
+                    <option value="tourney-only">Tourney Only</option>
+                    <option value="season">Season</option>
+                    <option value="season-plus-tourney">Season + Tourney</option>
+                </select>
 
-  <script>
-/* ================= Theme (never throws) ================= */
-window.NextUpTheme = window.NextUpTheme || {
-  toggle(){ document.documentElement.classList.toggle('theme--light'); }
-};
+                <label class="label-inline" for="seedMode">Seeding</label>
+                <select id="seedMode" class="input-lg" aria-label="Seeding">
+                    <option value="random" selected>Random</option>
+                    <option value="seeded">Seeded</option>
+                </select>
 
-/* ================= Unbreakable Toast ================= */
-(function Toast(){
-  const HOST_ID='toastHost'; const Q=[]; let showing=false;
-  function ensureHost(){
-    let host=document.getElementById(HOST_ID);
-    if(!host){
-      host=document.createElement('div');
-      host.id=HOST_ID; host.setAttribute('data-toast-host','');
-      Object.assign(host.style,{
-        position:'fixed',left:'0',right:'0',bottom:'14px',
-        display:'flex',justifyContent:'center',pointerEvents:'none',zIndex:'999'
-      });
-      document.body.appendChild(host);
-    }
-    return host;
-  }
-  function drain(){
-    if(!Q.length){showing=false;return;} showing=true;
-    const host=ensureHost(); const {text,kind}=Q.shift();
-    const el=document.createElement('div');
-    el.className='toast '+(kind||'ok');
-    el.setAttribute('role','status'); el.setAttribute('aria-live','polite');
-    Object.assign(el.style,{
-      background:'var(--card)',color:'var(--fg)',border:'1px solid var(--line)',
-      padding:'10px 12px',borderRadius:'10px',boxShadow:'0 8px 28px rgba(0,0,0,.18)',
-      pointerEvents:'auto',maxWidth:'92vw',fontSize:'14px',whiteSpace:'pre-wrap'
-    });
-    el.style.borderColor=(kind==='err')?'var(--err)':(kind==='info')?'var(--warn)':'var(--ok)';
-    el.textContent=text; host.appendChild(el);
-    setTimeout(()=>{try{el.remove();}catch(_){} drain();},2600);
-  }
-  window.toast=function(msg,kind){
-    try{
-      const text=(msg==null)?'':(typeof msg==='string'?msg:JSON.stringify(msg));
-      Q.push({text,kind:kind||'ok'}); if(!showing) drain();
-    }catch(e){ try{console.error('toast error',e);}catch(_){}
-      try{alert(String(msg));}catch(_){} }
-  };
-  // self-heal if removed
-  new MutationObserver(()=>ensureHost()).observe(document.documentElement,{childList:true,subtree:true});
-})();
+                <button id="btnCreateEvent" class="btn btn-xl">Create</button>
+            </div>
+            <div class="muted" style="margin-top:6px;">Name and Date are required.</div>
+        </section>
 
-/* Back-compat helper for old showToast calls */
-function showToast(m,t='success',d=2600){ toast(m, t==='error'?'err':(t==='success'?'ok':'info')); }
+        <!-- Manage -->
+        <section class="card" aria-labelledby="h-manage">
+            <h2 id="h-manage">Manage</h2>
+            <label for="chooseEvent" class="label-inline">
+                Choose Event
+                <span id="synclabel" class="muted"></span>
+            </label>
+            <select id="chooseEvent" class="input-lg" aria-label="Choose Event"></select>
 
-/* ================= State (sticky + SWR) ================= */
-const NU_EVT_LS_KEY='events_index_v1';
-const STATE={items:[],etag:null,lastSync:0,selectedId:null};
-let _syncTimer=null,_syncInflight=false,_failCount=0,_lastErrToastAt=0;
+            <div class="row" style="margin-top:10px;">
+                <button id="btnOpenWorkbook" class="btn" disabled>Open Workbook</button>
+            </div>
 
-function hydrateFromLocal(){
-  try{
-    const raw=localStorage.getItem(NU_EVT_LS_KEY);
-    if(raw){
-      const cached=JSON.parse(raw);
-      STATE.items=Array.isArray(cached.items)?cached.items:[];
-      STATE.etag=cached.etag||null; STATE.lastSync=cached.savedAt||0;
-      STATE.selectedId=cached.selectedId||null;
-    }
-    paintDropdown(STATE.items); paintSyncLabel(); updateWorkbookButtonForSelected(); refreshQuickLinks();
-  }catch{ paintLoading(); }
-}
-function persistLocal(){
-  try{ localStorage.setItem(NU_EVT_LS_KEY, JSON.stringify({items:STATE.items,etag:STATE.etag,generatedAt:Date.now(),savedAt:Date.now(),selectedId:STATE.selectedId})); }catch{}
-}
+            <div class="row" style="margin-top:8px;">
+                <button id="btnLinkForm" class="btn" disabled>Create/Link Form…</button>
+                <button id="btnImportSignups" class="btn" disabled>Import Signups…</button>
+            </div>
 
-/* ================= UI painters ================= */
-function paintLoading(){
-  const sel=document.querySelector('#chooseEvent'); if(!sel) return;
-  sel.innerHTML=''; const opt=document.createElement('option');
-  opt.disabled=true; opt.selected=true; opt.textContent='Loading events…';
-  sel.appendChild(opt); sel.disabled=true;
-}
-function paintOfflineMessage(){
-  const sel=document.querySelector('#chooseEvent'); if(!sel) return;
-  sel.innerHTML=''; const opt=document.createElement('option');
-  opt.disabled=true; opt.selected=true; opt.textContent='Unable to load events (offline)';
-  sel.appendChild(opt); sel.disabled=true; toast('Offline or server error','err');
-}
-function paintSyncLabel(){
-  const el=document.getElementById('synclabel'); if(!el) return;
-  if(!STATE.lastSync){ el.textContent=''; return; }
-  const age=Math.round((Date.now()-STATE.lastSync)/1000); el.textContent=`synced ${age}s ago`;
-}
-function buildEventLabel(it){
-  const pretty=(it.name&&String(it.name).trim())||it.slug||it.id||'(unnamed)';
-  const dt=it.startDateISO?` (${String(it.startDateISO).slice(0,10)})`:'';
-  const tag=it.eventTag?` · ${it.eventTag}`:'';
-  return pretty+dt+tag+(it.isDefault?' ★':'');
-}
-function normalizeEvents(items){
-  return items.map(it=>({...it,name:it.name||'',slug:it.slug||'',id:it.id||it.slug||it.name||''}))
-    .sort((a,b)=>(b.isDefault-a.isDefault)||String(b.startDateISO).localeCompare(String(a.startDateISO)));
-}
-function paintDropdown(items){
-  const sel=document.querySelector('#chooseEvent'); if(!sel) return;
-  if(sel._len===items.length && sel._firstId===(items[0]?.id||null)) return;
-  const keep=STATE.selectedId||sel.value||null;
-  sel.innerHTML='';
-  if(!items||!items.length){
-    const opt=document.createElement('option'); opt.disabled=true; opt.selected=true; opt.textContent='(no events yet — create above)';
-    sel.appendChild(opt); sel.disabled=true; document.getElementById('eventMeta').textContent=''; updateWorkbookButtonForSelected(); return;
-  }
-  items.forEach(it=>{ const opt=document.createElement('option'); opt.value=it.id||it.slug||it.name||'(unnamed)'; opt.textContent=buildEventLabel(it); sel.appendChild(opt); });
-  sel.disabled=false;
-  if(keep && items.some(x=>x.id===keep||x.slug===keep)){ sel.value=keep; STATE.selectedId=keep; }
-  else { const firstId=items[0]?.id||items[0]?.slug||null; if(firstId){ sel.value=firstId; STATE.selectedId=firstId; } }
-  sel._len=items.length; sel._firstId=items[0]?.id||null;
-  const selected=items.find(x=>x.id===STATE.selectedId||x.slug===STATE.selectedId)||items[0];
-  document.getElementById('eventMeta').textContent=selected?JSON.stringify(selected):'';
-  updateWorkbookButtonForSelected(); persistLocal();
-}
+            <div id="eventMeta" class="mono muted" style="margin-top:8px;"></div>
+        </section>
 
-/* ================= Background sync (SWR + backoff) ================= */
-async function backgroundSync(){
-  if(_syncInflight) return; _syncInflight=true;
-  try{
-    const res=await api.getEventsSafe({etag:STATE.etag}); _failCount=0;
-    if(res && res.ok && res.status!==304 && Array.isArray(res.items)){
-      const oldFirst=STATE.items[0]?.id, oldLen=STATE.items.length;
-      STATE.items=normalizeEvents(res.items); STATE.etag=res.etag||null; STATE.lastSync=Date.now();
-      persistLocal(); paintSyncLabel();
-      const changed=(oldLen!==STATE.items.length)||(oldFirst!==STATE.items[0]?.id);
-      if(changed) paintDropdown(STATE.items);
-      updateWorkbookButtonForSelected(); refreshQuickLinks();
-    }
-  }catch(e){
-    _failCount=Math.min(_failCount+1,5);
-    if(!STATE.items.length) paintOfflineMessage();
-    const now=Date.now(); if(now-_lastErrToastAt>10000){ toast('Event sync failed — retrying…','err'); _lastErrToastAt=now; }
-  }finally{
-    _syncInflight=false;
-    const jitter=Math.floor(Math.random()*3000);
-    const next=_failCount?Math.min(30000,1000*Math.pow(2,_failCount)):(20000+jitter);
-    clearTimeout(_syncTimer); _syncTimer=setTimeout(backgroundSync,next);
-  }
-}
-function bootAdminEvents(){ if(bootAdminEvents._didBoot) return; bootAdminEvents._didBoot=true; hydrateFromLocal(); if(!STATE.items.length) paintLoading(); backgroundSync(); }
+        <!-- Share -->
+        <section class="card" id="shareCard" style="display:none;" aria-labelledby="h-share">
+            <h2 id="h-share">Share</h2>
+            <div class="qrgrid">
+                <!-- Form -->
+                <div class="qrbox">
+                    <div><strong>Form</strong> <span class="muted">(if linked)</span></div>
+                    <img id="qrForm" alt="QR: Form" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenFormQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyFormUrl" disabled title="No form linked">Copy URL</button>
+                    </div>
+                </div>
+                <!-- Display (org) -->
+                <div class="qrbox">
+                    <div><strong>Display (org)</strong></div>
+                    <img id="qrDisplay" alt="QR: Display (org)" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenDisplayQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyDisplayUrl" disabled title="Org sign-in required">Copy
+                            URL</button>
+                    </div>
+                </div>
+                <!-- Public (anyone) -->
+                <div class="qrbox">
+                    <div><strong>Public (anyone)</strong></div>
+                    <img id="qrPublic" alt="QR: Public" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPublicQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPublicUrl" disabled>Copy URL</button>
+                    </div>
+                </div>
+                <!-- Poster (sheet) -->
+                <div class="qrbox">
+                    <div><strong>Poster (sheet)</strong> <span class="muted">(if PosterConfig exists)</span></div>
+                    <img id="qrPoster" alt="QR: Poster Sheet" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPosterQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPosterUrl" disabled title="No poster sheet">Copy URL</button>
+                    </div>
+                </div>
+                <!-- Poster Image (art) -->
+                <div class="qrbox">
+                    <div><strong>Poster Image</strong> <span class="muted">(direct art)</span></div>
+                    <img id="qrPosterImage" alt="QR: Poster Image" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPosterImageQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPosterImageUrl" disabled title="No poster image">Copy
+                            URL</button>
+                    </div>
+                </div>
+                <!-- Poster Page (public) -->
+                <div class="qrbox">
+                    <div><strong>Poster Page</strong> <span class="muted">(public poster)</span></div>
+                    <img id="qrPosterPage" alt="QR: Poster Page" />
+                    <div class="row">
+                        <button class="btn" id="btnOpenPosterPageQr" disabled title="No QR yet">Open QR</button>
+                        <button class="btn" id="btnCopyPosterPageUrl" disabled>Copy URL</button>
+                    </div>
+                </div>
+            </div>
+        </section>
 
-/* ================= Manage actions ================= */
-function updateWorkbookButtonForSelected(){
-  const event=STATE.items.find(x=>x.id===STATE.selectedId||x.slug===STATE.selectedId);
-  const btn=document.getElementById('btnOpenWorkbook'); if(!btn) return;
-  if(event && event.eventSpreadsheetUrl){ btn.disabled=false; btn.textContent=event.eventTag?`Open Workbook (${event.eventTag})`:'Open Workbook'; btn.onclick=()=>window.open(event.eventSpreadsheetUrl,'_blank'); }
-  else { btn.disabled=true; btn.textContent='Open Workbook'; btn.onclick=null; }
-  const linkBtn=document.getElementById('btnLinkForm'); const impBtn=document.getElementById('btnImportSignups'); const enable=!!event; [linkBtn,impBtn].forEach(b=>{ if(b) b.disabled=!enable; });
-}
+        <!-- Players -->
+        <section class="card" id="playersCard" style="display:none;" aria-labelledby="h-players">
+            <h2 id="h-players">Players</h2>
+            <div class="row">
+                <button class="btn" id="btnOpenSignupsSheet" disabled title="Workbook not ready yet">Open Signups
+                    Sheet</button>
+            </div>
+        </section>
+    </main>
 
-/* ================= CREATE FLOW (toast-first; workbook-first if supported) ================= */
-document.getElementById('btnCreateEvent').addEventListener('click', onCreateClick);
+    <!-- resilient toast host (kept empty; JS fills) -->
+    <div id="toast" aria-live="polite" role="status"></div>
 
-async function onCreateClick(){
-  const name=(document.getElementById('eventName').value||'').trim();
-  const date=document.getElementById('eventDate').value||'';
-  const flowSel=document.getElementById('eventFlow'); const flow=flowSel.value||'';
-  const seedMode=document.getElementById('seedMode').value||'random';
+    <script>
+        /* ================= Theme (never throws) ================= */
+        window.NextUpTheme = window.NextUpTheme || {
+            toggle() { document.documentElement.classList.toggle('theme--light'); }
+        };
 
-  if(!name||!date){ toast('Name and Date are required','err'); return; }
-  if(!flow){ toast('Pick an event type','err'); flowSel.focus(); return; }
+        /* ================= Unbreakable Toast ================= */
+        (function Toast() {
+            const HOST_ID = 'toastHost'; const Q = []; let showing = false;
+            function ensureHost() {
+                let host = document.getElementById(HOST_ID);
+                if (!host) {
+                    host = document.createElement('div');
+                    host.id = HOST_ID; host.setAttribute('data-toast-host', '');
+                    Object.assign(host.style, {
+                        position: 'fixed', left: '0', right: '0', bottom: '14px',
+                        display: 'flex', justifyContent: 'center', pointerEvents: 'none', zIndex: '999'
+                    });
+                    document.body.appendChild(host);
+                }
+                return host;
+            }
+            function drain() {
+                if (!Q.length) { showing = false; return; } showing = true;
+                const host = ensureHost(); const { text, kind } = Q.shift();
+                const el = document.createElement('div');
+                el.className = 'toast ' + (kind || 'ok');
+                el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+                Object.assign(el.style, {
+                    background: 'var(--card)', color: 'var(--fg)', border: '1px solid var(--line)',
+                    padding: '10px 12px', borderRadius: '10px', boxShadow: '0 8px 28px rgba(0,0,0,.18)',
+                    pointerEvents: 'auto', maxWidth: '92vw', fontSize: '14px', whiteSpace: 'pre-wrap'
+                });
+                el.style.borderColor = (kind === 'err') ? 'var(--err)' : (kind === 'info') ? 'var(--warn)' : 'var(--ok)';
+                el.textContent = text; host.appendChild(el);
+                setTimeout(() => { try { el.remove(); } catch (_) { } drain(); }, 2600);
+            }
+            window.toast = function (msg, kind) {
+                try {
+                    const text = (msg == null) ? '' : (typeof msg === 'string' ? msg : JSON.stringify(msg));
+                    Q.push({ text, kind: kind || 'ok' }); if (!showing) drain();
+                } catch (e) {
+                    try { console.error('toast error', e); } catch (_) { }
+                    try { alert(String(msg)); } catch (_) { }
+                }
+            };
+            // self-heal if removed
+            new MutationObserver(() => ensureHost()).observe(document.documentElement, { childList: true, subtree: true });
+        })();
 
-  const btn=document.getElementById('btnCreateEvent'); btn.disabled=true;
+        /* Back-compat helper for old showToast calls */
+        function showToast(m, t = 'success', d = 2600) { toast(m, t === 'error' ? 'err' : (t === 'success' ? 'ok' : 'info')); }
 
-  // Immediate user feedback
-  toast('Creating workbook…','info');
+        /* ================= State (sticky + SWR) ================= */
+        const NU_EVT_LS_KEY = 'events_index_v1';
+        const STATE = { items: [], etag: null, lastSync: 0, selectedId: null };
+        let _syncTimer = null, _syncInflight = false, _failCount = 0, _lastErrToastAt = 0;
 
-  // Optimistic list stub (keeps dropdown usable if server is slow)
-  const lite={ id:'temp-'+Math.random().toString(36).slice(2,8), slug:null, name, startDateISO:date, isDefault:false };
-  STATE.items=[lite, ...STATE.items]; persistLocal(); paintDropdown(STATE.items);
+        function hydrateFromLocal() {
+            try {
+                const raw = localStorage.getItem(NU_EVT_LS_KEY);
+                if (raw) {
+                    const cached = JSON.parse(raw);
+                    STATE.items = Array.isArray(cached.items) ? cached.items : [];
+                    STATE.etag = cached.etag || null; STATE.lastSync = cached.savedAt || 0;
+                    STATE.selectedId = cached.selectedId || null;
+                }
+                paintDropdown(STATE.items); paintSyncLabel(); updateWorkbookButtonForSelected(); refreshQuickLinks();
+            } catch { paintLoading(); }
+        }
+        function persistLocal() {
+            try { localStorage.setItem(NU_EVT_LS_KEY, JSON.stringify({ items: STATE.items, etag: STATE.etag, generatedAt: Date.now(), savedAt: Date.now(), selectedId: STATE.selectedId })); } catch { }
+        }
 
-  const payload={ name, startDateISO:date, flow, seedMode };
+        /* ================= UI painters ================= */
+        function paintLoading() {
+            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
+            sel.innerHTML = ''; const opt = document.createElement('option');
+            opt.disabled = true; opt.selected = true; opt.textContent = 'Loading events…';
+            sel.appendChild(opt); sel.disabled = true;
+        }
+        function paintOfflineMessage() {
+            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
+            sel.innerHTML = ''; const opt = document.createElement('option');
+            opt.disabled = true; opt.selected = true; opt.textContent = 'Unable to load events (offline)';
+            sel.appendChild(opt); sel.disabled = true; toast('Offline or server error', 'err');
+        }
+        function paintSyncLabel() {
+            const el = document.getElementById('synclabel'); if (!el) return;
+            if (!STATE.lastSync) { el.textContent = ''; return; }
+            const age = Math.round((Date.now() - STATE.lastSync) / 1000); el.textContent = `synced ${age}s ago`;
+        }
+        function buildEventLabel(it) {
+            const pretty = (it.name && String(it.name).trim()) || it.slug || it.id || '(unnamed)';
+            const dt = it.startDateISO ? ` (${String(it.startDateISO).slice(0, 10)})` : '';
+            const tag = it.eventTag ? ` · ${it.eventTag}` : '';
+            return pretty + dt + tag + (it.isDefault ? ' ★' : '');
+        }
+        function normalizeEvents(items) {
+            return items.map(it => ({ ...it, name: it.name || '', slug: it.slug || '', id: it.id || it.slug || it.name || '' }))
+                .sort((a, b) => (b.isDefault - a.isDefault) || String(b.startDateISO).localeCompare(String(a.startDateISO)));
+        }
+        function paintDropdown(items) {
+            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
+            if (sel._len === items.length && sel._firstId === (items[0]?.id || null)) return;
+            const keep = STATE.selectedId || sel.value || null;
+            sel.innerHTML = '';
+            if (!items || !items.length) {
+                const opt = document.createElement('option'); opt.disabled = true; opt.selected = true; opt.textContent = '(no events yet — create above)';
+                sel.appendChild(opt); sel.disabled = true; document.getElementById('eventMeta').textContent = ''; updateWorkbookButtonForSelected(); return;
+            }
+            items.forEach(it => { const opt = document.createElement('option'); opt.value = it.id || it.slug || it.name || '(unnamed)'; opt.textContent = buildEventLabel(it); sel.appendChild(opt); });
+            sel.disabled = false;
+            if (keep && items.some(x => x.id === keep || x.slug === keep)) { sel.value = keep; STATE.selectedId = keep; }
+            else { const firstId = items[0]?.id || items[0]?.slug || null; if (firstId) { sel.value = firstId; STATE.selectedId = firstId; } }
+            sel._len = items.length; sel._firstId = items[0]?.id || null;
+            const selected = items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId) || items[0];
+            document.getElementById('eventMeta').textContent = selected ? JSON.stringify(selected) : '';
+            updateWorkbookButtonForSelected(); persistLocal();
+        }
 
-  // Try new path (workbook-first). If unavailable, fall back to legacy createEvent.
-  let res=null, usedLegacy=false;
-  try{
-    res = await api.createEventV2(payload);    // may resolve to null if method missing
-    if(!(res && res.ok)){ usedLegacy=true; toast('Using legacy create…','info'); res = await api.createEvent(payload); }
-  }catch(_){ usedLegacy=true; res = await api.createEvent(payload); }
+        /* ================= Background sync (SWR + backoff) ================= */
+        async function backgroundSync() {
+            if (_syncInflight) return; _syncInflight = true;
+            try {
+                const res = await api.getEventsSafe({ etag: STATE.etag }); _failCount = 0;
+                if (res && res.ok && res.status !== 304 && Array.isArray(res.items)) {
+                    const oldFirst = STATE.items[0]?.id, oldLen = STATE.items.length;
+                    STATE.items = normalizeEvents(res.items); STATE.etag = res.etag || null; STATE.lastSync = Date.now();
+                    persistLocal(); paintSyncLabel();
+                    const changed = (oldLen !== STATE.items.length) || (oldFirst !== STATE.items[0]?.id);
+                    if (changed) paintDropdown(STATE.items);
+                    updateWorkbookButtonForSelected(); refreshQuickLinks();
+                }
+            } catch (e) {
+                _failCount = Math.min(_failCount + 1, 5);
+                if (!STATE.items.length) paintOfflineMessage();
+                const now = Date.now(); if (now - _lastErrToastAt > 10000) { toast('Event sync failed — retrying…', 'err'); _lastErrToastAt = now; }
+            } finally {
+                _syncInflight = false;
+                const jitter = Math.floor(Math.random() * 3000);
+                const next = _failCount ? Math.min(30000, 1000 * Math.pow(2, _failCount)) : (20000 + jitter);
+                clearTimeout(_syncTimer); _syncTimer = setTimeout(backgroundSync, next);
+            }
+        }
+        function bootAdminEvents() { if (bootAdminEvents._didBoot) return; bootAdminEvents._didBoot = true; hydrateFromLocal(); if (!STATE.items.length) paintLoading(); backgroundSync(); }
 
-  if(res && res.ok){
-    // Success UX
-    toast( usedLegacy ? 'Event created' : 'Workbook created • Event created','ok');
-    backgroundSync();
-  }else{
-    // Roll back optimistic stub
-    STATE.items = STATE.items.filter(x=>x.id!==lite.id); paintDropdown(STATE.items); persistLocal();
-    toast((res && res.error) ? `Create failed: ${res.error}` : 'Create failed','err');
-  }
+        /* ================= Manage actions ================= */
+        function updateWorkbookButtonForSelected() {
+            const event = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            const btn = document.getElementById('btnOpenWorkbook'); if (!btn) return;
+            if (event && event.eventSpreadsheetUrl) { btn.disabled = false; btn.textContent = event.eventTag ? `Open Workbook (${event.eventTag})` : 'Open Workbook'; btn.onclick = () => window.open(event.eventSpreadsheetUrl, '_blank'); }
+            else { btn.disabled = true; btn.textContent = 'Open Workbook'; btn.onclick = null; }
+            const linkBtn = document.getElementById('btnLinkForm'); const impBtn = document.getElementById('btnImportSignups'); const enable = !!event;[linkBtn, impBtn].forEach(b => { if (b) b.disabled = !enable; });
+        }
 
-  btn.disabled=false;
-}
+        /* ================= CREATE FLOW (toast-first; workbook-first if supported) ================= */
+        document.getElementById('btnCreateEvent').addEventListener('click', onCreateClick);
 
-/* ================= Sticky selection ================= */
-document.addEventListener('change', (e)=>{
-  if(e.target && e.target.id==='chooseEvent'){
-    STATE.selectedId=e.target.value; persistLocal();
-    updateWorkbookButtonForSelected(); refreshQuickLinks();
-  }
-});
+        async function onCreateClick() {
+            const name = (document.getElementById('eventName').value || '').trim();
+            const date = document.getElementById('eventDate').value || '';
+            const flowSel = document.getElementById('eventFlow'); const flow = flowSel.value || '';
+            const seedMode = document.getElementById('seedMode').value || 'random';
 
-/* ================= Form link & Import ================= */
-document.getElementById('btnLinkForm').addEventListener('click', async ()=>{
-  const ev=STATE.items.find(x=>x.id===STATE.selectedId||x.slug===STATE.selectedId);
-  if(!ev){ toast('Choose an event first','err'); return; }
-  const url=prompt('Paste the Google Form link (or leave empty to clear):', ev.formId?`https://docs.google.com/forms/d/${ev.formId}/edit`: '');
-  if(url===null) return;
-  const formId=(url||'').match(/\/d\/([^/]+)/)?.[1] || (url||'').trim();
-  const res=await api.setEventFormId(ev.id, formId||'');
-  if(res && res.ok){ toast(formId?'Form linked':'Form cleared','ok'); backgroundSync(); refreshQuickLinks(); }
-  else { toast('Could not update form link','err'); }
-});
+            if (!name || !date) { toast('Name and Date are required', 'err'); return; }
+            if (!flow) { toast('Pick an event type', 'err'); flowSel.focus(); return; }
 
-document.getElementById('btnImportSignups').addEventListener('click', async ()=>{
-  const ev=STATE.items.find(x=>x.id===STATE.selectedId||x.slug===STATE.selectedId);
-  if(!ev){ toast('Choose an event first','err'); return; }
-  const mode=prompt('Type "csv" to paste CSV, or "sheet" for Google Sheet range:','csv'); if(mode===null) return;
-  if(String(mode).toLowerCase()==='csv'){
-    const csv=prompt('Paste CSV with headers (e.g., name,email,team):','name,email\nJane,j@x.com\nJohn,j@y.com'); if(csv===null) return;
-    const res=await api.importSignupsCsv(ev.id, csv);
-    res && res.ok ? toast(`Imported ${res.count} signups`,'ok') : toast('Import failed','err');
-  }else{
-    const sheetId=prompt('Google Sheet ID (from URL):',''); if(sheetId===null) return;
-    const rangeA1=prompt('Range A1 (e.g., Sheet1!A:C):','Sheet1!A:C'); if(rangeA1===null) return;
-    const res=await api.importSignupsFromSheet(ev.id, sheetId, rangeA1);
-    res && res.ok ? toast(`Imported ${res.count} signups`,'ok') : toast('Import failed','err');
-  }
-});
+            const btn = document.getElementById('btnCreateEvent'); btn.disabled = true;
 
-/* ================= Quick Links / QR ================= */
-const LINKS={formUrl:'',displayUrl:'',publicUrl:'',posterUrl:'',posterImageUrl:'',posterPageUrl:'',workbookUrl:'',signupsUrl:'',qr:{form:'',display:'',public:'',poster:'',posterImage:'',posterPage:''}};
-let _linksFetchToken=0;
+            // Immediate user feedback
+            toast('Creating workbook…', 'info');
 
-async function refreshQuickLinks(){
-  const ev=STATE.items.find(x=>x.id===STATE.selectedId||x.slug===STATE.selectedId);
-  const shareCard=document.getElementById('shareCard'); const playersCard=document.getElementById('playersCard');
-  if(!ev){ shareCard.style.display='none'; playersCard.style.display='none'; return; }
-  shareCard.style.display='block'; playersCard.style.display='block';
-  renderCards({loading:true});
+            // Optimistic list stub (keeps dropdown usable if server is slow)
+            const lite = { id: 'temp-' + Math.random().toString(36).slice(2, 8), slug: null, name, startDateISO: date, isDefault: false };
+            STATE.items = [lite, ...STATE.items]; persistLocal(); paintDropdown(STATE.items);
 
-  const myToken=++_linksFetchToken;
-  const res=await api.getEventQuickLinks(ev.id);
-  if(myToken!==_linksFetchToken) return;
-  if(!res||!res.ok){ renderCards({error:true}); toast('Could not load quick links','err'); return; }
+            const payload = { name, startDateISO: date, flow, seedMode };
 
-  Object.assign(LINKS,{
-    formUrl:res.formUrlView||'', displayUrl:res.displayUrl||'', publicUrl:res.publicUrl||'',
-    posterUrl:res.posterUrl||'', posterImageUrl:res.posterImageUrl||'', posterPageUrl:res.posterPageUrl||'',
-    workbookUrl:res.workbookUrl||'', signupsUrl:res.signupsUrl||'',
-    qr:Object.assign({form:'',display:'',public:'',poster:'',posterImage:'',posterPage:''},res.qr||{})
-  });
-  renderCards();
-}
+            // Try new path (workbook-first). If unavailable, fall back to legacy createEvent.
+            let res = null, usedLegacy = false;
+            try {
+                res = await api.createEventV2(payload); // may resolve to null if method missing
+                if (!(res && res.ok)) { usedLegacy = true; toast('Using legacy create…', 'info'); res = await api.createEvent(payload); }
+            } catch (_) { usedLegacy = true; res = await api.createEvent(payload); }
 
-function renderCards(opts={}){
-  const loading=!!opts.loading, errored=!!opts.error;
-  bindQrBlock({img:'qrForm',copyBtn:'btnCopyFormUrl',openBtn:'btnOpenFormQr',url:LINKS.formUrl,qr:LINKS.qr.form,loading,errored,copyMsg:'Form URL copied'});
-  bindQrBlock({img:'qrDisplay',copyBtn:'btnCopyDisplayUrl',openBtn:'btnOpenDisplayQr',url:LINKS.displayUrl,qr:LINKS.qr.display,loading,errored,copyMsg:'Display URL copied'});
-  bindQrBlock({img:'qrPublic',copyBtn:'btnCopyPublicUrl',openBtn:'btnOpenPublicQr',url:LINKS.publicUrl,qr:LINKS.qr.public,loading,errored,copyMsg:'Public URL copied'});
-  bindQrBlock({img:'qrPoster',copyBtn:'btnCopyPosterUrl',openBtn:'btnOpenPosterQr',url:LINKS.posterUrl,qr:LINKS.qr.poster,loading,errored,requireUrl:true,copyMsg:'Poster Sheet URL copied'});
-  bindQrBlock({img:'qrPosterImage',copyBtn:'btnCopyPosterImageUrl',openBtn:'btnOpenPosterImageQr',url:LINKS.posterImageUrl,qr:LINKS.qr.posterImage,loading,errored,requireUrl:true,copyMsg:'Poster Image URL copied'});
-  bindQrBlock({img:'qrPosterPage',copyBtn:'btnCopyPosterPageUrl',openBtn:'btnOpenPosterPageQr',url:LINKS.posterPageUrl,qr:LINKS.qr.posterPage,loading,errored,copyMsg:'Poster Page URL copied'});
+            if (res && res.ok) {
+                // Success UX
+                toast(usedLegacy ? 'Event created' : 'Workbook created • Event created', 'ok');
+                backgroundSync();
+            } else {
+                // Roll back optimistic stub
+                STATE.items = STATE.items.filter(x => x.id !== lite.id); paintDropdown(STATE.items); persistLocal();
+                toast((res && res.error) ? `Create failed: ${res.error}` : 'Create failed', 'err');
+            }
 
-  const btnOpenSignups=document.getElementById('btnOpenSignupsSheet');
-  if(loading||errored||(!LINKS.signupsUrl && !LINKS.workbookUrl)){ btnOpenSignups.disabled=true; btnOpenSignups.onclick=null; }
-  else { btnOpenSignups.disabled=false; btnOpenSignups.onclick=()=>window.open(LINKS.signupsUrl||LINKS.workbookUrl,'_blank'); }
-}
+            btn.disabled = false;
+        }
 
-function bindQrBlock({img,copyBtn,openBtn,url,qr,loading,errored,requireUrl=false,copyMsg='Copied'}){
-  const imgEl=document.getElementById(img);
-  const btnCopy=document.getElementById(copyBtn);
-  const btnOpen=document.getElementById(openBtn);
-  const ok=!loading && !errored && (!!qr) && (!requireUrl || !!url);
+        /* ================= Sticky selection ================= */
+        document.addEventListener('change', (e) => {
+            if (e.target && e.target.id === 'chooseEvent') {
+                STATE.selectedId = e.target.value; persistLocal();
+                updateWorkbookButtonForSelected(); refreshQuickLinks();
+            }
+        });
 
-  if(!ok){
-    if(imgEl){ imgEl.style.display='none'; imgEl.removeAttribute('src'); }
-    if(btnCopy){ btnCopy.disabled=true; btnCopy.onclick=null; }
-    if(btnOpen){ btnOpen.disabled=true; btnOpen.onclick=null; }
-    return;
-  }
-  if(imgEl){ imgEl.src=qr; imgEl.style.display='block'; }
-  if(btnCopy){ btnCopy.disabled=false; btnCopy.onclick=()=>copyToClipboard(url,copyMsg); }
-  if(btnOpen){ btnOpen.disabled=false; btnOpen.onclick=()=>window.open(qr,'_blank'); }
-}
+        /* ================= Form link & Import ================= */
+        document.getElementById('btnLinkForm').addEventListener('click', async () => {
+            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            if (!ev) { toast('Choose an event first', 'err'); return; }
+            const url = prompt('Paste the Google Form link (or leave empty to clear):', ev.formId ? `https://docs.google.com/forms/d/${ev.formId}/edit` : '');
+            if (url === null) return;
+            const formId = (url || '').match(/\/d\/([^/]+)/)?.[1] || (url || '').trim();
+            const res = await api.setEventFormId(ev.id, formId || '');
+            if (res && res.ok) { toast(formId ? 'Form linked' : 'Form cleared', 'ok'); backgroundSync(); refreshQuickLinks(); }
+            else { toast('Could not update form link', 'err'); }
+        });
 
-async function copyToClipboard(text,msg){
-  try{ await navigator.clipboard.writeText(text); toast(msg||'Copied','ok'); }
-  catch{ window.prompt('Copy to clipboard:', text); }
-}
+        document.getElementById('btnImportSignups').addEventListener('click', async () => {
+            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            if (!ev) { toast('Choose an event first', 'err'); return; }
+            const mode = prompt('Type "csv" to paste CSV, or "sheet" for Google Sheet range:', 'csv'); if (mode === null) return;
+            if (String(mode).toLowerCase() === 'csv') {
+                const csv = prompt('Paste CSV with headers (e.g., name,email,team):', 'name,email\nJane,j@x.com\nJohn,j@y.com'); if (csv === null) return;
+                const res = await api.importSignupsCsv(ev.id, csv);
+                res && res.ok ? toast(`Imported ${res.count} signups`, 'ok') : toast('Import failed', 'err');
+            } else {
+                const sheetId = prompt('Google Sheet ID (from URL):', ''); if (sheetId === null) return;
+                const rangeA1 = prompt('Range A1 (e.g., Sheet1!A:C):', 'Sheet1!A:C'); if (rangeA1 === null) return;
+                const res = await api.importSignupsFromSheet(ev.id, sheetId, rangeA1);
+                res && res.ok ? toast(`Imported ${res.count} signups`, 'ok') : toast('Import failed', 'err');
+            }
+        });
 
-window.addEventListener('beforeunload',()=>{ if(_syncTimer) clearTimeout(_syncTimer); });
+        /* ================= Quick Links / QR ================= */
+        const LINKS = { formUrl: '', displayUrl: '', publicUrl: '', posterUrl: '', posterImageUrl: '', posterPageUrl: '', workbookUrl: '', signupsUrl: '', qr: { form: '', display: '', public: '', poster: '', posterImage: '', posterPage: '' } };
+        let _linksFetchToken = 0;
 
-/* ================= API adapter (Apps Script) ================= */
-const api={
-  getEventsSafe:({etag})=>new Promise(resolve=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(()=>resolve(null)).getEventsSafe(etag||null);
-  }),
-  // New preferred endpoint: create workbook first, then event (server must implement)
-  createEventV2:(payload)=>new Promise(resolve=>{
-    try{
-      google.script.run.withSuccessHandler(res=>resolve(res||null)).withFailureHandler(()=>resolve(null)).createEventV2(payload);
-    }catch(_){ resolve(null); }
-  }),
-  // Legacy endpoint: creates control row then workbook
-  createEvent:(payload)=>new Promise(resolve=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(()=>resolve({ok:false})).createEvent(payload);
-  }),
-  setEventFormId:(eventId,formId)=>new Promise(resolve=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(()=>resolve({ok:false})).setEventFormId(eventId,formId);
-  }),
-  importSignupsCsv:(eventId,csv)=>new Promise(resolve=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(()=>resolve({ok:false})).importSignupsCsv(eventId,csv);
-  }),
-  importSignupsFromSheet:(eventId,sheetId,rangeA1)=>new Promise(resolve=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(()=>resolve({ok:false})).importSignupsFromSheet(eventId,sheetId,rangeA1);
-  }),
-  getEventQuickLinks:(eventId)=>new Promise(resolve=>{
-    google.script.run.withSuccessHandler(resolve).withFailureHandler(()=>resolve({ok:false})).getEventQuickLinks(eventId);
-  })
-};
+        async function refreshQuickLinks() {
+            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
+            const shareCard = document.getElementById('shareCard'); const playersCard = document.getElementById('playersCard');
+            if (!ev) { shareCard.style.display = 'none'; playersCard.style.display = 'none'; return; }
+            shareCard.style.display = 'block'; playersCard.style.display = 'block';
+            renderCards({ loading: true });
 
-/* ================= Boot ================= */
-document.addEventListener('DOMContentLoaded', bootAdminEvents);
-  </script>
+            const myToken = ++_linksFetchToken;
+            const res = await api.getEventQuickLinks(ev.id);
+            if (myToken !== _linksFetchToken) return;
+            if (!res || !res.ok) { renderCards({ error: true }); toast('Could not load quick links', 'err'); return; }
+
+            Object.assign(LINKS, {
+                formUrl: res.formUrlView || '', displayUrl: res.displayUrl || '', publicUrl: res.publicUrl || '',
+                posterUrl: res.posterUrl || '', posterImageUrl: res.posterImageUrl || '', posterPageUrl: res.posterPageUrl || '',
+                workbookUrl: res.workbookUrl || '', signupsUrl: res.signupsUrl || '',
+                qr: Object.assign({ form: '', display: '', public: '', poster: '', posterImage: '', posterPage: '' }, res.qr || {})
+            });
+            renderCards();
+        }
+
+        function renderCards(opts = {}) {
+            const loading = !!opts.loading, errored = !!opts.error;
+            bindQrBlock({ img: 'qrForm', copyBtn: 'btnCopyFormUrl', openBtn: 'btnOpenFormQr', url: LINKS.formUrl, qr: LINKS.qr.form, loading, errored, copyMsg: 'Form URL copied' });
+            bindQrBlock({ img: 'qrDisplay', copyBtn: 'btnCopyDisplayUrl', openBtn: 'btnOpenDisplayQr', url: LINKS.displayUrl, qr: LINKS.qr.display, loading, errored, copyMsg: 'Display URL copied' });
+            bindQrBlock({ img: 'qrPublic', copyBtn: 'btnCopyPublicUrl', openBtn: 'btnOpenPublicQr', url: LINKS.publicUrl, qr: LINKS.qr.public, loading, errored, copyMsg: 'Public URL copied' });
+            bindQrBlock({ img: 'qrPoster', copyBtn: 'btnCopyPosterUrl', openBtn: 'btnOpenPosterQr', url: LINKS.posterUrl, qr: LINKS.qr.poster, loading, errored, requireUrl: true, copyMsg: 'Poster Sheet URL copied' });
+            bindQrBlock({ img: 'qrPosterImage', copyBtn: 'btnCopyPosterImageUrl', openBtn: 'btnOpenPosterImageQr', url: LINKS.posterImageUrl, qr: LINKS.qr.posterImage, loading, errored, requireUrl: true, copyMsg: 'Poster Image URL copied' });
+            bindQrBlock({ img: 'qrPosterPage', copyBtn: 'btnCopyPosterPageUrl', openBtn: 'btnOpenPosterPageQr', url: LINKS.posterPageUrl, qr: LINKS.qr.posterPage, loading, errored, copyMsg: 'Poster Page URL copied' });
+
+            const btnOpenSignups = document.getElementById('btnOpenSignupsSheet');
+            if (loading || errored || (!LINKS.signupsUrl && !LINKS.workbookUrl)) { btnOpenSignups.disabled = true; btnOpenSignups.onclick = null; }
+            else { btnOpenSignups.disabled = false; btnOpenSignups.onclick = () => window.open(LINKS.signupsUrl || LINKS.workbookUrl, '_blank'); }
+        }
+
+        function bindQrBlock({ img, copyBtn, openBtn, url, qr, loading, errored, requireUrl = false, copyMsg = 'Copied' }) {
+            const imgEl = document.getElementById(img);
+            const btnCopy = document.getElementById(copyBtn);
+            const btnOpen = document.getElementById(openBtn);
+            const ok = !loading && !errored && (!!qr) && (!requireUrl || !!url);
+
+            if (!ok) {
+                if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
+                if (btnCopy) { btnCopy.disabled = true; btnCopy.onclick = null; }
+                if (btnOpen) { btnOpen.disabled = true; btnOpen.onclick = null; }
+                return;
+            }
+            if (imgEl) { imgEl.src = qr; imgEl.style.display = 'block'; }
+            if (btnCopy) { btnCopy.disabled = false; btnCopy.onclick = () => copyToClipboard(url, copyMsg); }
+            if (btnOpen) { btnOpen.disabled = false; btnOpen.onclick = () => window.open(qr, '_blank'); }
+        }
+
+        async function copyToClipboard(text, msg) {
+            try { await navigator.clipboard.writeText(text); toast(msg || 'Copied', 'ok'); }
+            catch { window.prompt('Copy to clipboard:', text); }
+        }
+
+        window.addEventListener('beforeunload', () => { if (_syncTimer) clearTimeout(_syncTimer); });
+
+        /* ================= API adapter (Apps Script) ================= */
+        const api = {
+            getEventsSafe: ({ etag }) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve(null)).getEventsSafe(etag || null);
+            }),
+            // New preferred endpoint: create workbook first, then event (server must implement)
+            createEventV2: (payload) => new Promise(resolve => {
+                try {
+                    google.script.run.withSuccessHandler(res => resolve(res || null)).withFailureHandler(() => resolve(null)).createEventV2(payload);
+                } catch (_) { resolve(null); }
+            }),
+            // Legacy endpoint: creates control row then workbook
+            createEvent: (payload) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).createEvent(payload);
+            }),
+            setEventFormId: (eventId, formId) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).setEventFormId(eventId, formId);
+            }),
+            importSignupsCsv: (eventId, csv) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).importSignupsCsv(eventId, csv);
+            }),
+            importSignupsFromSheet: (eventId, sheetId, rangeA1) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).importSignupsFromSheet(eventId, sheetId, rangeA1);
+            }),
+            getEventQuickLinks: (eventId) => new Promise(resolve => {
+                google.script.run.withSuccessHandler(resolve).withFailureHandler(() => resolve({ ok: false })).getEventQuickLinks(eventId);
+            })
+        };
+
+        /* ================= Boot ================= */
+        document.addEventListener('DOMContentLoaded', bootAdminEvents);
+    </script>
 </body>
+
 </html>
