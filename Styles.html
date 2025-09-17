@@ -271,6 +271,71 @@
 </style>
 
 <script>
+  
+/* NULog — small, resilient client logger (console + server Diagnostics) */
+(function () {
+    const hasGAS = !!(window.google && google.script && google.script.run);
+    const Q = [];
+    let sending = false;
+
+    function post(entry) {
+        if (!hasGAS) return; // no Apps Script context (preview, etc.)
+        try {
+            google.script.run
+                .withSuccessHandler(() => { })
+                .withFailureHandler(() => { })
+                .clientLog(entry);
+        } catch (_) { /* swallow */ }
+    }
+
+    function base(level, where, msg, data) {
+        const e = {
+            level: (level || 'info'),
+            where: String(where || 'client'),
+            msg: String(msg || ''),
+            data: data || null,
+            t: Date.now()
+        };
+
+        // Console mirror
+        try {
+            const c = console || {};
+            (level === 'error' && c.error) ? c.error('[NULog]', e.where, e.msg, e.data)
+                : (level === 'warn' && c.warn) ? c.warn('[NULog]', e.where, e.msg, e.data)
+                    : c.log && c.log('[NULog]', e.where, e.msg, e.data);
+        } catch (_) { }
+
+        // Best-effort send (queued to avoid spamming)
+        Q.push(e);
+        if (!sending) {
+            sending = true;
+            setTimeout(() => {
+                try { Q.splice(0).forEach(post); } finally { sending = false; }
+            }, 120); // tiny debounce
+        }
+    }
+
+    // Simple timing helpers
+    const times = new Map();
+    function time(key) { times.set(key, performance.now()); }
+    function timeEnd(key) {
+        const t0 = times.get(key); if (t0 == null) return null;
+        const ms = Math.round(performance.now() - t0);
+        times.delete(key);
+        base('info', 'timer', key, { ms });
+        return ms;
+    }
+
+    // Public API
+    window.NULog = {
+        info: (w, m, d) => base('info', w, m, d),
+        warn: (w, m, d) => base('warn', w, m, d),
+        error: (w, m, d) => base('error', w, m, d),
+        event: (w, m, d) => base('info', w, m, d), // semantic alias
+        time, timeEnd
+    };
+})();
+
 /* NextUpTheme — resilient theme toggler (works even if not pre-defined) */
 window.NextUpTheme = window.NextUpTheme || {
     toggle(){
