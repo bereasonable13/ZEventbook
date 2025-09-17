@@ -27,6 +27,29 @@ const CFG_KEYS = {
   PUB_URL: 'NU_PUBLIC_BASE_URL'
 };
 
+/**
+* Receive client logs and persist into Diagnostics sheet.
+* Shape expected from NULog: { level, where, msg, data, t }
+*/
+function clientLog(entry) {
+    try {
+        const e = entry || {};
+        const level = String(e.level || 'info');
+        const where = 'client:' + String(e.where || '');
+        const msg = String(e.msg || '');
+        // Keep payload compact; avoid recursive objects
+        const data = e.data != null ? e.data : { t: e.t || Date.now() };
+
+        // Use existing Diagnostics helper (never throws)
+        DIAG.log(level, where, msg, data);
+        return { ok: true };
+    } catch (err) {
+        // Never throw to caller
+        try { DIAG.log('error', 'clientLog', 'exception', { err: String(err) }); } catch (_) { }
+        return { ok: false, error: String(err) };
+    }
+}
+
 // Read precedence: ScriptProperties → provided constant (if not placeholder) → ''
 function cfgGet_(k, fallbackConst) {
   const props = PropertiesService.getScriptProperties();
