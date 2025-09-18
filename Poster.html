@@ -1,205 +1,209 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-  <title>NextUp · Poster</title>
-  <?!= include('Styles'); ?>
-  <style>
-    /* Poster look: bold, clean, printable */
-    :root { --pad: 16px; }
-    body { background: color-mix(in oklab, var(--surface) 96%, transparent); }
-    .wrap { max-width: 900px; margin: 12px auto 24px; padding: 0 var(--pad); }
-    .poster {
-      background: var(--surface); color: var(--text);
-      border-radius: var(--radius); padding: clamp(16px, 4vw, 28px);
-      box-shadow: var(--shadow-2); border: 1px solid var(--border);
-    }
-    header { text-align: center; margin-bottom: clamp(16px, 3.5vw, 28px); }
-    .eyebrow { letter-spacing: .18em; text-transform: uppercase; font-weight: 800; color: var(--muted); font-size: clamp(10px, 1.8vw, 12px); }
-    h1 { font-size: clamp(28px, 7vw, 56px); line-height: 1.03; margin: .25em 0 .1em; }
-    .sub { color: var(--muted); font-size: clamp(14px, 2.6vw, 18px); }
-    .place { font-weight: 700; }
-    .hero {
-      margin: clamp(10px, 3vw, 20px) 0 clamp(18px, 4vw, 28px);
-      display: flex; gap: clamp(10px, 2vw, 16px); align-items: center; justify-content: center; flex-wrap: wrap;
-    }
-    .art {
-      flex: 1 1 520px; min-height: 220px; display: flex; align-items: center; justify-content: center;
-      background: color-mix(in oklab, var(--surface) 92%, transparent);
-      border-radius: 14px; overflow: hidden; border: 1px dashed var(--border);
-    }
-    .art img { width: 100%; height: auto; display: block; }
-    .art.empty { background: repeating-linear-gradient(45deg, #fafafa, #fafafa 8px, #f3f4f6 8px, #f3f4f6 16px); color: var(--muted); font-weight: 700; font-size: 14px; }
-    .qrrow { display: flex; gap: clamp(12px, 3vw, 24px); justify-content: space-between; align-items: flex-start; flex-wrap: wrap; }
-    .qrbox {
-      background: #0b1220; color: #e6edf7; border-radius: 12px; padding: 12px;
-      box-shadow: 0 8px 22px rgba(2, 6, 23, .25); min-width: 240px; max-width: 320px; flex: 1 1 260px;
-    }
-    .qrbox .label { display:block; font-weight:800; margin-bottom:6px; }
-    .qrbox img { display:block; width:100%; max-width:260px; height:auto; border-radius:8px; background:#fff; }
-    .qrbox .hint { color:#b6c2d1; font-size:12px; margin-top:6px; word-break:break-all; }
-    .buttons { margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
-    .btn { min-height: var(--btn-h); }
-    .btn.secondary { background: transparent; border: 1px solid var(--border); }
-    footer { margin-top: clamp(14px, 3vw, 22px); text-align:center; color: var(--muted); font-size:12px; }
-    @media print {
-      body { background:#fff; }
-      .poster { box-shadow:none; }
-      .buttons { display:none !important; }
-    }
-  </style>
+    <meta charset="utf-8" />
+    <title>
+        <?= appTitle ?> · Poster
+    </title>
+    <?!= include('Styles'); ?>
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <style>
+        .poster {
+            max-width: 840px;
+            margin: 0 auto;
+            padding: 16px;
+        }
+
+        .qrgrid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .qrbox {
+            border: 1px solid rgba(0, 0, 0, .12);
+            border-radius: 8px;
+            padding: 12px;
+            background: #fff;
+        }
+
+        .qrbox img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+
+        .qr-fallback {
+            font-size: .9rem;
+            word-break: break-all;
+            color: #333;
+        }
+
+        .meta small {
+            color: #555;
+        }
+
+        @media print {
+            .pfbar {
+                display: none !important;
+            }
+        }
+    </style>
 </head>
+
 <body>
-  <div class="wrap">
-    <div class="poster">
-      <header>
-        <div class="eyebrow" id="tag">NEXTUP</div>
-        <h1 id="title">Eventbook</h1>
-        <div class="sub">
-          <span id="datePretty"></span>
-          <span id="placeWrap" style="display:none;"> · <span class="place" id="place"></span></span>
-        </div>
-        <div class="buttons">
-          <button class="btn"          type="button" id="btnOpenPublic" style="display:none;">Open Public Page</button>
-          <button class="btn secondary" type="button" id="btnOpenAdmin"  style="display:none;">Open Admin</button>
-          <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
-        </div>
-      </header>
+    <main class="poster">
+        <header>
+            <h1 id="posterTitle">(event)</h1>
+            <div class="meta">
+                <small id="eventDate"></small>
+                <span id="statusBadge" style="margin-left:8px;"></span>
+            </div>
+        </header>
 
-      <section class="hero">
-        <div id="art" class="art empty" aria-live="polite">
-          <span id="artPlaceholder">Poster image will appear here</span>
-        </div>
-      </section>
+        <section class="qrgrid">
+            <div class="qrbox">
+                <h3>Public Page</h3>
+                <div id="qrPublic">
+                    <div class="spinner" aria-label="Loading QR"></div>
+                </div>
+                <small id="publicUrlLabel"></small>
+            </div>
+            <div class="qrbox">
+                <h3>Signups (Form)</h3>
+                <div id="qrForm">
+                    <div class="spinner" aria-label="Loading Form link"></div>
+                </div>
+                <small id="formUrlLabel"></small>
+            </div>
+        </section>
 
-      <section class="qrrow" id="qrRow">
-        <div class="qrbox" id="qrFormBox" style="display:none;">
-          <span class="label">Sign Up</span>
-          <img id="qrForm" alt="QR: Sign-up" />
-          <div class="hint" id="formUrl"></div>
-        </div>
-        <div class="qrbox" id="qrPublicBox" style="display:none;">
-          <span class="label">Eventbook Page</span>
-          <img id="qrPublic" alt="QR: Public page" />
-          <div class="hint" id="publicUrl"></div>
-        </div>
-      </section>
+        <p><em>Tip:</em> If a QR isn’t ready yet, this poster keeps checking and fills it automatically.</p>
+    </main>
 
-      <footer>
-        Generated by NextUp · Poster is public-shareable; sensitive content belongs on the Display page.
-      </footer>
-    </div>
-  </div>
+    <script>
+        /* ================= Poster v4.1 ================= */
 
-  <script>
-    // Safe theme toggle fallback
-    window.NextUpTheme = window.NextUpTheme || { toggle(){ document.documentElement.classList.toggle('theme--light'); } };
+        /** 0) Config (centralized) */
+        const CONFIG = {
+            META_RETRY_MS: [1200, 2000, 3000], // backoff if meta fails
+            QR_RETRY_MS: [1500, 2500, 4000], // backoff if QR not ready
+            LOOP_FORM_MS: 4000 // periodic form URL recheck until available
+        };
 
-    const qs = new URLSearchParams(location.search);
-    const eventId = qs.get('event') || '';
+        /** 1) Params */
+        const params = new URLSearchParams(location.search);
+        const eventKey = params.get('event') || '';
 
-    function setText(id, val, { hideParentIfEmpty=false, parentId } = {}){
-      const el = document.getElementById(id); if(!el) return;
-      const v = String(val || '').trim();
-      el.textContent = v;
-      if(hideParentIfEmpty && parentId){
-        const p = document.getElementById(parentId);
-        if(p) p.style.display = v ? '' : 'none';
-      }
-    }
+        /** 2) RPC (hardened + offline awareness) */
+        async function rpc(fn, ...args) {
+            try {
+                return await new Promise((res, rej) =>
+                    google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error(e?.message || String(e))))[fn](...args)
+                );
+            } catch (err) {
+                if (!navigator.onLine) throw new Error('offline');
+                throw err;
+            }
+        }
 
-    function setQr(blockId, imgId, urlTextId, qrUrl, rawUrl){
-      const box = document.getElementById(blockId);
-      const img = document.getElementById(imgId);
-      const txt = document.getElementById(urlTextId);
-      const ok = !!qrUrl && !!rawUrl;
-      if(!ok){
-        box.style.display = 'none';
-        if(img) img.removeAttribute('src');
-        if(txt) txt.textContent = '';
-        return;
-      }
-      box.style.display = '';
-      img.src = qrUrl;
-      txt.textContent = rawUrl;
-    }
+        /** 3) DOM (defensive) */
+        const els = {
+            title: document.getElementById('posterTitle'),
+            date: document.getElementById('eventDate'),
+            badge: document.getElementById('statusBadge'),
+            qrPub: document.getElementById('qrPublic'),
+            qrForm: document.getElementById('qrForm'),
+            pubLabel: document.getElementById('publicUrlLabel'),
+            formLabel: document.getElementById('formUrlLabel')
+        };
+        function must(el, id) { if (!el) throw new Error('Missing #' + id); return el; }
+        ['title', 'date', 'badge', 'qrPub', 'qrForm', 'pubLabel', 'formLabel'].forEach(k => must(els[k], k));
 
-    async function loadPoster(){
-      try{
-        const res = await new Promise(resolve=>{
-          google.script.run
-            .withSuccessHandler(resolve)
-            .withFailureHandler(()=>resolve(null))
-            .getPosterBundle(eventId);
+        /** 4) Utils */
+        function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+        function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+        /** 5) Meta loader (name/date/status) with small backoff on errors */
+        async function loadMeta() {
+            let attempt = 0;
+            while (true) {
+                try {
+                    const r = await rpc('getPublicBundle', eventKey);
+                    if (!r || !r.ok) throw new Error(r?.error || 'meta load failed');
+
+                    const m = r.eventMeta || {};
+                    els.title.textContent = m.name || '(event)';
+                    els.date.textContent = m.dateISO || '';
+                    if (!m.status || m.status === 'LINKS_READY') els.badge.innerHTML = '';
+                    else {
+                        const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
+                        els.badge.innerHTML = `<span class="badge badge-warn">${text}</span>`;
+                    }
+                    return; // success
+                } catch (e) {
+                    if (String(e || '').includes('offline')) {
+                        els.badge.innerHTML = `<span class="badge badge-warn">Offline — showing cached view</span>`;
+                    }
+                    const backoff = CONFIG.META_RETRY_MS[Math.min(attempt, CONFIG.META_RETRY_MS.length - 1)];
+                    attempt++;
+                    await sleep(backoff);
+                }
+            }
+        }
+
+        /** 6) Public QR loader (keeps retrying until ready) */
+        async function loadPublicQr() {
+            let attempt = 0;
+            while (true) {
+                try {
+                    const r = await rpc('getShareQr', eventKey);
+                    if (!r || !r.ok) throw new Error(r?.error || 'not ready');
+
+                    const url = r.url || '';
+                    els.pubLabel.textContent = url;
+                    if (r.qrB64) {
+                        els.qrPub.innerHTML = `<img alt="Public QR" src="data:image/png;base64,${r.qrB64}" />`;
+                    } else {
+                        els.qrPub.innerHTML = `<div class="qr-fallback">${esc(url)}</div>`;
+                    }
+                    return; // success
+                } catch (_e) {
+                    const backoff = CONFIG.QR_RETRY_MS[Math.min(attempt, CONFIG.QR_RETRY_MS.length - 1)];
+                    attempt++;
+                    await sleep(backoff);
+                }
+            }
+        }
+
+        /** 7) Form URL loader (polls periodically until present) */
+        let formLoopTimer = null;
+        async function loadFormUrlOnce() {
+            try {
+                const r = await rpc('getPublicBundle', eventKey);
+                if (!r || !r.ok) throw new Error(r?.error || 'bundle load failed');
+
+                const formUrl = (r.eventMeta && r.eventMeta.formUrl) || '';
+                if (formUrl) {
+                    els.formLabel.textContent = formUrl;
+                    els.qrForm.innerHTML = `<div class="qr-fallback">${esc(formUrl)}</div>`;
+                    if (formLoopTimer) { clearInterval(formLoopTimer); formLoopTimer = null; }
+                }
+            } catch (_e) {
+                // Quietly ignore; next tick will try again
+            }
+        }
+
+        /** 8) Boot */
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Start all tasks in parallel
+            loadMeta();
+            loadPublicQr();
+            loadFormUrlOnce();
+            formLoopTimer = setInterval(loadFormUrlOnce, CONFIG.LOOP_FORM_MS); // keep checking until present
         });
-
-        if(!res || !res.ok){
-          setText('title', 'Eventbook not found');
-          document.getElementById('qrRow').style.display = 'none';
-          return;
-        }
-
-        // Header
-        setText('tag',        res.eventTag || 'NEXTUP');
-        setText('title',      res.title || 'Eventbook');
-        setText('datePretty', res.datePretty || '');
-        setText('place',      res.place || '', { hideParentIfEmpty:true, parentId:'placeWrap' });
-
-        // Poster art
-        const artBox = document.getElementById('art');
-        const ph = document.getElementById('artPlaceholder');
-        const url = String(res.posterImageUrl || '').trim();
-        if(url){
-          const img = new Image();
-          img.onload = ()=>{
-            artBox.classList.remove('empty');
-            ph.style.display = 'none';
-            artBox.innerHTML = '';
-            artBox.appendChild(img);
-          };
-          img.onerror = ()=>{
-            artBox.classList.add('empty');
-            ph.style.display = '';
-            artBox.innerHTML = '';
-            artBox.appendChild(ph);
-          };
-          img.alt = 'Poster image';
-          img.src = url;
-        }else{
-          artBox.classList.add('empty');
-          ph.style.display = '';
-          artBox.innerHTML = '';
-          artBox.appendChild(ph);
-        }
-
-        // QR blocks (hide when missing)
-        setQr(
-          'qrFormBox', 'qrForm', 'formUrl',
-          res.qr && res.qr.form || '',
-          (res.adminUrl && res.adminUrl.replace('Admin', 'R')) || res.formUrlView || ''
-        );
-        setQr(
-          'qrPublicBox', 'qrPublic', 'publicUrl',
-          res.qr && res.qr.public || '',
-          res.publicUrl || ''
-        );
-
-        // Buttons
-        const bPub = document.getElementById('btnOpenPublic');
-        const bAdm = document.getElementById('btnOpenAdmin');
-        if(res.publicUrl){ bPub.style.display = 'inline-flex'; bPub.onclick = ()=>window.open(res.publicUrl, '_blank'); }
-        else { bPub.style.display = 'none'; }
-        if(res.adminUrl){ bAdm.style.display = 'inline-flex'; bAdm.onclick = ()=>window.open(res.adminUrl, '_blank'); }
-        else { bAdm.style.display = 'none'; }
-
-      }catch(e){
-        setText('title', 'Error loading poster');
-        document.getElementById('qrRow').style.display = 'none';
-      }
-    }
-
-    document.addEventListener('DOMContentLoaded', loadPoster);
-  </script>
+    </script>
 </body>
+
 </html>
