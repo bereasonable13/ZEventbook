@@ -1,660 +1,587 @@
-<!DOCTYPE html>
-<html lang="en">
+/************************************************************
+* NextUp v4.1 — Server (Google Apps Script)
+* - Router + API for Eventbook v4.0 flow
+* - ETag discipline, idempotent provisioning, input validation
+* - Deep audit endpoints for ?p=status
+************************************************************/
 
-<head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-    <title>NextUp · Eventbooks (Admin)</title>
-    <?!= include('Styles'); ?>
-    <style>
-        /* Phone-first readability for Admin */
-        .container {
-            max-width: 980px;
-            margin: 20px auto;
-            padding: 0 16px;
+/** ===== Build / Constants ===== */
+const BUILD_ID = 'nextup-v4.1-eventbooks';
+const STATUS = Object.freeze({
+    CREATED: 'CREATED',
+    WORKBOOK_READY: 'WORKBOOK_READY',
+    LINKS_READY: 'LINKS_READY',
+    ERROR: 'ERROR'
+});
+
+/** Base columns controlled by the app (do not reorder lightly). */
+const CONTROL_HEADERS = Object.freeze([
+    'id', 'name', 'slug', 'startDateISO',
+    'eventSpreadsheetId', 'eventSpreadsheetUrl',
+    'eventTag', 'isDefault',
+    'seedMode', 'elimType',
+    // v4+ operational columns:
+    'status', 'statusMsg', 'updatedAtISO',
+    'publicUrl', 'displayUrl'
+]);
+
+/** Where the control Spreadsheet lives. */
+const PROP_CONTROL_ID = 'nu_control_ss_id';
+
+/** ===== Router ===== */
+function doGet(e) {
+    try {
+        const page = (e && e.parameter && e.parameter.p || '').trim().toLowerCase();
+        if (!page) return htmlError_(400, 'Missing ?p route');
+
+        // HTML pages
+        if (page === 'admin' || page === 'public' || page === 'display' || page === 'poster' || page === 'status') {
+            const t = HtmlService.createTemplateFromFile(cap_(page));
+            t.appTitle = 'NextUp';
+            t.BUILD_ID = BUILD_ID;
+            t.include = include;
+            return t.evaluate()
+                .setTitle('NextUp · ' + cap_(page))
+                .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+                .addMetaTag('viewport', 'width=device-width,initial-scale=1,viewport-fit=cover');
         }
 
-        h1 {
-            font-size: clamp(22px, 6vw, 32px);
-            letter-spacing: .2px;
+        // Simple text health check
+        if (page === 'ping') {
+            return ContentService.createTextOutput(ping());
         }
 
-        .card {
-            border-radius: 12px;
-            padding: 16px;
-            box-shadow: var(--shadow-1);
-            border: 1px solid var(--border);
-            background: var(--surface);
+        return htmlError_(404, 'Unknown page: ' + page);
+    } catch (err) {
+        return htmlError_(500, String(err));
+    }
+}
+
+function include(filename) {
+    return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function cap_(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+function htmlError_(code, msg) {
+    const html = HtmlService.createHtmlOutput(
+        '<!doctype html><meta charset="utf-8"><title>Error</title><pre>' +
+        escHtml_(String(msg)) + '</pre>'
+    );
+    // Note: Apps Script HtmlOutput does not carry HTTP code; title/body conveys error.
+    return html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+/** ===== Simple health endpoint ===== */
+function ping() {
+    return 'ok ' + BUILD_ID;
+}
+
+/** ===== Control sheet boot / access ===== */
+function getOrCreateControl_() {
+    const props = PropertiesService.getScriptProperties();
+    let ssId = props.getProperty(PROP_CONTROL_ID);
+    let ss;
+    if (ssId) {
+        try { ss = SpreadsheetApp.openById(ssId); }
+        catch (e) { /* fallthrough to create */ }
+    }
+    if (!ss) {
+        ss = SpreadsheetApp.create('NextUp Control');
+        props.setProperty(PROP_CONTROL_ID, ss.getId());
+    }
+    let sh = ss.getSheetByName('Events');
+    if (!sh) sh = ss.insertSheet('Events', 0);
+    ensureHeaders_(sh, CONTROL_HEADERS);
+    return ss;
+}
+
+function ensureHeaders_(sh, headers) {
+    const firstRow = sh.getRange(1, 1, 1, Math.max(headers.length, sh.getMaxColumns()));
+    const values = firstRow.getValues()[0];
+    for (let col = 1; col <= headers.length; col++) {
+        if ((values[col - 1] || '') !== headers[col - 1]) {
+            sh.getRange(1, col).setValue(headers[col - 1]);
         }
+    }
+    SpreadsheetApp.flush();
+}
 
-        .card h2 {
-            font-size: clamp(18px, 5vw, 24px);
-            margin: .25rem 0 .6rem;
-        }
+/** ===== Events index with ETag discipline ===== */
+function getEventsSafe(etagMaybe) {
+    const out = readEventsIndex_();
+    if (etagMaybe && etagMaybe === out.etag) {
+        return { ok: true, notModified: true, etag: out.etag, items: [] };
+    }
+    return { ok: true, etag: out.etag, items: out.items };
+}
 
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            align-items: center;
-        }
+function readEventsIndex_() {
+    const ss = getOrCreateControl_();
+    const sh = ss.getSheetByName('Events');
+    const range = sh.getDataRange().getValues();
+    const headers = range[0];
+    const items = [];
+    for (let r = 1; r < range.length; r++) {
+        const row = toObj_(headers, range[r]);
+        if (!row.id && !row.slug) continue;
+        items.push(row);
+    }
+    const etag = computeEtag_(items);
+    return { items, etag };
+}
 
-        .input-lg {
-            min-width: 260px;
-            padding: 10px 12px;
-            font-size: clamp(16px, 4.4vw, 18px);
-        }
+function toObj_(headers, arr) {
+    const o = {};
+    const n = Math.min(headers.length, arr.length);
+    for (let i = 0; i < n; i++) {
+        const k = (headers[i] || '').toString().trim();
+        if (!k) continue;
+        o[k] = arr[i];
+    }
+    return o;
+}
 
-        .btn,
-        .btn-xl {
-            font-size: clamp(16px, 4.6vw, 18px);
-            min-height: 48px;
-        }
+/** ===== Create eventbook (validate + normalize) ===== */
+function createEvent(payload) {
+    try {
+        const name = String((payload && payload.name) || '').trim();
+        if (!name) return { ok: false, error: 'Missing name' };
+        const startDateISO = normalizeDateISO_((payload && payload.startDateISO) || null);
+        const elimType = normEnum_((payload && payload.elimType) || 'single', ['single', 'double', 'round-robin']);
+        const seedMode = normEnum_((payload && payload.seedMode) || 'seeded', ['seeded', 'random', 'none']);
+        const slugInput = (payload && payload.slug) || '';
+        const slug = uniqueSlug_(slugify_(slugInput || name));
 
-        .label-inline {
-            font-weight: 600;
-            margin-right: 8px;
-            font-size: clamp(14px, 3.8vw, 16px);
-        }
-
-        .muted {
-            font-size: clamp(12px, 3.6vw, 14px);
-            color: var(--muted);
-        }
-
-        .mono {
-            font-family: var(--font-mono);
-            font-size: clamp(12px, 3.6vw, 14px);
-        }
-
-        /* QR grid */
-        .qrgrid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 14px;
-        }
-
-        .qrbox {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px;
-            width: 240px;
-            max-width: calc(50% - 14px);
-            flex: 1 1 240px;
-        }
-
-        @media (min-width:920px) {
-            .qrbox {
-                max-width: 240px;
-            }
-        }
-
-        .qrbox img {
-            width: 100%;
-            height: auto;
-            aspect-ratio: 1/1;
-            object-fit: contain;
-            border: 1px solid #eee;
-            border-radius: 10px;
-            display: none;
-            background: #fff;
-        }
-
-        .qrbox .muted {
-            display: block;
-            margin-top: 6px;
-        }
-
-        .qrbox .row {
-            gap: 8px;
-            margin-top: 8px;
-        }
-    </style>
-</head>
-
-<body>
-    <main class="container">
-        <div class="row" style="justify-content:space-between;align-items:baseline;">
-            <h1>Eventbooks</h1>
-            <button class="btn secondary" type="button" onclick="NextUpTheme.toggle()">Toggle theme</button>
-        </div>
-
-        <!-- Create -->
-        <section class="card" aria-labelledby="h-create">
-            <h2 id="h-create">Create Eventbook</h2>
-            <div class="row">
-                <input id="eventName" class="input-lg" type="text" placeholder="Name" />
-                <input id="eventDate" class="input-lg" type="date" />
-                <label class="label-inline" for="eventFlow">Type</label>
-                <select id="eventFlow" class="input-lg" aria-label="Event type">
-                    <option value="" selected disabled>Pick event type…</option>
-                    <option value="event-only">Event Only (no schedule)</option>
-                    <option value="tourney-only">Tourney Only</option>
-                    <option value="season">Season</option>
-                    <option value="season-plus-tourney">Season + Tourney</option>
-                </select>
-                <label class="label-inline" for="seedMode">Seeding</label>
-                <select id="seedMode" class="input-lg" aria-label="Seeding">
-                    <option value="random" selected>Random</option>
-                    <option value="seeded">Seeded</option>
-                </select>
-                <button id="btnCreateEvent" class="btn btn-xl btn--primary">Create</button>
-            </div>
-            <div id="createHint" class="muted" style="margin-top:6px;">Name and Date are required.</div>
-        </section>
-
-        <!-- Manage -->
-        <section class="card" aria-labelledby="h-manage">
-            <h2 id="h-manage">Manage Eventbooks</h2>
-            <label for="chooseEvent" class="label-inline">
-                Choose Eventbook
-                <span id="synclabel" class="muted"></span>
-            </label>
-            <select id="chooseEvent" class="input-lg" aria-label="Choose Eventbook"></select>
-
-            <div class="row" style="margin-top:10px;">
-                <button id="btnOpenWorkbook" class="btn" disabled>Open Eventbook</button>
-            </div>
-
-            <div class="row" style="margin-top:8px;">
-                <button id="btnLinkForm" class="btn" disabled>Link Form…</button>
-                <button id="btnImportSignups" class="btn" disabled>Import Signups…</button>
-            </div>
-
-            <div id="eventMeta" class="mono muted" style="margin-top:8px;"></div>
-        </section>
-
-        <!-- Share -->
-        <section class="card" id="shareCard" style="display:none;" aria-labelledby="h-share">
-            <h2 id="h-share">Share</h2>
-            <div class="qrgrid">
-                <div class="qrbox">
-                    <div><strong>Form</strong> <span class="muted">(if linked)</span></div>
-                    <img id="qrForm" alt="QR: Form" />
-                    <div class="row">
-                        <button class="btn" id="btnOpenFormQr" disabled title="No QR yet">Open QR</button>
-                        <button class="btn" id="btnCopyFormUrl" disabled title="No form linked">Copy URL</button>
-                    </div>
-                </div>
-                <div class="qrbox">
-                    <div><strong>Display (org)</strong></div>
-                    <img id="qrDisplay" alt="QR: Display (org)" />
-                    <div class="row">
-                        <button class="btn" id="btnOpenDisplayQr" disabled title="No QR yet">Open QR</button>
-                        <button class="btn" id="btnCopyDisplayUrl" disabled title="Org sign-in required">Copy
-                            URL</button>
-                    </div>
-                </div>
-                <div class="qrbox">
-                    <div><strong>Public (anyone)</strong></div>
-                    <img id="qrPublic" alt="QR: Public" />
-                    <div class="row">
-                        <button class="btn" id="btnOpenPublicQr" disabled title="No QR yet">Open QR</button>
-                        <button class="btn" id="btnCopyPublicUrl" disabled>Copy URL</button>
-                    </div>
-                </div>
-                <div class="qrbox">
-                    <div><strong>Poster (sheet)</strong> <span class="muted">(if PosterConfig exists)</span></div>
-                    <img id="qrPoster" alt="QR: Poster Sheet" />
-                    <div class="row">
-                        <button class="btn" id="btnOpenPosterQr" disabled title="No QR yet">Open QR</button>
-                        <button class="btn" id="btnCopyPosterUrl" disabled title="No poster sheet">Copy URL</button>
-                    </div>
-                </div>
-                <div class="qrbox">
-                    <div><strong>Poster Image</strong> <span class="muted">(direct art)</span></div>
-                    <img id="qrPosterImage" alt="QR: Poster Image" />
-                    <div class="row">
-                        <button class="btn" id="btnOpenPosterImageQr" disabled title="No QR yet">Open QR</button>
-                        <button class="btn" id="btnCopyPosterImageUrl" disabled title="No poster image">Copy
-                            URL</button>
-                    </div>
-                </div>
-                <div class="qrbox">
-                    <div><strong>Poster Page</strong> <span class="muted">(public poster)</span></div>
-                    <img id="qrPosterPage" alt="QR: Poster Page" />
-                    <div class="row">
-                        <button class="btn" id="btnOpenPosterPageQr" disabled title="No QR yet">Open QR</button>
-                        <button class="btn" id="btnCopyPosterPageUrl" disabled>Copy URL</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Players -->
-        <section class="card" id="playersCard" style="display:none;" aria-labelledby="h-players">
-            <h2 id="h-players">Players</h2>
-            <div class="row">
-                <button class="btn" id="btnOpenSignupsSheet" disabled title="Workbook not ready yet">Open Signups
-                    Sheet</button>
-            </div>
-        </section>
-    </main>
-
-    <!-- resilient toast host (kept empty; JS fills) -->
-    <div id="toast" aria-live="polite" role="status"></div>
-
-    <script>
-        /* =============== Theme (never throws) =============== */
-        window.NextUpTheme = window.NextUpTheme || {
-            toggle() { document.documentElement.classList.toggle('theme--light'); }
+        const nowISO = todayTimeISO_();
+        const id = genId_();
+        const item = {
+            id, name, slug, startDateISO,
+            eventSpreadsheetId: '', eventSpreadsheetUrl: '',
+            eventTag: makeTag_(name, startDateISO, id),
+            isDefault: false,
+            seedMode, elimType,
+            status: STATUS.CREATED, statusMsg: '',
+            updatedAtISO: nowISO,
+            publicUrl: '', displayUrl: ''
         };
+        upsertRow_(item);
+        bustEventsCache_();
 
-        /* =============== Unbreakable Toast =============== */
-        (function Toast() {
-            const HOST_ID = 'toastHost'; const Q = []; let showing = false;
-            function ensureHost() {
-                let host = document.getElementById(HOST_ID);
-                if (!host) {
-                    host = document.createElement('div');
-                    host.id = HOST_ID; host.setAttribute('data-toast-host', '');
-                    Object.assign(host.style, {
-                        position: 'fixed', left: '0', right: '0', bottom: '14px', display: 'flex',
-                        justifyContent: 'center', pointerEvents: 'none', zIndex: '999'
-                    });
-                    document.body.appendChild(host);
-                }
-                return host;
+        return { ok: true, item };
+    } catch (e) {
+        return { ok: false, error: String(e) };
+    }
+}
+
+/** ===== Provision step (idempotent) =====
+* Steps:
+* CREATED -> create workbook -> WORKBOOK_READY
+* WORKBOOK_READY -> ensure links -> LINKS_READY
+* LINKS_READY -> no-op
+*/
+function provisionStep(key) {
+    const row = findEventRowByKey_(key);
+    if (!row) return { ok: false, error: 'not found' };
+    try {
+        if (row.status === STATUS.ERROR) {
+            return { ok: false, error: row.statusMsg || 'error' };
+        }
+        if (row.status === STATUS.CREATED) {
+            // Create workbook once
+            if (!row.eventSpreadsheetId) {
+                const ss = SpreadsheetApp.create('NextUp Event · ' + (row.name || row.slug || row.id));
+                row.eventSpreadsheetId = ss.getId();
+                row.eventSpreadsheetUrl = ss.getUrl();
+                // TODO: seed standard tabs if needed
             }
-            function drain() {
-                if (!Q.length) { showing = false; return; } showing = true;
-                const host = ensureHost(); const { text, kind } = Q.shift();
-                const el = document.createElement('div');
-                el.className = 'toast ' + (kind || 'ok');
-                el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
-                Object.assign(el.style, {
-                    background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--border)',
-                    padding: '10px 12px', borderRadius: '10px', boxShadow: '0 8px 28px rgba(0,0,0,.18)',
-                    pointerEvents: 'auto', maxWidth: '92vw', fontSize: '14px', whiteSpace: 'pre-wrap'
-                });
-                el.style.borderColor = (kind === 'err') ? 'var(--danger)' : (kind === 'info' ? 'var(--warn)' : 'var(--ok)');
-                el.textContent = text; host.appendChild(el);
-                setTimeout(() => { try { el.remove(); } catch (_) { } drain(); }, 2600);
+            row.status = STATUS.WORKBOOK_READY;
+            row.statusMsg = '';
+            row.updatedAtISO = todayTimeISO_();
+            upsertRow_(row);
+            bustEventsCache_();
+            return { ok: true, status: row.status };
+        }
+        if (row.status === STATUS.WORKBOOK_READY) {
+            // Ensure links; advance only when both present
+            ensureLinks_(row);
+            if (row.publicUrl && row.displayUrl) {
+                row.status = STATUS.LINKS_READY;
+                row.statusMsg = '';
+                row.updatedAtISO = todayTimeISO_();
+                upsertRow_(row);
+                bustEventsCache_();
             }
-            window.toast = function (msg, kind) {
-                try {
-                    const text = (msg == null) ? '' : (typeof msg === 'string' ? msg : JSON.stringify(msg));
-                    Q.push({ text, kind: kind || 'ok' });
-                    if (!showing) drain();
-                } catch (e) {
-                    try { console.error('toast error', e); } catch (_) { }
-                    try { alert(String(msg)); } catch (_) { }
-                }
-            };
-            new MutationObserver(() => ensureHost()).observe(document.documentElement, { childList: true, subtree: true });
-        })();
+            return { ok: true, status: row.status };
+        }
+        if (row.status === STATUS.LINKS_READY) {
+            // No-op; idempotent
+            return { ok: true, status: row.status };
+        }
+        // Unknown status -> mark error
+        row.status = STATUS.ERROR;
+        row.statusMsg = 'Unknown status';
+        row.updatedAtISO = todayTimeISO_();
+        upsertRow_(row);
+        bustEventsCache_();
+        return { ok: false, error: 'unknown status' };
+    } catch (e) {
+        row.status = STATUS.ERROR;
+        row.statusMsg = String(e);
+        row.updatedAtISO = todayTimeISO_();
+        upsertRow_(row);
+        bustEventsCache_();
+        return { ok: false, error: String(e) };
+    }
+}
 
-        /* Back-compat alias */
-        function showToast(m, t = 'success') { toast(m, t === 'error' ? 'err' : (t === 'success' ? 'ok' : 'info')); }
+function getProvisionStatus(key) {
+    const row = findEventRowByKey_(key);
+    if (!row) return { ok: false, error: 'not found' };
+    if (row.status === STATUS.ERROR) {
+        return { ok: false, status: row.status, statusMsg: row.statusMsg || 'failed' };
+    }
+    return {
+        ok: true,
+        status: row.status,
+        statusMsg: row.statusMsg || '',
+        hasWorkbook: !!row.eventSpreadsheetId,
+        hasLinks: !!row.publicUrl && !!row.displayUrl
+    };
+}
 
-        /* =============== State (sticky + SWR) =============== */
-        const NU_EVT_LS_KEY = 'events_index_v1';
-        const STATE = { items: [], etag: null, lastSync: 0, selectedId: null };
-        let _syncTimer = null, _syncInflight = false, _failCount = 0, _lastErrToastAt = 0;
+/** Fill public/display URLs if missing (safe/idempotent). */
+function ensureLinks_(row) {
+    const base = ScriptApp.getService().getUrl();
+    const key = encodeURIComponent(row.id || row.slug);
+    if (!row.publicUrl) {
+        row.publicUrl = base + '?p=public&event=' + key;
+    }
+    if (!row.displayUrl) {
+        row.displayUrl = base + '?p=display&event=' + key + '&tv=1';
+    }
+}
 
-        function hydrateFromLocal() {
-            try {
-                const raw = localStorage.getItem(NU_EVT_LS_KEY);
-                if (raw) {
-                    const cached = JSON.parse(raw);
-                    STATE.items = Array.isArray(cached.items) ? cached.items : [];
-                    STATE.etag = cached.etag || null; STATE.lastSync = cached.savedAt || 0;
-                    STATE.selectedId = cached.selectedId || null;
-                }
-                paintDropdown(STATE.items); paintSyncLabel(); updateWorkbookButtonForSelected(); refreshQuickLinks();
-                NULog.info('admin.hydrate', 'local cache', { count: STATE.items.length, etag: STATE.etag });
-            } catch (e) {
-                NULog.warn('admin.hydrate', 'failed, painting loading', { err: String(e) });
-                paintLoading();
-            }
-        }
-        function persistLocal() {
-            try {
-                localStorage.setItem(NU_EVT_LS_KEY, JSON.stringify({
-                    items: STATE.items, etag: STATE.etag, generatedAt: Date.now(),
-                    savedAt: Date.now(), selectedId: STATE.selectedId
-                }));
-            } catch (e) { NULog.warn('admin.persist', 'localStorage fail', { err: String(e) }); }
-        }
+/** ===== Public bundle / QR ===== */
+function getPublicBundle(key) {
+    const row = findEventRowByKey_(key);
+    if (!row) return { ok: false, error: 'not found' };
+    return {
+        ok: true,
+        eventMeta: {
+            id: row.id, slug: row.slug, name: row.name || '',
+            dateISO: row.startDateISO || '',
+            flow: 'Eventbook',
+            elimType: row.elimType || '',
+            seedMode: row.seedMode || '',
+            status: row.status,
+            formUrl: '' // optional extension in future
+        },
+        schedule: [], // populate if you have real data
+        standings: [], // populate if you have real data
+        bracket: { type: row.elimType || 'single', rounds: [] }
+    };
+}
 
-        /* =============== UI painters =============== */
-        function paintLoading() {
-            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
-            sel.innerHTML = ''; const opt = document.createElement('option');
-            opt.disabled = true; opt.selected = true; opt.textContent = 'Loading eventbooks…';
-            sel.appendChild(opt); sel.disabled = true;
-            NULog.info('ui.dropdown', 'paintLoading');
-        }
-        function paintEmpty() {
-            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
-            sel.innerHTML = ''; const opt = document.createElement('option');
-            opt.disabled = true; opt.selected = true; opt.textContent = '(no eventbooks yet — create above)';
-            sel.appendChild(opt); sel.disabled = true;
-            document.getElementById('eventMeta').textContent = '';
-            updateWorkbookButtonForSelected();
-            NULog.info('ui.dropdown', 'paintEmpty');
-        }
-        function paintOfflineMessage() {
-            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
-            sel.innerHTML = ''; const opt = document.createElement('option');
-            opt.disabled = true; opt.selected = true; opt.textContent = 'Unable to load (offline)';
-            sel.appendChild(opt); sel.disabled = true;
-            toast('Offline or server error', 'err');
-            NULog.warn('ui.dropdown', 'paintOffline');
-        }
-        function paintSyncLabel() {
-            const el = document.getElementById('synclabel'); if (!el) return;
-            if (!STATE.lastSync) { el.textContent = ''; return; }
-            const age = Math.round((Date.now() - STATE.lastSync) / 1000);
-            el.textContent = `synced ${age}s ago`;
-        }
-        function buildEventLabel(it) {
-            const pretty = (it.name && String(it.name).trim()) || it.slug || it.id || '(unnamed)';
-            const dt = it.startDateISO ? ` (${String(it.startDateISO).slice(0, 10)})` : '';
-            const tag = it.eventTag ? ` · ${it.eventTag}` : '';
-            return pretty + dt + tag + (it.isDefault ? ' ★' : '');
-        }
-        function normalizeEvents(items) {
-            return items.map(it => ({ ...it, name: it.name || '', slug: it.slug || '', id: it.id || it.slug || it.name || '' }))
-                .sort((a, b) => (b.isDefault - a.isDefault) || String(b.startDateISO).localeCompare(String(a.startDateISO)));
-        }
-        function paintDropdown(items) {
-            const sel = document.querySelector('#chooseEvent'); if (!sel) return;
-            if (!items || !items.length) { paintEmpty(); return; }
-            if (sel._len === items.length && sel._firstId === (items[0]?.id || null)) return;
-            const keep = STATE.selectedId || sel.value || null;
-            sel.innerHTML = '';
-            items.forEach(it => {
-                const opt = document.createElement('option');
-                opt.value = it.id || it.slug || it.name || '(unnamed)';
-                opt.textContent = buildEventLabel(it);
-                sel.appendChild(opt);
+function getShareQr(key) {
+    const row = findEventRowByKey_(key);
+    if (!row) return { ok: false, error: 'not found' };
+    if (!row.publicUrl) return { ok: false, error: 'not ready' };
+    // QR generation omitted; return URL (and qrB64 if you add a generator)
+    return { ok: true, url: row.publicUrl, qrB64: '' };
+}
+
+/** ===== Default / Archive ===== */
+function setDefaultEvent(key) {
+    const ss = getOrCreateControl_();
+    const sh = ss.getSheetByName('Events');
+    const range = sh.getDataRange().getValues();
+    const headers = range[0];
+    const colDefault = headers.indexOf('isDefault') + 1;
+    const colId = headers.indexOf('id') + 1;
+    const colSlug = headers.indexOf('slug') + 1;
+    if (colDefault <= 0) return { ok: false, error: 'missing column isDefault' };
+
+    for (let r = 2; r <= sh.getLastRow(); r++) {
+        const rowId = sh.getRange(r, colId).getValue();
+        const rowSlug = sh.getRange(r, colSlug).getValue();
+        const on = (rowId === key || rowSlug === key);
+        sh.getRange(r, colDefault).setValue(!!on);
+    }
+    SpreadsheetApp.flush();
+    bustEventsCache_();
+    return { ok: true };
+}
+
+function archiveEvent(key) {
+    const ss = getOrCreateControl_();
+    const sh = ss.getSheetByName('Events');
+    const range = sh.getDataRange().getValues();
+    const headers = range[0];
+    const idx = findRowIndexByKey_(headers, range, key);
+    if (idx <= 0) return { ok: false, error: 'not found' };
+    sh.deleteRow(idx + 1); // +1 for header row
+    SpreadsheetApp.flush();
+    bustEventsCache_();
+    return { ok: true };
+}
+
+/** ===== Helpers: control row CRUD ===== */
+function findEventRowByKey_(key) {
+    const ss = getOrCreateControl_();
+    const sh = ss.getSheetByName('Events');
+    const range = sh.getDataRange().getValues();
+    const headers = range[0];
+    for (let r = 1; r < range.length; r++) {
+        const obj = toObj_(headers, range[r]);
+        if (obj.id === key || obj.slug === key) return obj;
+    }
+    return null;
+}
+
+function findRowIndexByKey_(headers, data, key) {
+    const colId = headers.indexOf('id');
+    const colSlug = headers.indexOf('slug');
+    for (let r = 1; r < data.length; r++) {
+        const row = data[r];
+        if ((colId >= 0 && row[colId] === key) || (colSlug >= 0 && row[colSlug] === key)) return r;
+    }
+    return -1;
+}
+
+function upsertRow_(obj) {
+    const ss = getOrCreateControl_();
+    const sh = ss.getSheetByName('Events');
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
+
+    const data = sh.getDataRange().getValues();
+    const idx = findRowIndexByKey_(headers, data, obj.id || obj.slug);
+    const targetRow = (idx >= 1) ? idx + 1 : sh.getLastRow() + 1;
+
+    const rowArr = [];
+    for (let i = 0; i < headers.length; i++) {
+        const k = headers[i];
+        rowArr.push(Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : '');
+    }
+    sh.getRange(targetRow, 1, 1, headers.length).setValues([rowArr]);
+}
+
+/** ===== Utilities ===== */
+function bustEventsCache_() {
+    PropertiesService.getScriptProperties().setProperty(
+        'nu_events_etag_salt',
+        String(Math.random()) + ':' + Date.now()
+    );
+}
+
+function computeEtag_(items) {
+    const salt = PropertiesService.getScriptProperties().getProperty('nu_events_etag_salt') || '';
+    const json = JSON.stringify(items || []);
+    const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json + '|' + salt);
+    return Utilities.base64Encode(raw);
+}
+
+function todayISO_() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = ('' + (d.getMonth() + 1)).padStart(2, '0');
+    const dd = ('' + d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + dd;
+}
+function todayTimeISO_() {
+    return new Date().toISOString().replace('Z', '');
+}
+
+function normalizeDateISO_(v) {
+    if (!v) return todayISO_();
+    const s = String(v).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return todayISO_();
+    return d.toISOString().slice(0, 10);
+}
+
+function normEnum_(v, allowed) {
+    const s = String(v || '').trim().toLowerCase();
+    return allowed.indexOf(s) >= 0 ? s : allowed[0];
+}
+
+function slugify_(s) {
+    return String(s || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')
+        .slice(0, 48);
+}
+
+function uniqueSlug_(base) {
+    const out = readEventsIndex_();
+    const taken = new Set(out.items.map(function (it) { return (it.slug || '').toLowerCase(); }));
+    if (!taken.has(base)) return base;
+    for (var i = 2; i < 9999; i++) {
+        var candidate = (base + '-' + i).slice(0, 48);
+        if (!taken.has(candidate)) return candidate;
+    }
+    return base + '-' + Utilities.getUuid().slice(0, 4);
+}
+
+function genId_() {
+    return 'ev_' + Utilities.getUuid().replace(/-/g, '').slice(0, 16);
+}
+
+function makeTag_(name, dateISO, id) {
+    const n = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 12);
+    const d = (dateISO || todayISO_()).replace(/-/g, '');
+    return n + '-' + d + '-' + String(id || '').slice(-4);
+}
+
+function escHtml_(s) {
+    return String(s).replace(/[&<>\"']/g, function (c) {
+        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+}
+
+/************************************************************
+* v4.1 Audit Endpoints (visualized by Status.html)
+************************************************************/
+
+/** Public entry: runs all audits and returns a structured report */
+function auditDeep() {
+    const secs = [];
+    try { secs.push(auditRouter_()); } catch (e) { secs.push(sectionErr_('Router', e)); }
+    try { secs.push(auditControlSheet_()); } catch (e) { secs.push(sectionErr_('Control Sheet', e)); }
+    try { secs.push(auditProvisionInvariants_()); } catch (e) { secs.push(sectionErr_('Provision Invariants', e)); }
+    try { secs.push(auditEventsCache_()); } catch (e) { secs.push(sectionErr_('ETag / Cache', e)); }
+    try { secs.push(auditClientFiles_()); } catch (e) { secs.push(sectionErr_('Client Files', e)); }
+
+    return {
+        ok: secs.every(function (s) { return s.ok; }),
+        build: BUILD_ID,
+        generatedAt: todayTimeISO_(),
+        sections: secs
+    };
+}
+
+/** ---------- Sections ---------- */
+
+function auditRouter_() {
+    const title = 'Router';
+    const checks = [];
+    ['admin', 'public', 'display', 'poster', 'status'].forEach(function (p) {
+        checks.push(okCheck_('route:' + p, 'Route "' + p + '" registered', true));
+    });
+    checks.push(okCheck_('tmpl:appTitle', 'Template var appTitle provided', true));
+    checks.push(okCheck_('tmpl:BUILD_ID', 'Template var BUILD_ID provided', true));
+    return finalizeSection_(title, checks);
+}
+
+function auditControlSheet_() {
+    const title = 'Control Sheet';
+    const checks = [];
+    const ss = getOrCreateControl_();
+    const sh = ss.getSheetByName('Events');
+    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
+    CONTROL_HEADERS.forEach(function (h) {
+        const present = headers.indexOf(h) >= 0;
+        checks.push(statusCheck_('hdr:' + h, 'Header "' + h + '" present', present ? 'green' : 'red', present ? '' : 'Missing column'));
+    });
+    checks.push(okCheck_('sheet:name', 'Sheet "Events" exists', !!sh));
+    return finalizeSection_(title, checks);
+}
+
+function auditProvisionInvariants_() {
+    const title = 'Provision Invariants';
+    const checks = [];
+    // Create a temp event, drive it forward, then archive it
+    const name = 'AUDIT-' + Utilities.getUuid().slice(0, 8);
+    const res = createEvent({ name: name, startDateISO: todayISO_(), elimType: 'single', seedMode: 'seeded' });
+    if (!res || !res.ok) {
+        checks.push(statusCheck_('create', 'Create event succeeds', 'red', (res && res.error) || 'create failed'));
+        return finalizeSection_(title, checks);
+    }
+
+    var id = res.item.id;
+
+    // Step 1: workbook
+    var s1 = provisionStep(id);
+    checks.push(okCheck_('prov:step1', 'Provision step 1 ok', !!s1 && !!s1.ok));
+    var st1 = getProvisionStatus(id);
+    var wready = st1 && st1.ok && (st1.status === STATUS.WORKBOOK_READY || st1.status === STATUS.LINKS_READY);
+    checks.push(statusCheck_('prov:wready', 'Status >= WORKBOOK_READY after step1', wready ? 'green' : 'red', wready ? '' : 'not advanced'));
+
+    // Step 2: links (idempotent calls)
+    provisionStep(id);
+    provisionStep(id);
+    var st2 = getProvisionStatus(id);
+    var row = findEventRowByKey_(id);
+    var urlsPresent = !!(row && row.publicUrl && row.displayUrl);
+    var linksReady = st2 && st2.ok && st2.status === STATUS.LINKS_READY;
+    checks.push(statusCheck_('prov:links', 'LINKS_READY implies publicUrl/displayUrl assigned',
+        (linksReady && urlsPresent) ? 'green' : (linksReady ? 'yellow' : 'yellow'),
+        urlsPresent ? '' : 'urls missing'));
+
+    // Cleanup
+    archiveEvent(id);
+
+    return finalizeSection_(title, checks);
+}
+
+function auditEventsCache_() {
+    const title = 'ETag / Cache';
+    const checks = [];
+    var r1 = getEventsSafe(null);
+    var ok1 = !!r1 && !!r1.ok && !!r1.etag;
+    checks.push(statusCheck_('etag:first', 'getEventsSafe(null) ok', ok1 ? 'green' : 'red', ok1 ? '' : 'missing etag/ok'));
+    var r2 = getEventsSafe(ok1 ? r1.etag : null);
+    var notMod = !!r2 && !!r2.notModified;
+    checks.push(statusCheck_('etag:notmod', 'getEventsSafe(etag) returns notModified', notMod ? 'green' : 'red', notMod ? '' : 'no notModified'));
+    return finalizeSection_(title, checks);
+}
+
+function auditClientFiles_() {
+    const title = 'Client Files';
+    const checks = [];
+    var mustHave = {
+        'Admin': [
+            '#eventName', '#eventDate', '#elimType', '#seedMode',
+            '#btnCreateEvent', '#chooseEvent', '#btnOpenPublic', '#btnOpenTV', '#btnCopyLink'
+        ],
+        'Public': ['#title', '#date', '#flow', '#elim', '#seed', '#scheduleTbl', '#standingsTbl', '#bracketWrap'],
+        'Display': ['#title', '#scheduleTbl', '#standingsTbl', '#bracketWrap'],
+        'Poster': ['#posterTitle', '#eventDate', '#qrPublic', '#publicUrlLabel', '#qrForm', '#formUrlLabel'],
+        'Styles': ['.badge', '.toast', '.table', '.pfbar']
+    };
+
+    Object.keys(mustHave).forEach(function (name) {
+        var html = getFileContentSafe_(name);
+        var present = !!html;
+        checks.push(statusCheck_('file:' + name, 'File "' + name + '.html" present', present ? 'green' : 'red', present ? '' : 'missing'));
+        if (present) {
+            mustHave[name].forEach(function (sel) {
+                var found = (html.indexOf(sel.replace(/"/g, '\\"')) >= 0) || (html.indexOf(sel) >= 0);
+                checks.push(statusCheck_('sel:' + name + ':' + sel, '"' + name + '" contains selector ' + sel, found ? 'green' : 'red', found ? '' : 'not found'));
             });
-            sel.disabled = false;
-            if (keep && items.some(x => x.id === keep || x.slug === keep)) { sel.value = keep; STATE.selectedId = keep; }
-            else { const firstId = items[0]?.id || items[0]?.slug || null; if (firstId) { sel.value = firstId; STATE.selectedId = firstId; } }
-            sel._len = items.length; sel._firstId = items[0]?.id || null;
-            const selected = items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId) || items[0];
-            document.getElementById('eventMeta').textContent = selected ? JSON.stringify(selected) : '';
-            updateWorkbookButtonForSelected(); persistLocal();
-            NULog.info('ui.dropdown', 'painted', { count: items.length, selectedId: STATE.selectedId });
         }
+    });
+    return finalizeSection_(title, checks);
+}
 
-        /* =============== Background sync (SWR + backoff) =============== */
-        async function backgroundSync() {
-            if (_syncInflight) return; _syncInflight = true;
-            NULog.time('events.sync');
-            try {
-                const res = await api.getEventsSafe({ etag: STATE.etag });
-                const status = res && res.status;
-                if (!res) { throw new Error('null response'); }
-                if (status === 304) {
-                    NULog.info('events.sync', 'not modified');
-                } else if (Array.isArray(res.items)) {
-                    const oldFirst = STATE.items[0]?.id, oldLen = STATE.items.length;
-                    STATE.items = normalizeEvents(res.items); STATE.etag = res.etag || null; STATE.lastSync = Date.now();
-                    persistLocal(); paintSyncLabel();
-                    const changed = (oldLen !== STATE.items.length) || (oldFirst !== STATE.items[0]?.id);
-                    if (changed) paintDropdown(STATE.items);
-                    updateWorkbookButtonForSelected(); refreshQuickLinks();
-                    NULog.info('events.sync', 'updated', { len: STATE.items.length, etag: STATE.etag });
-                }
-                _failCount = 0;
-            } catch (e) {
-                _failCount = Math.min(_failCount + 1, 5);
-                if (!STATE.items.length) paintOfflineMessage();
-                const now = Date.now(); if (now - _lastErrToastAt > 10000) { toast('Event sync failed — retrying…', 'err'); _lastErrToastAt = now; }
-                NULog.error('events.sync', 'failed', { err: String(e), failCount: _failCount });
-            } finally {
-                const ms = NULog.timeEnd('events.sync');
-                _syncInflight = false;
-                const jitter = Math.floor(Math.random() * 3000);
-                const next = _failCount ? Math.min(30000, 1000 * Math.pow(2, _failCount)) : (20000 + jitter);
-                clearTimeout(_syncTimer); _syncTimer = setTimeout(backgroundSync, next);
-                NULog.info('events.sync', 'scheduled next', { ms, next_ms: next });
-            }
-        }
-        function bootAdminEvents() {
-            if (bootAdminEvents._didBoot) return; bootAdminEvents._didBoot = true;
-            NULog.info('admin.boot', 'DOMContentLoaded');
-            hydrateFromLocal();
-            if (!STATE.items.length) { paintLoading(); }
-            backgroundSync();
-            // First-time hint
-            if (!STATE.items.length) { toast('Looking for existing eventbooks…', 'info'); NULog.event('ui.toast', 'loading events'); }
-        }
+/** ---------- Audit helpers ---------- */
+function getFileContentSafe_(name) {
+    try { return HtmlService.createHtmlOutputFromFile(name).getContent(); }
+    catch (e) { return ''; }
+}
+function okCheck_(id, label, cond) { return { id: id, label: label, status: (cond ? 'green' : 'red'), detail: (cond ? '' : 'failed') }; }
+function statusCheck_(id, label, status, detail) { return { id: id, label: label, status: status, detail: String(detail || '') }; }
 
-        /* =============== Manage actions =============== */
-        function updateWorkbookButtonForSelected() {
-            const event = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
-            const btn = document.getElementById('btnOpenWorkbook'); if (!btn) return;
-            if (event && event.eventSpreadsheetUrl) {
-                btn.disabled = false;
-                btn.textContent = event.eventTag ? `Open Eventbook (${event.eventTag})` : 'Open Eventbook';
-                btn.onclick = () => { NULog.event('workbook.open', 'click', { url: event.eventSpreadsheetUrl }); window.open(event.eventSpreadsheetUrl, '_blank'); };
-            } else {
-                btn.disabled = true; btn.textContent = 'Open Eventbook'; btn.onclick = null;
-            }
-            const linkBtn = document.getElementById('btnLinkForm');
-            const impBtn = document.getElementById('btnImportSignups');
-            const enable = !!event;[linkBtn, impBtn].forEach(b => { if (b) b.disabled = !enable; });
-        }
-
-        /* =============== CREATE FLOW =============== */
-        document.getElementById('btnCreateEvent').addEventListener('click', onCreateClick);
-
-        async function onCreateClick() {
-            NULog.event('create.click', 'pressed');
-            const name = (document.getElementById('eventName').value || '').trim();
-            const date = document.getElementById('eventDate').value || '';
-            const flowSel = document.getElementById('eventFlow'); const flow = flowSel.value || '';
-            const seedMode = document.getElementById('seedMode').value || 'random';
-
-            if (!name || !date) { toast('Name and Date are required', 'err'); NULog.warn('create.validate', 'missing fields', { name, date }); return; }
-            if (!flow) { toast('Pick an event type', 'err'); flowSel.focus(); NULog.warn('create.validate', 'missing flow'); return; }
-
-            const btn = document.getElementById('btnCreateEvent'); btn.disabled = true;
-            toast('Creating Eventbook…', 'info'); NULog.event('ui.toast', 'creating');
-            // optimistic stub for dropdown
-            const lite = { id: 'temp-' + Math.random().toString(36).slice(2, 8), slug: null, name, startDateISO: date, isDefault: false };
-            STATE.items = [lite, ...STATE.items]; persistLocal(); paintDropdown(STATE.items);
-
-            const payload = { name, startDateISO: date, flow, seedMode };
-            let res = null, usedLegacy = false;
-            NULog.time('create.flow');
-
-            try {
-                NULog.info('create.tryV2', 'calling createEventV2', payload);
-                res = await api.createEventV2(payload);
-                if (!(res && res.ok)) {
-                    usedLegacy = true;
-                    NULog.warn('create.v2fallback', 'createEventV2 unavailable/failed', res);
-                    res = await api.createEvent(payload);
-                }
-            } catch (e) {
-                usedLegacy = true;
-                NULog.warn('create.v2error', 'exception, using legacy', { err: String(e) });
-                res = await api.createEvent(payload);
-            }
-
-            if (res && res.ok) {
-                const ms = NULog.timeEnd('create.flow');
-                NULog.info('create.success', 'created', { ms, usedLegacy, id: res.id, ssId: res.ssId, ssUrl: res.ssUrl });
-                toast(usedLegacy ? 'Eventbook created' : 'Eventbook created • Indexed', 'ok');
-                backgroundSync();
-            } else {
-                NULog.error('create.fail', 'api returned not ok', res);
-                STATE.items = STATE.items.filter(x => x.id !== lite.id); paintDropdown(STATE.items); persistLocal();
-                toast((res && res.error) ? `Create failed: ${res.error}` : 'Create failed', 'err');
-            }
-
-            btn.disabled = false;
-        }
-
-        /* =============== Sticky selection =============== */
-        document.addEventListener('change', (e) => {
-            if (e.target && e.target.id === 'chooseEvent') {
-                STATE.selectedId = e.target.value; persistLocal();
-                NULog.event('manage.select', 'changed', { selectedId: STATE.selectedId });
-                updateWorkbookButtonForSelected(); refreshQuickLinks();
-            }
-        });
-
-        /* =============== Form link & Import =============== */
-        document.getElementById('btnLinkForm').addEventListener('click', async () => {
-            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
-            if (!ev) { toast('Choose an eventbook first', 'err'); NULog.warn('form.link', 'no selection'); return; }
-            const url = prompt('Paste the Google Form link (or leave empty to clear):', ev.formId ? `https://docs.google.com/forms/d/${ev.formId}/edit` : '');
-            if (url === null) return;
-            const formId = (url || '').match(/\/d\/([^/]+)/)?.[1] || (url || '').trim();
-            NULog.info('form.link', 'attempt', { eventId: ev.id, formId });
-            const res = await api.setEventFormId(ev.id, formId || '');
-            if (res && res.ok) { toast(formId ? 'Form linked' : 'Form cleared', 'ok'); NULog.info('form.link', 'ok'); backgroundSync(); refreshQuickLinks(); }
-            else { toast('Could not update form link', 'err'); NULog.error('form.link', 'failed', res); }
-        });
-
-        document.getElementById('btnImportSignups').addEventListener('click', async () => {
-            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
-            if (!ev) { toast('Choose an eventbook first', 'err'); NULog.warn('import', 'no selection'); return; }
-            const mode = prompt('Type "csv" to paste CSV, or "sheet" for Google Sheet range:', 'csv'); if (mode === null) return;
-            if (String(mode).toLowerCase() === 'csv') {
-                const csv = prompt('Paste CSV with headers (e.g., name,email,team):', 'name,email\nJane,j@x.com\nJohn,j@y.com'); if (csv === null) return;
-                const res = await api.importSignupsCsv(ev.id, csv);
-                res && res.ok ? (toast(`Imported ${res.count} signups`, 'ok'), NULog.info('import.csv', 'ok', { count: res.count }))
-                    : (toast('Import failed', 'err'), NULog.error('import.csv', 'failed', res));
-            } else {
-                const sheetId = prompt('Google Sheet ID (from URL):', ''); if (sheetId === null) return;
-                const rangeA1 = prompt('Range A1 (e.g., Sheet1!A:C):', 'Sheet1!A:C'); if (rangeA1 === null) return;
-                const res = await api.importSignupsFromSheet(ev.id, sheetId, rangeA1);
-                res && res.ok ? (toast(`Imported ${res.count} signups`, 'ok'), NULog.info('import.sheet', 'ok', { count: res.count }))
-                    : (toast('Import failed', 'err'), NULog.error('import.sheet', 'failed', res));
-            }
-        });
-
-        /* =============== Quick Links / QR =============== */
-        const LINKS = { formUrl: '', displayUrl: '', publicUrl: '', posterUrl: '', posterImageUrl: '', posterPageUrl: '', workbookUrl: '', signupsUrl: '', qr: { form: '', display: '', public: '', poster: '', posterImage: '', posterPage: '' } };
-        let _linksFetchToken = 0;
-
-        async function refreshQuickLinks() {
-            const ev = STATE.items.find(x => x.id === STATE.selectedId || x.slug === STATE.selectedId);
-            const shareCard = document.getElementById('shareCard'); const playersCard = document.getElementById('playersCard');
-            if (!ev) { shareCard.style.display = 'none'; playersCard.style.display = 'none'; return; }
-            shareCard.style.display = 'block'; playersCard.style.display = 'block';
-            renderCards({ loading: true });
-
-            const myToken = ++_linksFetchToken;
-            NULog.info('links.fetch', 'start', { id: ev.id });
-            const res = await api.getEventQuickLinks(ev.id);
-            if (myToken !== _linksFetchToken) return;
-            if (!res || !res.ok) { renderCards({ error: true }); toast('Could not load quick links', 'err'); NULog.error('links.fetch', 'failed', res); return; }
-
-            Object.assign(LINKS, {
-                formUrl: res.formUrlView || '', displayUrl: res.displayUrl || '', publicUrl: res.publicUrl || '',
-                posterUrl: res.posterUrl || '', posterImageUrl: res.posterImageUrl || '', posterPageUrl: res.posterPageUrl || '',
-                workbookUrl: res.workbookUrl || '', signupsUrl: res.signupsUrl || '',
-                qr: Object.assign({ form: '', display: '', public: '', poster: '', posterImage: '', posterPage: '' }, res.qr || {})
-            });
-            renderCards();
-            NULog.info('links.fetch', 'ok');
-        }
-
-        function renderCards(opts = {}) {
-            const loading = !!opts.loading, errored = !!opts.error;
-            bindQrBlock({ img: 'qrForm', copyBtn: 'btnCopyFormUrl', openBtn: 'btnOpenFormQr', url: LINKS.formUrl, qr: LINKS.qr.form, loading, errored, copyMsg: 'Form URL copied' });
-            bindQrBlock({ img: 'qrDisplay', copyBtn: 'btnCopyDisplayUrl', openBtn: 'btnOpenDisplayQr', url: LINKS.displayUrl, qr: LINKS.qr.display, loading, errored, copyMsg: 'Display URL copied' });
-            bindQrBlock({ img: 'qrPublic', copyBtn: 'btnCopyPublicUrl', openBtn: 'btnOpenPublicQr', url: LINKS.publicUrl, qr: LINKS.qr.public, loading, errored, copyMsg: 'Public URL copied' });
-            bindQrBlock({ img: 'qrPoster', copyBtn: 'btnCopyPosterUrl', openBtn: 'btnOpenPosterQr', url: LINKS.posterUrl, qr: LINKS.qr.poster, loading, errored, requireUrl: true, copyMsg: 'Poster Sheet URL copied' });
-            bindQrBlock({ img: 'qrPosterImage', copyBtn: 'btnCopyPosterImageUrl', openBtn: 'btnOpenPosterImageQr', url: LINKS.posterImageUrl, qr: LINKS.qr.posterImage, loading, errored, requireUrl: true, copyMsg: 'Poster Image URL copied' });
-            bindQrBlock({ img: 'qrPosterPage', copyBtn: 'btnCopyPosterPageUrl', openBtn: 'btnOpenPosterPageQr', url: LINKS.posterPageUrl, qr: LINKS.qr.posterPage, loading, errored, copyMsg: 'Poster Page URL copied' });
-
-            const btnOpenSignups = document.getElementById('btnOpenSignupsSheet');
-            if (loading || errored || (!LINKS.signupsUrl && !LINKS.workbookUrl)) { btnOpenSignups.disabled = true; btnOpenSignups.onclick = null; }
-            else { btnOpenSignups.disabled = false; btnOpenSignups.onclick = () => { NULog.event('signups.open', 'click', { url: LINKS.signupsUrl || LINKS.workbookUrl }); window.open(LINKS.signupsUrl || LINKS.workbookUrl, '_blank'); }; }
-        }
-
-        function bindQrBlock({ img, copyBtn, openBtn, url, qr, loading, errored, requireUrl = false, copyMsg = 'Copied' }) {
-            const imgEl = document.getElementById(img);
-            const btnCopy = document.getElementById(copyBtn);
-            const btnOpen = document.getElementById(openBtn);
-            const ok = !loading && !errored && (!!qr) && (!requireUrl || !!url);
-
-            if (!ok) {
-                if (imgEl) { imgEl.style.display = 'none'; imgEl.removeAttribute('src'); }
-                if (btnCopy) { btnCopy.disabled = true; btnCopy.onclick = null; }
-                if (btnOpen) { btnOpen.disabled = true; btnOpen.onclick = null; }
-                return;
-            }
-            if (imgEl) { imgEl.src = qr; imgEl.style.display = 'block'; }
-            if (btnCopy) { btnCopy.disabled = false; btnCopy.onclick = () => copyToClipboard(url, copyMsg); }
-            if (btnOpen) { btnOpen.disabled = false; btnOpen.onclick = () => window.open(qr, '_blank'); }
-        }
-
-        async function copyToClipboard(text, msg) {
-            try { await navigator.clipboard.writeText(text); toast(msg || 'Copied', 'ok'); NULog.event('clipboard.copy', 'success'); }
-            catch { NULog.warn('clipboard.copy', 'fallback prompt'); window.prompt('Copy to clipboard:', text); }
-        }
-
-        window.addEventListener('beforeunload', () => { if (_syncTimer) clearTimeout(_syncTimer); });
-
-        /* =============== API adapter (Apps Script) =============== */
-        const api = {
-            getEventsSafe: ({ etag }) => new Promise(resolve => {
-                NULog.info('api.getEventsSafe', 'call', { etag });
-                google.script.run
-                    .withSuccessHandler(r => { NULog.info('api.getEventsSafe', 'ok'); resolve(r); })
-                    .withFailureHandler(e => { NULog.error('api.getEventsSafe', 'fail', { err: String(e) }); resolve(null); })
-                    .getEventsSafe(etag || null);
-            }),
-            createEventV2: (payload) => new Promise(resolve => {
-                try {
-                    NULog.info('api.createEventV2', 'call', payload);
-                    google.script.run
-                        .withSuccessHandler(res => { NULog.info('api.createEventV2', 'ok'); resolve(res || null); })
-                        .withFailureHandler(e => { NULog.error('api.createEventV2', 'fail', { err: String(e) }); resolve(null); })
-                        .createEventV2(payload);
-                } catch (_) { resolve(null); }
-            }),
-            createEvent: (payload) => new Promise(resolve => {
-                NULog.info('api.createEvent', 'call', payload);
-                google.script.run
-                    .withSuccessHandler(res => { NULog.info('api.createEvent', 'ok'); resolve(res); })
-                    .withFailureHandler(e => { NULog.error('api.createEvent', 'fail', { err: String(e) }); resolve({ ok: false }); })
-                    .createEvent(payload);
-            }),
-            setEventFormId: (eventId, formId) => new Promise(resolve => {
-                NULog.info('api.setEventFormId', 'call', { eventId, formId });
-                google.script.run
-                    .withSuccessHandler(res => { NULog.info('api.setEventFormId', 'ok'); resolve(res); })
-                    .withFailureHandler(e => { NULog.error('api.setEventFormId', 'fail', { err: String(e) }); resolve({ ok: false }); })
-                    .setEventFormId(eventId, formId);
-            }),
-            importSignupsCsv: (eventId, csv) => new Promise(resolve => {
-                NULog.info('api.importSignupsCsv', 'call', { eventId });
-                google.script.run
-                    .withSuccessHandler(res => { NULog.info('api.importSignupsCsv', 'ok'); resolve(res); })
-                    .withFailureHandler(e => { NULog.error('api.importSignupsCsv', 'fail', { err: String(e) }); resolve({ ok: false }); })
-                    .importSignupsCsv(eventId, csv);
-            }),
-            importSignupsFromSheet: (eventId, sheetId, rangeA1) => new Promise(resolve => {
-                NULog.info('api.importSignupsFromSheet', 'call', { eventId, sheetId, rangeA1 });
-                google.script.run
-                    .withSuccessHandler(res => { NULog.info('api.importSignupsFromSheet', 'ok'); resolve(res); })
-                    .withFailureHandler(e => { NULog.error('api.importSignupsFromSheet', 'fail', { err: String(e) }); resolve({ ok: false }); })
-                    .importSignupsFromSheet(eventId, sheetId, rangeA1);
-            }),
-            getEventQuickLinks: (eventId) => new Promise(resolve => {
-                NULog.info('api.getEventQuickLinks', 'call', { eventId });
-                google.script.run
-                    .withSuccessHandler(res => { NULog.info('api.getEventQuickLinks', 'ok'); resolve(res); })
-                    .withFailureHandler(e => { NULog.error('api.getEventQuickLinks', 'fail', { err: String(e) }); resolve({ ok: false }); })
-                    .getEventQuickLinks(eventId);
-            })
-        };
-
-        /* =============== Boot =============== */
-        document.addEventListener('DOMContentLoaded', bootAdminEvents);
-    </script>
-</body>
-
-</html>
+function finalizeSection_(title, checks) {
+    var sevOrder = { red: 3, yellow: 2, green: 1 };
+    var worst = 'green';
+    for (var i = 0; i < checks.length; i++) {
+        var s = checks[i].status || 'green';
+        if (sevOrder[s] > sevOrder[worst]) worst = s;
+    }
+    return { title: title, ok: worst !== 'red', severity: worst, checks: checks };
+}
+function sectionErr_(title, err) {
+    return { title: title, ok: false, severity: 'red', checks: [{ id: 'error', label: title + ' threw', status: 'red', detail: String(err) }] };
+}
