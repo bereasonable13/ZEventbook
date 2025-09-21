@@ -1,13 +1,36 @@
 <!DOCTYPE html>
+<!--
+  ************************************************************
+  * NextUp v4.1.1b — Test & SLA
+  * Suites map:
+  *   0) HEAD (title, global + local styles)
+  *   1) HEADER (build/version)
+  *   2) PREFLIGHT (quick sanity)
+  *   3) SLA (8-scenario runner)
+  *   4) API CONTRACTS (self-tests)
+  *   5) DIAGNOSTICS (live tail)
+  *   A) CONSTANTS & LABELS (JS)
+  *   B) DOM REFS (JS)
+  *   C) RPC + CLIENT LOG (JS)
+  *   D) PREFLIGHT (JS)
+  *   E) SMOKE (JS)
+  *   F) CONTRACTS (JS)
+  *   G) SLA RUNNER (JS)
+  *   H) UI HELPERS (toast/diag) (JS)
+  *   I) WIRING & BOOT (JS)
+  ************************************************************
+-->
 <html lang="en">
 <head>
+  <!-- =======================================================
+       0) HEAD (title, global + local styles)
+  ======================================================== -->
   <meta charset="utf-8" />
   <title><?= appTitle ?> · Test & SLA</title>
   <?!= include('Styles'); ?>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <style>
-    /* reorg for better maintenance */
-    /* Test-only extras */
+    /* ===== Test-only styles (kept minimal; global tokens come from Styles.html) ===== */
     .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
     .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-weight:700; }
     .g { background: var(--ok-bg); color: var(--ok); }
@@ -31,6 +54,9 @@
 </head>
 <body>
   <div class="container">
+    <!-- =======================================================
+         1) HEADER
+    ======================================================== -->
     <header>
       <h1>Test & SLA</h1>
       <div class="meta">
@@ -39,7 +65,9 @@
       <small class="muted">All tests are safe in prod; mock keys are used unless you provide a real event key.</small>
     </header>
 
-    <!-- ================= Preflight (quick sanity) ================= -->
+    <!-- =======================================================
+         2) PRE-FLIGHT (quick sanity)
+    ======================================================== -->
     <section data-testid="test-preflight">
       <div class="card-head">
         <h2>Preflight</h2>
@@ -56,7 +84,9 @@
       <div id="preflightMsg" class="small muted" style="margin-top:6px;"></div>
     </section>
 
-    <!-- ================= SLA Matrix Runner (8 scenarios) ================= -->
+    <!-- =======================================================
+         3) SLA MATRIX RUNNER (8 scenarios)
+    ======================================================== -->
     <section data-testid="test-sla">
       <div class="card-head">
         <div>
@@ -94,7 +124,9 @@
       </div>
     </section>
 
-    <!-- ================= API Contracts (Self-tests) ================= -->
+    <!-- =======================================================
+         4) API CONTRACTS (self-tests)
+    ======================================================== -->
     <section data-testid="test-contracts">
       <div class="card-head">
         <h2>API Contracts</h2>
@@ -103,7 +135,9 @@
       <div id="contractsOut" class="code mono small" aria-live="polite"></div>
     </section>
 
-    <!-- ================= Diagnostics (live tail) ================= -->
+    <!-- =======================================================
+         5) DIAGNOSTICS (live tail)
+    ======================================================== -->
     <section class="diag" id="diag" data-testid="diag-pane">
       <div class="diag-head">
         <h2>Diagnostics</h2>
@@ -117,21 +151,24 @@
   </div>
 
   <script>
-    /* ================= Test Harness · SLA + Smoke ================= */
-
+    /* =======================================================
+     * A) CONSTANTS & LABELS
+     * ======================================================= */
     const THRESH = { GREEN_MS: 90000, YELLOW_MS: 180000 }; // 90s / 180s
     const SLA = {
-      // keys → human labels for the 8 metrics
       BARE_NOPOSTER: 'TtL w/o Form · No Poster',
-      BARE_FORM: 'TtL w/ Form · No Poster',
-      IMG_NOFORM: 'TtL w/o Form · Poster Image',
-      IMG_FORM: 'TtL w/ Form · Poster Image',
-      TXT_NOFORM: 'TtL w/o Form · Poster Text',
-      TXT_FORM: 'TtL w/ Form · Poster Text',
-      BOTH_NOFORM: 'TtL w/o Form · Poster Image+Text',
-      BOTH_FORM: 'TtL w/ Form · Poster Image+Text'
+      BARE_FORM:     'TtL w/ Form · No Poster',
+      IMG_NOFORM:    'TtL w/o Form · Poster Image',
+      IMG_FORM:      'TtL w/ Form · Poster Image',
+      TXT_NOFORM:    'TtL w/o Form · Poster Text',
+      TXT_FORM:      'TtL w/ Form · Poster Text',
+      BOTH_NOFORM:   'TtL w/o Form · Poster Image+Text',
+      BOTH_FORM:     'TtL w/ Form · Poster Image+Text'
     };
 
+    /* =======================================================
+     * B) DOM REFS
+     * ======================================================= */
     const els = {
       pfMsg: document.getElementById('preflightMsg'),
       pfCtrl: document.getElementById('pf-ctrl-dot'),
@@ -158,26 +195,25 @@
     els.threshYellow.textContent = THRESH.YELLOW_MS.toLocaleString();
     els.threshYellow2.textContent = THRESH.YELLOW_MS.toLocaleString();
 
-    function badge(ms){
-      if (ms < THRESH.GREEN_MS) return '<span class="pill g">G</span>';
-      if (ms < THRESH.YELLOW_MS) return '<span class="pill y">Y</span>';
-      return '<span class="pill r">R</span>';
-    }
-    function dot(el, state){ el.className = 'status-dot ' + (state || ''); }
-
-    /** RPC wrapper */
+    /* =======================================================
+     * C) RPC + CLIENT LOG
+     * ======================================================= */
     function rpc(fn, ...args){
       return new Promise((res, rej)=>{
-        google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej(e && e.message ? new Error(e.message) : e))[fn](...args);
+        google.script.run
+          .withSuccessHandler(res)
+          .withFailureHandler(e=>rej(e && e.message ? new Error(e.message) : e))
+          [fn](...args);
       });
     }
-
-    /** Log to Diagnostics sheet via backend */
     function log(level, where, msg, data){
       try { google.script.run.clientLog({ level, where, msg, data, ts: Date.now() }); } catch (_) {}
     }
 
-    /** Preflight: control/template/qr cache */
+    /* =======================================================
+     * D) PREFLIGHT (backend presence, warmups)
+     * ======================================================= */
+    function dot(el, state){ el.className = 'status-dot ' + (state || ''); }
     async function preflight(){
       try {
         const st = await rpc('getControlStatus');
@@ -189,12 +225,14 @@
       els.pfMsg.textContent = 'Preflight checked. Control/Template auto-heal occurs on Admin/Test load.';
     }
 
-    /** Smoke: bundles + link endpoints on mock keys */
+    /* =======================================================
+     * E) SMOKE (mock keys)
+     * ======================================================= */
     async function runSmoke(){
       const cases = [
-        { k:'mock:empty', what:'bundle' },
-        { k:'mock:public_qr_ready', what:'public' },
-        { k:'mock:signup_qr_ready', what:'signup' }
+        { k:'mock:empty',             what:'bundle' },
+        { k:'mock:public_qr_ready',   what:'public' },
+        { k:'mock:signup_qr_ready',   what:'signup' }
       ];
       let ok = true, lines = [];
       for (const c of cases){
@@ -218,7 +256,9 @@
       log(ok ? 'info':'error', 'test.smoke', ok ? 'pass':'fail', { lines });
     }
 
-    /** Self-tests (backend contract checks) */
+    /* =======================================================
+     * F) API CONTRACTS (self-tests)
+     * ======================================================= */
     async function runContracts(){
       els.contractsBadge.textContent = '…';
       els.contractsBadge.className = 'pill';
@@ -245,14 +285,16 @@
       }
     }
 
-    /** ================= SLA runner =================
-     * Poster readiness == verified public QR.
-     * For "with form" variants, we also require verified signup QR.
-     * Image/Text/Both label the UI path; verification condition is identical (strict QR invariant).
-     */
+    /* =======================================================
+     * G) SLA RUNNER (8 scenarios; strict QR invariant)
+     * ======================================================= */
+    function badge(ms){
+      if (ms < THRESH.GREEN_MS) return '<span class="pill g">G</span>';
+      if (ms < THRESH.YELLOW_MS) return '<span class="pill y">Y</span>';
+      return '<span class="pill r">R</span>';
+    }
     function msSince(t0){ return Date.now() - t0; }
     function slaRow(label, ms, ok, extra){
-      const cls = ok ? '' : ' (timeout)';
       return [
         `<div>${label}</div>`,
         `<div><span class="mono">${ms.toLocaleString()} ms</span> ${badge(ms)} ${extra||''}${ok?'':` <span class="pill r">FAIL</span>`}</div>`
@@ -263,6 +305,7 @@
         const r = results[k]; return slaRow(r.label, r.ms, r.ok, r.note || '');
       }).join('');
     }
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
 
     async function waitPublicQr(eventKey, timeoutMs=180000, intervalMs=750){
       const t0 = Date.now();
@@ -283,13 +326,10 @@
       return { ok:false, ms: msSince(t0), error:'timeout_signup_qr' };
     }
 
-    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
-
     async function runSla(useMock){
       const started = Date.now();
       const keyReal = (els.eventKey.value || '').trim();
 
-      // Keys for mock vs real. For real, user can pass one key; both public/signup use the same event.
       const keys = useMock ? {
         public: 'mock:public_qr_ready',
         signup: 'mock:signup_qr_ready'
@@ -300,7 +340,6 @@
 
       const results = {};
 
-      // Helper measuring functions
       async function measureBareNoPoster(){
         const t0 = Date.now();
         const p = await waitPublicQr(keys.public);
@@ -360,7 +399,9 @@
       toast('SLA (8) run complete.');
     }
 
-    /** Toasts */
+    /* =======================================================
+     * H) UI HELPERS (toast + front-only diag)
+     * ======================================================= */
     let toastTimer=null;
     function toast(msg, kind){
       clearTimeout(toastTimer);
@@ -370,8 +411,6 @@
       document.body.appendChild(t);
       toastTimer = setTimeout(()=> t.remove(), 2400);
     }
-
-    /** Diagnostics live tail (front-only marker) */
     function diag(line, level){
       const el = document.createElement('div');
       el.className = 'lvl-' + (level || 'info');
@@ -381,7 +420,9 @@
       while (els.diagBody.childNodes.length > keep) els.diagBody.removeChild(els.diagBody.lastChild);
     }
 
-    // Wire buttons
+    /* =======================================================
+     * I) WIRING & BOOT
+     * ======================================================= */
     els.btnRunSlaMock.addEventListener('click', ()=> runSla(true));
     els.btnSlaReal.addEventListener('click', ()=> runSla(false));
     els.btnRunSmoke.addEventListener('click', runSmoke);
@@ -392,7 +433,6 @@
       toast('Sample log sent to Diagnostics');
     });
 
-    // Boot
     document.addEventListener('DOMContentLoaded', async ()=>{
       try { await preflight(); } catch(_) {}
       diag('Test page loaded', 'info');
