@@ -16,9 +16,7 @@
       </div>
     </header>
 
-    <!-- Control preflight banner:
-         Only shows when the control TEMPLATE is not configured.
-         Backend auto-repairs control workbook itself. -->
+    <!-- Control status banner (only on hard failure; auto-provision is default) -->
     <div id="ctrlBannerMount"></div>
 
     <section aria-labelledby="evt-head">
@@ -121,7 +119,7 @@
   </div>
 
   <script>
-  /* ===== Admin logic (v4.1.1a) ===== */
+  /* ===== Admin logic (v4.1.1a, auto-provision copy) ===== */
   const { rpc, retry, toast, esc } = NUSDK;
 
   const state = {
@@ -168,35 +166,61 @@
     els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
   }
 
+  // Updated: only show banner on hard failure; otherwise stay silent (backend auto-provisions).
   async function preflightControlBanner(){
     try {
       const st = await rpc('getControlStatus');
-      // Only show banner if TEMPLATE is not configured.
-      if (st && !st.templateId) {
-        const bar = document.createElement('div');
-        bar.className = 'pfbar';
-        bar.setAttribute('data-testid','ctrl-banner');
-        bar.innerHTML = `
-          <span class="pfpill pferr">Template missing</span>
-          <span class="pfmsg">Set the “NextUp – control (template)” Spreadsheet ID to enable automated control setup.</span>
-          <div style="display:flex;gap:8px;margin-left:auto;">
-            <button class="pfbtn" data-testid="btn-set-template">Set template…</button>
-            <button class="pfbtn pfhide" title="Hide" data-testid="btn-hide-ctrl-banner">×</button>
-          </div>`;
-        bar.querySelector('[data-testid="btn-set-template"]').onclick = async () => {
-          const id = prompt('Paste the Google Spreadsheet ID for the “NextUp – control (template)”.');
-          if (!id) return;
-          try {
-            const r = await rpc('setControlTemplateId', id.trim());
-            if (r?.ok) { toast('Template saved'); bar.remove(); }
-            else toast.error(r?.error || 'Failed to save template');
-          } catch(e){ toast.error('Template save error'); }
-        };
-        bar.querySelector('[data-testid="btn-hide-ctrl-banner"]').onclick = ()=> bar.remove();
-        els.ctrlMount.replaceChildren(bar);
-      } else {
-        els.ctrlMount.replaceChildren(); // no banner; backend will auto-heal the control
-      }
+      // Healthy path: template present AND control present with no missing tabs.
+      const healthy = !!(st && st.templateId && st.present && (!st.missingTabs || st.missingTabs.length === 0) && !st.err);
+      if (healthy) { els.ctrlMount.replaceChildren(); return; }
+
+      // Try a self-heal silently; only show banner if it still isn’t healthy.
+      try {
+        const healed = await rpc('ensureControlWorkbook');
+        if (healed?.ok) {
+          // Re-check after heal
+          const st2 = await rpc('getControlStatus');
+          const healthy2 = !!(st2 && st2.templateId && st2.present && (!st2.missingTabs || st2.missingTabs.length === 0) && !st2.err);
+          if (healthy2) { els.ctrlMount.replaceChildren(); return; }
+        }
+      } catch (_e) {}
+
+      // Hard failure → show minimal, action-oriented banner
+      const bar = document.createElement('div');
+      bar.className = 'pfbar';
+      bar.setAttribute('data-testid','ctrl-banner');
+      const msg = (st && st.err) ? ('Error: ' + st.err) :
+                  (!st?.templateId ? 'Template unavailable' :
+                   (!st?.present ? 'Control workbook unavailable' :
+                    'Control tabs missing: '+ (st.missingTabs||[]).join(', ')));
+      bar.innerHTML = `
+        <span class="pfpill pferr">Control issue</span>
+        <span class="pfmsg">${esc(msg)}</span>
+        <div style="display:flex;gap:8px;margin-left:auto;">
+          <button class="pfbtn" data-testid="btn-repair">Repair now</button>
+          <button class="pfbtn pfhide" title="Hide" data-testid="btn-hide-ctrl-banner">×</button>
+        </div>
+        <div class="pfdetails">
+          <div class="pfrow"><span class="pfpill ${st?.templateId ? 'pfok':'pferr'}">Template ${st?.templateId ? 'configured':'missing'}</span></div>
+          <div class="pfrow"><span class="pfpill ${st?.present && (!st.missingTabs || st.missingTabs.length===0) ? 'pfok':'pferr'}">
+            Control ${st?.present ? (st.missingTabs && st.missingTabs.length ? 'incomplete' : 'ready') : 'missing'}</span>
+          </div>
+        </div>
+      `;
+      bar.querySelector('[data-testid="btn-repair"]').onclick = async () => {
+        try {
+          const r = await rpc('ensureControlWorkbook');
+          if (r?.ok) {
+            toast('Control repaired');
+            els.ctrlMount.replaceChildren();
+            await loadEvents();
+          } else {
+            toast.error(r?.error || 'Repair failed');
+          }
+        } catch(e){ toast.error('Repair error'); log('repair: '+(e.message||e),'error'); }
+      };
+      bar.querySelector('[data-testid="btn-hide-ctrl-banner"]').onclick = ()=> bar.remove();
+      els.ctrlMount.replaceChildren(bar);
     } catch (e) {
       log('Control preflight failed: ' + (e.message || e), 'warn');
     }
@@ -231,8 +255,6 @@
     els.slug.value = ev.slug || '';
     els.date.value = ev.startDateISO || '';
     els.name.value = ev.name || '';
-    // Load admin settings (from properties) via bundle call:
-    // We rely on UI controls to reflect saved state on Save; for simplicity keep defaults until saved in this session.
   }
 
   async function saveSettings(){
@@ -270,24 +292,6 @@
     window.open(`?p=display&event=${encodeURIComponent(ev.slug||ev.id)}`, '_blank');
   }
 
-  async function createEvent(){
-    const ev = findCurrent(); if (!ev) return toast.error('Pick an event first');
-    try{
-      const payload = {
-        id: ev.id, slug: ev.slug, name: ev.name, dateISO: ev.startDateISO,
-        includeSignup: !!els.chkSignup.checked
-      };
-      const r = await rpc('createEventFromControl', payload);
-      if (!r?.ok) throw new Error(r?.error || 'create failed');
-      toast(r.created ? 'Event workbook created' : 'Event workbook ready');
-      log('createEventFromControl ok: ' + JSON.stringify({ id:r.eventId, book:r.eventBookId }));
-      await refreshLinkStatus();
-    } catch(e){
-      toast.error('Create failed');
-      log('createEvent: ' + (e.message || e), 'error');
-    }
-  }
-
   function renderLinkRow(label, status, url, verifyAction){
     // status: 'absent' (red), 'url' (yellow), 'qr' (green)
     const badge = status === 'qr' ? '<span class="pfpill pfok">Verified QR</span>'
@@ -309,7 +313,7 @@
     const ev = findCurrent(); if (!ev) return;
     try{
       const [sSignup, sPublic] = await Promise.all([
-        rpc('getSignupQr', ev.id),  // use id to match property keys
+        rpc('getSignupQr', ev.id),  // use id to align with property keys
         rpc('getShareQr', ev.id)
       ]);
       const rows = [];
@@ -328,7 +332,7 @@
         rows.push(renderLinkRow('Public', 'absent', '', ''));
       }
       els.linkTbody.innerHTML = rows.join('');
-      // Wire verify buttons (explicit verification step)
+      // Wire verify buttons
       els.linkTbody.querySelectorAll('button[data-action]').forEach(btn=>{
         btn.onclick = async () => {
           const act = btn.getAttribute('data-action');
@@ -356,7 +360,23 @@
   els.btnOpenPoster.onclick = openPoster;
   els.btnOpenPublic.onclick = openPublic;
   els.btnOpenDisplay.onclick = openDisplay;
-  els.btnCreate.onclick = createEvent;
+  els.btnCreate.onclick = async ()=>{
+    const ev = findCurrent(); if (!ev) return toast.error('Pick an event first');
+    try{
+      const payload = {
+        id: ev.id, slug: ev.slug, name: ev.name, dateISO: ev.startDateISO,
+        includeSignup: !!els.chkSignup.checked
+      };
+      const r = await rpc('createEventFromControl', payload);
+      if (!r?.ok) throw new Error(r?.error || 'create failed');
+      toast(r.created ? 'Event workbook created' : 'Event workbook ready');
+      log('createEventFromControl ok: ' + JSON.stringify({ id:r.eventId, book:r.eventBookId }));
+      await refreshLinkStatus();
+    } catch(e){
+      toast.error('Create failed');
+      log('createEvent: ' + (e.message || e), 'error');
+    }
+  };
   els.btnRefresh.onclick = async ()=>{ await loadEvents(); };
   els.choose.onchange = async (e)=>{ state.currentId = e.target.value; populateEventMeta(); await refreshLinkStatus(); };
   els.btnClearLogs.onclick = ()=> els.diagBody.replaceChildren();
@@ -364,7 +384,7 @@
 
   document.addEventListener('DOMContentLoaded', async ()=>{
     setDiagExpanded(false);
-    await preflightControlBanner();
+    await preflightControlBanner(); // usually silent; banner only on hard failure
     await loadEvents();
     toast('Admin ready');
   });
