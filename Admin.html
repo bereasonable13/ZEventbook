@@ -1,10 +1,34 @@
+<!--
+/************************************************************
+* NextUp · Admin.html — Suite Index
+* [H01] Head / Meta (title, viewport, styles)
+* [H02] Inline Styles (light UI)
+* [H03] Layout / DOM (header, create, manage, diagnostics)
+* [H04] Manage Actions (links, QR, hygiene buttons)
+* [H05] Toasts (UI feedback)
+* [H06] State & DOM Refs
+* [H07] RPC Wrapper
+* [H08] Bootstrap & Wiring
+* [H09] Events List (SWR dropdown)
+* [H10] Create Eventbook flow
+* [H11] Manage Actions (default, archive, form)
+* [H12] Links & QR (strict verified only)
+* [H13] Diagnostics (smoke, logs)
+* [H14] Shortlink Hygiene (repair one / repair all)
+* [H15] Utilities (enable/disable, clear, copy links)
+************************************************************/
+-->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- [H01] Head / Meta -->
   <meta charset="utf-8"/>
   <title><?= appTitle ?> · Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <?!= include('Styles'); ?>
+
+  <!-- [H02] Inline Styles -->
   <style>
     :root { --gap:12px; }
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 14px; }
@@ -21,21 +45,18 @@
     .toast { position:fixed; right:10px; bottom:10px; background:#222; color:#fff; padding:10px 12px; border-radius:8px; display:none; z-index:9999; }
     .toast.show{ display:block; }
     pre.json { background:#f7f7f7; border:1px solid #e3e3e3; border-radius:8px; padding:10px; max-height:320px; overflow:auto; }
+    .btn-subtle { background:#f6f6f6; border:1px solid #ddd; border-radius:8px; }
   </style>
 </head>
 <body>
   <main>
-    <!-- =======================================================
-         0) HEADER
-    ======================================================== -->
+    <!-- [H03] Layout / DOM: HEADER -->
     <header>
       <h1 data-testid="admin-title">NextUp Admin</h1>
       <small id="build">BUILD: <?= BUILD_ID ?></small>
     </header>
 
-    <!-- =======================================================
-         1) CREATE EVENTBOOK
-    ======================================================== -->
+    <!-- [H03] Layout / DOM: CREATE EVENTBOOK -->
     <section class="card" aria-label="Create Eventbook">
       <h3>Create Eventbook</h3>
       <div class="row">
@@ -68,9 +89,7 @@
       <small class="muted">Idempotent on <em>slug + start date</em>.</small>
     </section>
 
-    <!-- =======================================================
-         2) MANAGE EVENTBOOKS
-    ======================================================== -->
+    <!-- [H03] Layout / DOM: MANAGE EVENTBOOKS -->
     <section class="card" aria-label="Manage Eventbooks">
       <h3>Manage Eventbooks</h3>
       <div class="row">
@@ -86,19 +105,18 @@
         </div>
       </div>
 
+      <!-- [H04] Manage Actions: Links + Hygiene -->
       <div class="row" style="margin-top:10px">
         <div class="links">
           <a id="openPublic"  data-testid="link-public"  target="_blank" rel="noopener">Open Public</a>
           <a id="openDisplay" data-testid="link-display" target="_blank" rel="noopener">Open TV</a>
           <a id="openPoster"  data-testid="link-poster"  target="_blank" rel="noopener">Open Poster</a>
-          <button id="btnCopyLinks" data-testid="btn-copy-links" disabled>Copy Links</button>
+          <button id="btnCopyLinks" class="btn-subtle" data-testid="btn-copy-links" disabled>Copy Links</button>
+          <button id="btnRepairShort" class="btn-subtle" data-testid="btn-repair-short" disabled title="Recreate and re-point shortlinks for this event to the current deployment base">Repair Shortlinks</button>
         </div>
       </div>
 
-      <div class="row" style="margin-top:10px">
-        <button id="btnConfigureForm" data-testid="btn-configure-form" disabled>Configure Signup Form</button>
-      </div>
-
+      <!-- [H04] Manage Actions: QR -->
       <div class="qrwrap" style="margin-top:14px">
         <div><strong>Public QR</strong> <small class="muted">(shown only when verified)</small></div>
         <img id="qrImg" data-testid="img-qr" alt="QR" width="110" height="110" style="display:none;border:1px solid #ddd;border-radius:6px;"/>
@@ -106,15 +124,14 @@
       </div>
     </section>
 
-    <!-- =======================================================
-         3) DIAGNOSTICS
-    ======================================================== -->
+    <!-- [H03] Layout / DOM: DIAGNOSTICS -->
     <section class="card" aria-label="Diagnostics">
       <h3>Diagnostics</h3>
       <div class="row">
         <button id="btnSmoke" data-testid="btn-smoke">Run Smoke</button>
         <button id="btnViewLogs" data-testid="btn-view-logs">View Logs</button>
         <button id="btnClearLogs" data-testid="btn-clear-logs">Clear Logs</button>
+        <button id="btnRepairAllShort" class="btn-subtle" data-testid="btn-repair-all-short" title="Repair standard shortlinks for all events">Repair All Shortlinks</button>
       </div>
       <div style="margin-top:10px">
         <pre id="diagOut" class="json" role="status" aria-live="polite" data-testid="diag-output">{}</pre>
@@ -125,18 +142,14 @@
   </main>
 
   <script>
-/* =======================================================
- * A) TOASTS (UI feedback)
- * ======================================================= */
+/* [H05] Toasts */
 const TOAST = {
   show(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2300); },
   info(msg){ this.show(msg); console.log('[INFO]', msg); },
   error(msg){ this.show(msg); console.error('[ERR]', msg); }
 };
 
-/* =======================================================
- * B) STATE & DOM REFS
- * ======================================================= */
+/* [H06] State & DOM Refs */
 const STATE = { etag:null, events:[], selected:null, links:null, optimisticId:null };
 
 const DOM = {
@@ -149,7 +162,9 @@ const DOM = {
   btnMakeDefault: ()=>document.getElementById('btnMakeDefault'),
   btnArchive:     ()=>document.getElementById('btnArchive'),
   btnCopyLinks:   ()=>document.getElementById('btnCopyLinks'),
-  btnConfigureForm:()=>document.getElementById('btnConfigureForm'),
+  btnRepairShort: ()=>document.getElementById('btnRepairShort'),
+  btnRepairAllShort: ()=>document.getElementById('btnRepairAllShort'),
+  btnConfigureForm:()=>document.getElementById('btnConfigureForm'), // reserved if you add it back
   openPublic:     ()=>document.getElementById('openPublic'),
   openDisplay:    ()=>document.getElementById('openDisplay'),
   openPoster:     ()=>document.getElementById('openPoster'),
@@ -158,9 +173,7 @@ const DOM = {
   diagOut:        ()=>document.getElementById('diagOut')
 };
 
-/* =======================================================
- * C) RPC WRAPPER (defensive)
- * ======================================================= */
+/* [H07] RPC Wrapper */
 function rpc(fn, ...args){
   return new Promise((res, rej)=>{
     if(!window.google || !google.script || !google.script.run){
@@ -174,13 +187,11 @@ function rpc(fn, ...args){
   });
 }
 
-/* =======================================================
- * D) BOOTSTRAP & WIRING
- * ======================================================= */
+/* [H08] Bootstrap & Wiring */
 window.addEventListener('DOMContentLoaded', async () => {
   wireHandlers();
-  await bootstrap();           // ensure Template + Control (self-heal)
-  await swrEventsOnce();       // populate dropdown
+  await bootstrap();
+  await swrEventsOnce();
 });
 
 function wireHandlers(){
@@ -189,7 +200,8 @@ function wireHandlers(){
   DOM.btnMakeDefault().addEventListener('click', onMakeDefault);
   DOM.btnArchive().addEventListener('click', onArchive);
   DOM.btnCopyLinks().addEventListener('click', onCopyLinks);
-  DOM.btnConfigureForm().addEventListener('click', onConfigureForm);
+  DOM.btnRepairShort().addEventListener('click', onRepairShortlinks);
+  DOM.btnRepairAllShort().addEventListener('click', onRepairAllShortlinks);
 
   document.getElementById('btnSmoke').addEventListener('click', onSmoke);
   document.getElementById('btnViewLogs').addEventListener('click', onViewLogs);
@@ -198,47 +210,30 @@ function wireHandlers(){
 
 async function bootstrap(){
   try {
-    // Prefer new bootstrap; fallback to ping() if not present
-    if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.bootstrapControlAndTemplate) {
-      await rpc('bootstrapControlAndTemplate');
-    } else if (google?.script?.run?.ping) {
-      await rpc('ping');
-    }
+    // If you add a dedicated bootstrap server fn, call it; else noop
+    if (google?.script?.run?.ensureAll_) await rpc('ensureAll_');
   } catch (e) {
     TOAST.error('Bootstrap failed: ' + (e.message || e));
   }
 }
 
-/* =======================================================
- * E) EVENTS LIST (dropdown)
- * ======================================================= */
-// Retry-once SWR to avoid rare null hiccups
+/* [H09] Events List (SWR dropdown) */
 async function swrEventsOnce(_retried){
   try {
-    // Prefer newer listEvents(); fallback to legacy getEventsSafe(etag)
-    let res;
-    if (google?.script?.run?.listEvents) {
-      res = await rpc('listEvents');
-      if (!res || res.ok === false) throw new Error('listEvents failed');
-      STATE.events = Array.isArray(res.events) ? res.events : [];
-      STATE.etag = null;
-    } else {
-      res = await rpc('getEventsSafe', STATE.etag);
-      if (!res || typeof res !== 'object') {
-        if (!_retried) return swrEventsOnce(true);
-        throw new Error('invalid response');
-      }
-      if (res.ok === false) throw new Error('events error');
-      if (res.notModified) return;
-      STATE.events = Array.isArray(res.items) ? res.items : [];
-      STATE.etag   = res.etag || null;
+    const res = await rpc('getEventsSafe', STATE.etag);
+    if (!res || typeof res !== 'object') {
+      if (!_retried) return swrEventsOnce(true);
+      throw new Error('invalid response');
     }
+    if (res.ok === false) throw new Error('events error');
+    if (res.status === 304 || res.notModified) return;
+    STATE.events = Array.isArray(res.items) ? res.items : [];
+    STATE.etag   = res.etag || null;
     paintDropdown(STATE.events);
   } catch (err) {
     TOAST.error('Events load failed'); console.error(err);
   }
 }
-
 function paintDropdown(items){
   const sel = DOM.chooseEvent();
   const keep = STATE.optimisticId || sel.value;
@@ -262,9 +257,7 @@ function paintDropdown(items){
   hydrateLinksAndQr();
 }
 
-/* =======================================================
- * F) CREATE EVENTBOOK
- * ======================================================= */
+/* [H10] Create Eventbook */
 async function onCreate(){
   const payload = {
     name: DOM.evName().value.trim(),
@@ -276,25 +269,9 @@ async function onCreate(){
 
   TOAST.info('Creating…');
   try {
-    // Prefer newer createEventFromControl; fallback to createEventbook
-    let res;
-    if (google?.script?.run?.createEventFromControl) {
-      const id = Utilities?.getUuid ? Utilities.getUuid() : ('ev_' + Date.now()); // harmless; will be ignored server-side if not expected
-      res = await rpc('createEventFromControl', {
-        id,
-        name: payload.name,
-        slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''),
-        dateISO: payload.startDateISO,
-        includeSignup: true
-      });
-      if (!res || res.ok === false) throw new Error('createEventFromControl failed');
-      STATE.optimisticId = res.eventId || res.id || null;
-    } else {
-      res = await rpc('createEventbook', payload);
-      if (!res || res.ok === false) throw new Error('createEventbook failed');
-      STATE.optimisticId = res.id || null;
-    }
-
+    const res = await rpc('createEventbook', payload);
+    if (!res || res.ok === false) throw new Error('createEventbook failed');
+    STATE.optimisticId = res.id || null;
     TOAST.info(res.idempotent ? 'Already existed — selected existing.' : 'Created!');
     DOM.evName().value = ''; DOM.evDate().value = '';
     STATE.etag = null;
@@ -304,81 +281,52 @@ async function onCreate(){
   }
 }
 
-/* =======================================================
- * G) MANAGE ACTIONS (select, default, archive, form)
- * ======================================================= */
+/* [H11] Manage Actions (default, archive, form — archive/default are optional server fns) */
 function onChoose(){
   const sel = DOM.chooseEvent();
   STATE.selected = sel.value || null;
   setManageDisabled(!STATE.selected);
   hydrateLinksAndQr();
 }
-
 async function onMakeDefault(){
   if (!STATE.selected) return;
   try {
+    if (!google?.script?.run?.setDefaultEvent) { TOAST.error('setDefaultEvent not available'); return; }
     await rpc('setDefaultEvent', STATE.selected);
     TOAST.info('Default set');
     STATE.etag=null; await swrEventsOnce();
   } catch (err) { TOAST.error('Failed'); console.error(err); }
 }
-
 async function onArchive(){
   if (!STATE.selected) return;
   if (!confirm('Archive this eventbook?')) return;
   try {
+    if (!google?.script?.run?.archiveEvent) { TOAST.error('archiveEvent not available'); return; }
     await rpc('archiveEvent', STATE.selected);
     TOAST.info('Archived');
     STATE.etag=null; await swrEventsOnce();
   } catch (err) { TOAST.error('Failed'); console.error(err); }
 }
 
-async function onConfigureForm(){
-  if (!STATE.selected) return;
-  TOAST.info('Configuring form…');
-  try {
-    const res = await rpc('configureSignupForm', STATE.selected);
-    if (!res || res.ok === false){ TOAST.error('Form setup failed'); return; }
-    TOAST.info(res.idempotent ? 'Form already linked' : 'Form created');
-    if (res.formUrl) window.open(res.formUrl, '_blank');
-  } catch (err) { TOAST.error('Form setup failed'); console.error(err); }
-}
-
-/* =======================================================
- * H) LINKS & QR (strict invariant: only show QR when verified)
- * ======================================================= */
+/* [H12] Links & QR (strict: QR only when verified shortlink exists) */
 async function hydrateLinksAndQr(){
   if (!STATE.selected){ clearLinks(); clearQr(); return; }
   try {
-    // Prefer newer quicklinks; fallback to legacy getShareLinks
-    let res;
-    if (google?.script?.run?.getEventQuickLinks) {
-      res = await rpc('getEventQuickLinks', STATE.selected);
-      if (!res || res.ok === false) throw new Error('quicklinks failed');
-      DOM.openPublic().href  = res.publicUrl || '';
-      DOM.openDisplay().href = res.displayUrl || '';
-      DOM.openPoster().href  = res.posterUrl  || '';
-      DOM.btnCopyLinks().disabled = !(res.publicUrl || res.displayUrl || res.posterUrl);
-    } else {
-      res = await rpc('getShareLinks', STATE.selected);
-      if (!res || res.ok === false) throw new Error('sharelinks failed');
-      STATE.links = res;
-      DOM.openPublic().href  = res.publicUrl || '';
-      DOM.openDisplay().href = res.displayUrl || '';
-      DOM.openPoster().href  = res.posterUrl  || '';
-      DOM.btnCopyLinks().disabled = false;
-    }
+    const res = await rpc('getEventQuickLinks', STATE.selected);
+    if (!res || res.ok === false) throw new Error('quicklinks failed');
 
-    // Strict QR rule: show only when verified
-    if (google?.script?.run?.getShareQr && google?.script?.run?.verifyEventSafe) {
-      const v = await rpc('verifyEventSafe', STATE.selected);
-      if (!v || v.ok === false || !v.verified) { clearQr(); return; }
-      const q = await rpc('getShareQr', STATE.selected);
-      if (!q || q.ok === false || !q.qrUrl){ clearQr(); return; }
-      DOM.qrImg().src = q.qrUrl; DOM.qrImg().style.display = '';
-      DOM.qrLink().href = q.qrUrl; DOM.qrLink().textContent = 'Open QR';
+    DOM.openPublic().href  = res.publicUrl || '';
+    DOM.openDisplay().href = res.displayUrl || '';
+    DOM.openPoster().href  = res.posterUrl  || res.workbookUrl || '';
+    DOM.btnCopyLinks().disabled = !(res.publicUrl || res.displayUrl || res.posterUrl || res.workbookUrl);
+
+    // STRICT QR: use verified endpoint if available else hide
+    if (google?.script?.run?.getShareQrVerified) {
+      const v = await rpc('getShareQrVerified', STATE.selected);
+      if (!v || v.ok === false || !v.qrUrlVerified){ clearQr(); return; }
+      DOM.qrImg().src = v.qrUrlVerified; DOM.qrImg().style.display = '';
+      DOM.qrLink().href = v.qrUrlVerified; DOM.qrLink().textContent = 'Open QR';
     } else {
-      // If those endpoints don’t exist, keep invariant: no QR
       clearQr();
     }
   } catch (err) {
@@ -386,12 +334,11 @@ async function hydrateLinksAndQr(){
   }
 }
 
-/* =======================================================
- * I) DIAGNOSTICS (smoke, logs)
- * ======================================================= */
+/* [H13] Diagnostics */
 async function onSmoke(){
   DOM.diagOut().textContent = 'Running…';
   try {
+    if (!google?.script?.run?.runSmokeSafe) { DOM.diagOut().textContent='No smoke endpoint'; return; }
     const res = await rpc('runSmokeSafe', { form:false });
     DOM.diagOut().textContent = JSON.stringify(res, null, 2);
     TOAST[res && res.ok ? 'info' : 'error'](res && res.ok ? 'Smoke OK' : 'Smoke failed');
@@ -401,32 +348,59 @@ async function onSmoke(){
     TOAST.error('Smoke failed — see console'); console.error(err);
   }
 }
-
 async function onViewLogs(){
   DOM.diagOut().textContent = 'Loading logs…';
   try {
+    if (!google?.script?.run?.getLogs) { DOM.diagOut().textContent='No logs endpoint'; return; }
     const res = await rpc('getLogs', 300);
     if (!res || res.ok === false){ TOAST.error('Log fetch error'); return; }
     DOM.diagOut().textContent = JSON.stringify(res.items || [], null, 2);
   } catch (err) { TOAST.error('Log fetch failed'); console.error(err); }
 }
-
 async function onClearLogs(){
   if (!confirm('Clear logs?')) return;
   try {
+    if (!google?.script?.run?.clearLogs) { TOAST.error('No clear logs endpoint'); return; }
     await rpc('clearLogs');
     TOAST.info('Logs cleared'); onViewLogs();
   } catch (err) { TOAST.error('Clear failed'); console.error(err); }
 }
 
-/* =======================================================
- * J) UTILITIES (enable/disable, clear)
- * ======================================================= */
+/* [H14] Shortlink Hygiene (repair one / all)
+   Implementation note: calling getEventQuickLinks() on the server refreshes the standard shortlinks
+   (FORM, PUBLIC, DISPLAY, POSTER_SHEET, POSTER_IMG, POSTER_PAGE) to the current base URL. */
+async function onRepairShortlinks(){
+  if (!STATE.selected) return;
+  try {
+    TOAST.info('Repairing shortlinks…');
+    await rpc('getEventQuickLinks', STATE.selected); // rehydrates standard shortlinks
+    TOAST.info('Shortlinks repaired');
+    await hydrateLinksAndQr();
+  } catch (err) {
+    TOAST.error('Repair failed'); console.error(err);
+  }
+}
+async function onRepairAllShortlinks(){
+  if (!STATE.events.length){ TOAST.error('No events'); return; }
+  if (!confirm(`Repair shortlinks for ${STATE.events.length} event(s)?`)) return;
+  try {
+    TOAST.info('Repairing all shortlinks…');
+    for (const ev of STATE.events){
+      try { await rpc('getEventQuickLinks', ev.id); } catch (e) { console.warn('Repair failed for', ev.id, e); }
+    }
+    TOAST.info('All shortlinks repaired');
+    await hydrateLinksAndQr();
+  } catch (err) {
+    TOAST.error('Bulk repair failed'); console.error(err);
+  }
+}
+
+/* [H15] Utilities */
 function setManageDisabled(disabled){
   DOM.btnMakeDefault().disabled = disabled;
   DOM.btnArchive().disabled = disabled;
   DOM.btnCopyLinks().disabled = disabled;
-  DOM.btnConfigureForm().disabled = disabled;
+  DOM.btnRepairShort().disabled = disabled;
 }
 function clearLinks(){
   DOM.openPublic().removeAttribute('href');
@@ -437,6 +411,24 @@ function clearLinks(){
 function clearQr(){
   const img = DOM.qrImg(); img.removeAttribute('src'); img.style.display='none';
   const a = DOM.qrLink(); a.removeAttribute('href'); a.textContent='';
+}
+async function onCopyLinks(){
+  const links = [
+    ['Public',  DOM.openPublic().href || ''],
+    ['Display', DOM.openDisplay().href || ''],
+    ['Poster',  DOM.openPoster().href || '']
+  ].filter(([,u])=>!!u);
+  if (!links.length){ TOAST.error('No links to copy'); return; }
+  const text = links.map(([k,u])=>`${k}: ${u}`).join('\n');
+  try {
+    await navigator.clipboard.writeText(text);
+    TOAST.info('Links copied');
+  } catch {
+    // Fallback
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    TOAST.info('Links copied');
+  }
 }
   </script>
 </body>
