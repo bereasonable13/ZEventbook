@@ -1,12 +1,24 @@
 <style>
-/* =========================================================
-   NextUp v4.1.1b · Global Styles (dark-first + toast at top)
-   - Default theme is DARK. Light mode provided via media query.
-   - Toast appears near the top; tweak --toast-top as needed.
-   - Test-only LED styles still live in Test.html
-   =======================================================*/
+/************************************************************
+* NextUp v4.1.1b · Global Styles — Suite Index
+* [C01] Design Tokens (dark default) + light override
+* [C02] Resets & Base
+* [C03] Sections & Layout Helpers
+* [C04] Tables
+* [C05] Badges, Buttons, Pills
+* [C06] Diagnostics
+* [C07] Poster / QR Blocks
+* [C08] Preflight bar
+* [C09] Toast (TOP position)
+* [C10] Spinner
+* [C11] Display (TV) mode
+* [C12] Small screens
+* [C13] Print
+************************************************************/
 
-/* -------------------- 1) Design Tokens (DARK DEFAULT) -------------------- */
+/* =========================================================
+   [C01] Design Tokens (DARK DEFAULT) + light override
+   =======================================================*/
 :root{
   /* Layout + type scale */
   --container-w:980px;
@@ -57,7 +69,9 @@
   }
 }
 
-/* -------------------- 2) Resets & Base -------------------- */
+/* =========================================================
+   [C02] Resets & Base
+   =======================================================*/
 *{ box-sizing:border-box; }
 
 html,body{
@@ -82,7 +96,18 @@ header .meta{
 }
 small#build{ color:var(--muted); display:block; margin-top:.25rem; }
 
-/* -------------------- 3) Sections & Layout Helpers -------------------- */
+/* Links (small a11y boost) */
+a{ color: var(--brand); text-decoration: none; }
+a:hover{ text-decoration: underline; }
+a:focus-visible, .btn:focus-visible{
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* =========================================================
+   [C03] Sections & Layout Helpers
+   =======================================================*/
 section{
   background:var(--card);
   border:1px solid var(--line);
@@ -113,7 +138,9 @@ section{
   font:inherit; background:#0f141b; color:var(--fg);
 }
 
-/* -------------------- 4) Tables -------------------- */
+/* =========================================================
+   [C04] Tables
+   =======================================================*/
 .table{ width:100%; border-collapse:separate; border-spacing:0; }
 .table thead th{
   text-align:left; font-weight:700; color:var(--fg);
@@ -122,7 +149,9 @@ section{
 }
 .table tbody td{ padding:8px 10px; border-bottom:1px solid var(--line); color:var(--fg); }
 
-/* -------------------- 5) Badges, Buttons, Pills -------------------- */
+/* =========================================================
+   [C05] Badges, Buttons, Pills
+   =======================================================*/
 .badge{
   display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700;
   border:1px solid var(--line); background:#1a2332; color:#a9c3ff;
@@ -142,7 +171,9 @@ label[for="chooseEvent"][data-sync="syncing"]::after{
   content:" ⟳ syncing…"; color:var(--muted); font-weight:400;
 }
 
-/* -------------------- 6) Diagnostics -------------------- */
+/* =========================================================
+   [C06] Diagnostics
+   =======================================================*/
 .diag.collapsed .diag-body{ display:none; }
 .diag-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
 .diag-actions{ display:flex; align-items:center; gap:8px; }
@@ -156,14 +187,18 @@ label[for="chooseEvent"][data-sync="syncing"]::after{
 .diag-body .lvl-warn{ color:#ffd66b; }
 .diag-body .lvl-error{ color:#ff9b9b; }
 
-/* -------------------- 7) Poster / QR Blocks -------------------- */
+/* =========================================================
+   [C07] Poster / QR Blocks
+   =======================================================*/
 .poster h1{ font-size:1.6rem; }
 .qrgrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
 .qrbox{ border:1px solid var(--line); border-radius:8px; padding:12px; background:var(--card); }
 .qrbox img{ display:block; width:100%; height:auto; }
 .qr-fallback{ font-size:.9rem; word-break:break-all; color:var(--fg); }
 
-/* -------------------- 8) Preflight bar -------------------- */
+/* =========================================================
+   [C08] Preflight bar
+   =======================================================*/
 .pfbar{
   position:sticky; top:0; z-index:9999; background:var(--card);
   border-bottom:1px solid var(--line); padding:8px 12px;
@@ -180,7 +215,9 @@ label[for="chooseEvent"][data-sync="syncing"]::after{
 .pfrow{ display:flex; gap:8px; align-items:center; padding:4px 0; }
 .pfrow .pfmsg{ color:#cbd5e1; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.9rem; }
 
-/* -------------------- 9) Toast (TOP position) -------------------- */
+/* =========================================================
+   [C09] Toast (TOP position)
+   =======================================================*/
 .toast{
   position:fixed;
   left:50%;
@@ -189,11 +226,15 @@ label[for="chooseEvent"][data-sync="syncing"]::after{
   background:#0b0f14; color:#fff; border-radius:12px; padding:10px 14px; font-weight:600;
   box-shadow:0 10px 30px rgba(0,0,0,.45); z-index:9998; max-width:92vw;
   border:1px solid #263243;
+  display:none;           /* ensure hidden by default */
 }
+.toast.show{ display:block; }    /* ← JS toggles this */
 .toast.warn{ background:#3b2d09; color:#ffd66b; }
 .toast.error{ background:#3a1414; color:#ff9b9b; }
 
-/* -------------------- 10) Spinner -------------------- */
+/* =========================================================
+   [C10] Spinner
+   =======================================================*/
 .spinner{
   width:22px; height:22px; border-radius:50%;
   border:3px solid var(--spin-track); border-top-color:var(--spin-head);
@@ -207,7 +248,9 @@ label[for="chooseEvent"][data-sync="syncing"]::after{
   .spinner{ animation:none; }
 }
 
-/* -------------------- 11) Display (TV) mode -------------------- */
+/* =========================================================
+   [C11] Display (TV) mode
+   =======================================================*/
 body[data-tv="1"] .container{ max-width:var(--container-w-tv); }
 body[data-tv="1"] h1{ font-size:2.2rem; }
 body[data-tv="1"] h2{ font-size:1.35rem; }
@@ -215,14 +258,18 @@ body[data-tv="1"] .table thead th,
 body[data-tv="1"] .table tbody td{ padding:10px 12px; }
 body[data-tv="1"] .badge{ transform:scale(1.05); transform-origin:left center; }
 
-/* -------------------- 12) Small screens -------------------- */
+/* =========================================================
+   [C12] Small screens
+   =======================================================*/
 @media (max-width:640px){
   .form-grid{ grid-template-columns:1fr; }
   .container{ padding:12px; }
   .qrgrid{ grid-template-columns:1fr; }
 }
 
-/* -------------------- 13) Print -------------------- */
+/* =========================================================
+   [C13] Print
+   =======================================================*/
 @media print{
   header,.actions,.diag,.toast,.pfbar{ display:none !important; }
   section{ border:none; padding:0; }
