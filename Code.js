@@ -1,4 +1,29 @@
 /************************************************************
+* NextUp · Code.gs — Suite Index (jump anchors in brackets)
+* [S01] Optional Config (base URLs, IDs, CFG_KEYS/PROP)
+* [S02] Client Logging (DIAG)
+* [S03] Config Helpers (cfgGet_/Set_, base URLs, IDs)
+* [S04] Self-Healing Bootstrap (strict Control + Events hdr)
+* [S05] Model / Router (IDX, TABS, doGet, include)
+* [S06] Events Index (ETag + SWR)  ← getEventsSafe()
+* [S07] Eventbook Creation (idempotent)  ← createEventbook
+* [S08] Form Linking & Imports
+* [S09] Quick Links / Shortlinks / QR (verified only)
+* [S10] Bundles (Display/Public/Poster)
+* [S11] Confidence / Visibility (WILL-NOT-SHOW-UNTIL-ACTIVE)
+* [S12] URL Builders & Cache
+* [S13] Data Utils (ensureWorkbook_, worker, kv, header_)
+* [S14] Debug Helpers (NU_Debug_…)
+* [S15] Template Helpers (tplEnsure…)
+*
+* Public endpoints used by UI/Admin:
+* - doGet, getEventsSafe, createEventbook (also: createEventV2/createEvent)
+* - setEventFormId, importSignupsCsv, importSignupsFromSheet
+* - getEventQuickLinks, getDisplayBundle, getPublicBundle, getPosterBundle
+* - getConfidenceState, getShareQrVerified
+************************************************************/
+
+/************************************************************
 * NextUp v4.1.1 — Code.gs (Eventbooks-first + Confidence Gate)
 * - WILL-NOT-SHOW-UNTIL-ACTIVE gating (never show QR unless verified)
 * - Strict Control bootstrap (self-heal, exact Events A–N header)
@@ -7,10 +32,10 @@
 * - Shortlinks + poster/meta wiring intact
 ************************************************************/
 
+// [S01] Optional Config (base URLs, IDs, CFG_KEYS/PROP)
 const BUILD_ID = 'nextup-v4.1.1-eventbooks-confidence';
 const CONTROL_TITLE = 'NextUp - Control';
 
-/** ---------- 1) OPTIONAL CONFIG (used if provided; otherwise self-healing fills in) ---------- */
 const ORG_BASE_URL    = 'https://script.google.com/macros/s/ORG_DEPLOYMENT_ID/exec';
 const PUBLIC_BASE_URL = 'https://script.google.com/macros/s/PUBLIC_DEPLOYMENT_ID/exec';
 
@@ -26,7 +51,13 @@ const CFG_KEYS = {
   PUB_URL:    'NU_PUBLIC_BASE_URL'
 };
 
-/** ---------- 2) CLIENT LOGGING ---------- */
+const PROP = {
+  EVENTS_ETAG: 'NU_EVENTS_ETAG'
+};
+
+/************************************************************
+* [S02] Client Logging (DIAG)
+************************************************************/
 function clientLog(entry) {
   try {
     const e = entry || {};
@@ -60,7 +91,9 @@ const DIAG = {
   }
 };
 
-/** ---------- 3) CONFIG HELPERS ---------- */
+/************************************************************
+* [S03] Config Helpers (cfgGet_/Set_, base URLs, IDs)
+************************************************************/
 function cfgGet_(k, fallbackConst) {
   const props = PropertiesService.getScriptProperties();
   const v = props.getProperty(k);
@@ -80,7 +113,9 @@ function cfgControlId_(){ return ensureControlWorkbook_(); }
 function cfgTemplateId_(){ return ensureEventTemplate_(); }
 function cfgEventsFolderId_(){ return ensureEventsFolder_(); }
 
-/** ---------- 4) SELF-HEALING BOOTSTRAP (strict & idempotent) ---------- */
+/************************************************************
+* [S04] Self-Healing Bootstrap (strict & idempotent)
+************************************************************/
 function ensureAll_() {
   const control = ensureControlStrictOnBoot();
   ensureEventsHeaders_(control.id);
@@ -259,7 +294,9 @@ function ensureBaseUrls_(){
   if (!cfgGet_(CFG_KEYS.PUB_URL, PUBLIC_BASE_URL)) cfgSet_(CFG_KEYS.PUB_URL, ScriptApp.getService().getUrl());
 }
 
-/** ---------- 5) MODEL / ROUTER ---------- */
+/************************************************************
+* [S05] Model / Router (IDX, TABS, doGet, include)
+************************************************************/
 const EVENTS_SHEET = 'Events';
 const IDX = { id:0, name:1, slug:2, startDateISO:3, ssId:4, ssUrl:5, formId:6, tag:7, isDefault:8, seedMode:9, elimType:10 };
 const TABS = { HOME:'Home', META:'Meta', SIGNUPS:'SignupsView', SCHEDULE:'Schedule', STANDINGS:'Standings', POSTER:'PosterConfig' };
@@ -297,7 +334,9 @@ Redirecting… <a href="${safe}">Continue</a></body></html>`;
   return HtmlService.createHtmlOutput(html).setTitle('Redirecting…').setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
-/** ---------- 6) Events Index (ETag + SWR) ---------- */
+/************************************************************
+* [S06] Events Index (ETag + SWR) — getEventsSafe()
+************************************************************/
 function getMain_(){ ensureAll_(); return SpreadsheetApp.openById(cfgControlId_()); }
 function getEventsSheet_(){ const ss = getMain_(); return ss.getSheetByName(EVENTS_SHEET) || ss.insertSheet(EVENTS_SHEET); }
 
@@ -341,12 +380,14 @@ function getEventsSafe(etagOpt){
   const data = sh.getRange(2,1,last-1,15).getValues();
   const items = data.filter(r => String(r[IDX.id]||'').trim()).map(rowToEvent_);
   const etag = _eventsEtag_(items);
-  PropertiesService.getScriptProperties().setProperty('NU_EVENTS_ETAG', etag);
+  PropertiesService.getScriptProperties().setProperty(PROP.EVENTS_ETAG, etag);
   if (etagOpt && etagOpt === etag) return { ok:true, status:304, etag, items:[] };
   return { ok:true, status:200, etag, items };
 }
 
-/** ---------- 7) Eventbook Creation (workbook-first, idempotent) ---------- */
+/************************************************************
+* [S07] Eventbook Creation (workbook-first, idempotent)
+************************************************************/
 function eventWorkbookTitle_(name, slug, dateISO, id){
   const safeName = String(name || 'Event').trim();
   const safeDate = String(dateISO || '').trim();
@@ -456,7 +497,9 @@ function _createEventbookImpl(payload){
   }
 }
 
-/** ---------- 8) Form Linking & Imports (unchanged) ---------- */
+/************************************************************
+* [S08] Form Linking & Imports (unchanged)
+************************************************************/
 function setEventFormId(eventIdOrSlug, formIdOrUrl){
   const ev = findEventByIdOrSlug_(eventIdOrSlug);
   if (!ev) return { ok:false, error:'Eventbook not found' };
@@ -504,7 +547,9 @@ function importSignupsFromSheet(eventIdOrSlug, sheetId, rangeA1){
   return { ok:true, count: body.length };
 }
 
-/** ---------- 9) Quick Links / Shortlinks / QR ---------- */
+/************************************************************
+* [S09] Quick Links / Shortlinks / QR (verified only)
+************************************************************/
 const SHORT_KEY_MAP = 'NU_SHORTLINKS_MAP_V1';
 const SHORT_TARGET_MAP = 'NU_SHORTLINKS_TARGETS_V1';
 const Shortlinks = {
@@ -585,7 +630,9 @@ function getEventQuickLinks(eventIdOrSlug){
   };
 }
 
-/** ---------- 10) Bundles (unchanged shapes) ---------- */
+/************************************************************
+* [S10] Bundles (unchanged shapes)
+************************************************************/
 function getDisplayBundle(eventIdOrSlug){
   const ev = ensureWorkbook_(eventIdOrSlug);
   if (!ev.ok) return ev;
@@ -655,7 +702,9 @@ function getPosterBundle(eventIdOrSlug){
   };
 }
 
-/** ---------- 11) Confidence / Visibility — WILL-NOT-SHOW-UNTIL-ACTIVE ---------- */
+/************************************************************
+* [S11] Confidence / Visibility — WILL-NOT-SHOW-UNTIL-ACTIVE
+************************************************************/
 function getConfidenceState(eventIdOrSlug){
   ensureAll_();
   const out = {
@@ -716,15 +765,19 @@ function getShareQrVerified(eventIdOrSlug){
   return { ok:true, url: ql.publicUrl || '', qrUrlVerified: qrPublic || '' };
 }
 
-/** ---------- 12) URL Builders & Cache ---------- */
+/************************************************************
+* [S12] URL Builders & Cache
+************************************************************/
 function buildOrgUrl_(page, eventId){   const base = cfgOrgUrl_();  return `${base}?page=${encodeURIComponent(page)}&event=${encodeURIComponent(eventId)}`; }
 function buildPublicUrl_(page, eventId){ const base = cfgPubUrl_(); return `${base}?page=${encodeURIComponent(page)}&event=${encodeURIComponent(eventId)}`; }
 function bustEventsCache_(){
   try { CacheService.getScriptCache().remove('events_index'); } catch(_) {}
-  try { PropertiesService.getScriptProperties().deleteProperty('NU_EVENTS_ETAG'); } catch(_) {}
+  try { PropertiesService.getScriptProperties().deleteProperty(PROP.EVENTS_ETAG); } catch(_) {}
 }
 
-/** ---------- 13) Data Utils ---------- */
+/************************************************************
+* [S13] Data Utils (ensureWorkbook_, worker, kv, header_, tables)
+************************************************************/
 function ensureWorkbook_(eventIdOrSlug){
   const ev = findEventByIdOrSlug_(eventIdOrSlug);
   if (!ev) return { ok:false, error:'Eventbook not found' };
@@ -856,7 +909,9 @@ function prettyDate_(iso){
   catch (_) { return String(iso); }
 }
 
-/** ---------- 14) Debug helpers ---------- */
+/************************************************************
+* [S14] Debug Helpers
+************************************************************/
 function NU_Debug_ListEventbooks(){ return getEventbooksSafe(null); }
 function NU_Debug_ListEvents(){ return getEventsSafe(null); }
 function NU_Debug_GetLinks(eid){ return getEventQuickLinks(eid); }
@@ -864,7 +919,9 @@ function NU_Debug_Display(eid){ return getDisplayBundle(eid); }
 function NU_Debug_Public(eid){ return getPublicBundle(eid); }
 function NU_Debug_Poster(eid){ return getPosterBundle(eid); }
 
-/** ---------- 15) Template helpers ---------- */
+/************************************************************
+* [S15] Template Helpers (tplEnsure…)
+************************************************************/
 function tplEnsureSheetWithHeader_(ss, name, headers) {
   const sh = ss.getSheetByName(name) || ss.insertSheet(name);
   const have = sh.getLastRow()>=1 ? sh.getRange(1,1,1,headers.length).getValues()[0] : [];
