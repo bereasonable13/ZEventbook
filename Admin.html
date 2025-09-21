@@ -12,7 +12,7 @@
     small#build { color:#666 }
     .row { display:flex; gap: var(--gap); flex-wrap: wrap; align-items: flex-end; }
     .card { border:1px solid #ddd; border-radius:10px; padding:14px; margin:10px 0; }
-    .kpi { font-weight:600; }
+    .muted { color:#666; }
     label { display:block; font-size:.9rem; margin:.2rem 0; }
     input, select, button { font-size:1rem; padding:.55rem .7rem; }
     button { cursor:pointer; }
@@ -21,7 +21,6 @@
     .toast { position:fixed; right:10px; bottom:10px; background:#222; color:#fff; padding:10px 12px; border-radius:8px; display:none; z-index:9999; }
     .toast.show{ display:block; }
     pre.json { background:#f7f7f7; border:1px solid #e3e3e3; border-radius:8px; padding:10px; max-height:320px; overflow:auto; }
-    .muted { color:#666; }
   </style>
 </head>
 <body>
@@ -117,18 +116,16 @@
   </main>
 
   <script>
-  /* ---------------- Toasts & breadcrumbs ---------------- */
+  /* ---------------- Toasts ---------------- */
   const TOAST = {
     show(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2300); },
     info(msg){ this.show(msg); console.log('[INFO]', msg); },
     error(msg){ this.show(msg); console.error('[ERR]', msg); }
   };
-  const TRACE = (...a) => console.log('[TRACE]', ...a);
 
-  const STATE = { etag:null, events:[], selected:null, links:null };
+  const STATE = { etag:null, events:[], selected:null, links:null, optimisticId:null };
 
   window.addEventListener('DOMContentLoaded', () => {
-    TRACE('boot');
     boot();
     document.getElementById('btnCreate').addEventListener('click', onCreate);
     document.getElementById('chooseEvent').addEventListener('change', onChoose);
@@ -143,22 +140,24 @@
   });
 
   function boot(){
-    // Ensure control exists, then load events
     google.script.run
-      .withSuccessHandler(() => { TRACE('ping ok'); swrEventsOnce(); })
+      .withSuccessHandler(() => swrEventsOnce())
       .withFailureHandler(err => { TOAST.error('Bootstrap failed'); console.error(err); swrEventsOnce(); })
       .ping();
   }
 
-  function swrEventsOnce(){
+  /* Retry-once SWR to avoid rare null hiccups */
+  function swrEventsOnce(_retried){
     google.script.run
       .withSuccessHandler(res => {
-        TRACE('events', res);
-        if (!res || typeof res !== 'object') return TOAST.error('Events: invalid response');
+        if (!res || typeof res !== 'object'){
+          if (!_retried){ console.warn('Retrying events after invalid response'); return swrEventsOnce(true); }
+          return TOAST.error('Events: invalid response');
+        }
         if (res.ok === false) return TOAST.error('Events error');
         if (res.notModified) return;
         STATE.events = Array.isArray(res.items) ? res.items : [];
-        STATE.etag = res.etag || null;
+        STATE.etag   = res.etag || null;
         paintDropdown(STATE.events);
       })
       .withFailureHandler(err => { TOAST.error('Events load failed'); console.error(err); })
@@ -167,11 +166,11 @@
 
   function paintDropdown(items){
     const sel = document.getElementById('chooseEvent');
-    const keep = sel.value;
+    const keep = STATE.optimisticId || sel.value;
     sel.innerHTML = '';
     if (!items.length){
       sel.innerHTML = '<option value="">No events yet — create above</option>';
-      setManageDisabled(true); clearLinks(); clearQr(); return;
+      setManageDisabled(true); clearLinks(); clearQr(); STATE.optimisticId=null; return;
     }
     for (const ev of items){
       const label = (ev.name && String(ev.name).trim()) || ev.slug || ev.id || '(unnamed)';
@@ -182,7 +181,10 @@
     }
     if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
     sel.value = sel.value || items[0].id;
-    onChoose();
+    STATE.selected = sel.value;
+    STATE.optimisticId = null;
+    setManageDisabled(false);
+    hydrateLinksAndQr();
   }
 
   function onCreate(){
@@ -197,9 +199,17 @@
     TOAST.info('Creating…');
     google.script.run
       .withSuccessHandler(res => {
-        TRACE('create res', res);
         if (!res || res.ok === false){ TOAST.error('Create failed'); return; }
         TOAST.info(res.idempotent ? 'Already existed — selected existing.' : 'Created!');
+
+        // Clear form on success
+        document.getElementById('evName').value = '';
+        document.getElementById('evDate').value = '';
+
+        // Optimistically remember new id so dropdown selects it after refresh
+        if (res.id) STATE.optimisticId = res.id;
+
+        // Force reload of events
         STATE.etag = null; swrEventsOnce();
       })
       .withFailureHandler(err => { TOAST.error('Create failed'); console.error(err); })
@@ -210,9 +220,12 @@
     const sel = document.getElementById('chooseEvent');
     STATE.selected = sel.value || null;
     setManageDisabled(!STATE.selected);
+    hydrateLinksAndQr();
+  }
+
+  function hydrateLinksAndQr(){
     if (!STATE.selected){ clearLinks(); clearQr(); return; }
 
-    // links
     google.script.run
       .withSuccessHandler(res => {
         if (!res || res.ok === false){ clearLinks(); return; }
@@ -222,7 +235,6 @@
         document.getElementById('openPoster').href  = res.posterUrl;
         document.getElementById('btnCopyLinks').disabled = false;
 
-        // verification + QR (north-star)
         google.script.run
           .withSuccessHandler(v => {
             if (!v || v.ok === false || !v.verified){ clearQr(); return; }
@@ -237,7 +249,6 @@
           })
           .withFailureHandler(_ => clearQr())
           .verifyEventSafe(STATE.selected);
-
       })
       .withFailureHandler(err => { console.error(err); clearLinks(); clearQr(); })
       .getShareLinks(STATE.selected);
@@ -296,24 +307,21 @@
     const a = document.getElementById('qrLink'); a.removeAttribute('href'); a.textContent='';
   }
 
-  /* ---------------- Diagnostics actions ---------------- */
+  /* ---------------- Diagnostics ---------------- */
   function onSmoke(){
     document.getElementById('diagOut').textContent = 'Running…';
     google.script.run
       .withSuccessHandler(res => {
         document.getElementById('diagOut').textContent = JSON.stringify(res, null, 2);
         TOAST[res.ok ? 'info' : 'error'](res.ok ? 'Smoke OK' : 'Smoke failed');
-        // refresh events after smoke to reflect new create
         STATE.etag = null; swrEventsOnce();
       })
       .withFailureHandler(err => {
         document.getElementById('diagOut').textContent = String(err);
-        TOAST.error('Smoke failed — see console');
-        console.error(err);
+        TOAST.error('Smoke failed — see console'); console.error(err);
       })
-      .runSmokeSafe({ form: false }); // set true to also test form creation
+      .runSmokeSafe({ form: false });
   }
-
   function onViewLogs(){
     document.getElementById('diagOut').textContent = 'Loading logs…';
     google.script.run
@@ -321,12 +329,9 @@
         if (!res || res.ok === false){ TOAST.error('Log fetch error'); return; }
         document.getElementById('diagOut').textContent = JSON.stringify(res.items || [], null, 2);
       })
-      .withFailureHandler(err => {
-        TOAST.error('Log fetch failed'); console.error(err);
-      })
+      .withFailureHandler(err => { TOAST.error('Log fetch failed'); console.error(err); })
       .getLogs(300);
   }
-
   function onClearLogs(){
     if (!confirm('Clear logs?')) return;
     google.script.run
