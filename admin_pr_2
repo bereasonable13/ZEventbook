@@ -309,10 +309,6 @@ function bustEventsCache(){
 }
 
 
-
-
-
-
 /************************************************************
 * NextUp v4.0 — Code.gs (Eventbooks-first)
 * - Primary entity = Eventbook (1 event = 1 workbook)
@@ -1240,4 +1236,4 @@ function NU_Debug_ListEvents(){ return getEventsSafe(null); }           // legac
 function NU_Debug_GetLinks(eid){ return getEventQuickLinks(eid); }
 function NU_Debug_Display(eid){ return getDisplayBundle(eid); }
 function NU_Debug_Public(eid){ return getPublicBundle(eid); }
-function NU_Debug_Poster(eid){ return getPosterBundle(e
+function NU_Debug_Poster(eid){ return getPosterBundle(e); }
