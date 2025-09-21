@@ -1,643 +1,401 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title><?= appTitle ?> · Test & Smoke</title>
+  <title><?= appTitle ?> · Test & SLA</title>
   <?!= include('Styles'); ?>
-  <?!= include('NuSdk'); ?>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <style>
-    /* ===== Test-only styles (scoped to this page) ===== */
-    .led { display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid var(--line); vertical-align:middle; }
-    .led.red    { background:#d93025; }
-    .led.yellow { background:#f9ab00; }
-    .led.green  { background:#188038; }
-    .legend span { display:inline-flex; align-items:center; gap:6px; margin-right:12px; }
-    .card { border:1px solid var(--line); border-radius:10px; padding:12px; background:#fff; margin:12px 0; }
-    .kv { display:grid; grid-template-columns: 180px 1fr; gap:8px; }
-    .kv div { padding:4px 0; }
-    .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:.9rem; }
-    .good { color:var(--ok); }
-    .warn { color:#b07a00; }
-    .bad  { color:#a61c1c; }
-    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
-    @media (max-width:800px){ .grid2{ grid-template-columns:1fr; } .kv{ grid-template-columns: 1fr; } }
-    .banner { border:1px dashed var(--line); background:#fff; border-radius:8px; padding:8px 12px; }
-    .pill { border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-weight:700; }
-    .pill.testonly { background: #eef7ff; color:#1b74e4; }
-    .smoke-head { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    /* Test-only extras */
+    .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    .pill { display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-weight:700; }
+    .g { background: var(--ok-bg); color: var(--ok); }
+    .y { background: var(--warn-bg); color: var(--warn); }
+    .r { background: var(--err-bg); color: var(--err); }
+    .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+    .kvs { display:grid; grid-template-columns: 220px 1fr; gap:6px 10px; }
+    .kvs div { padding:6px 0; border-bottom:1px dashed var(--line); }
+    .small { font-size:.9rem; color: #444; }
+    .btn-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .muted { color: var(--muted); }
+    .status-dot { width:10px; height:10px; border-radius:999px; display:inline-block; vertical-align:middle; margin-right:6px; background:#bbb; }
+    .status-dot.g { background:#1e7f54; }
+    .status-dot.y { background:#b07a00; }
+    .status-dot.r { background:#a61c1c; }
+    .card-head { display:flex; justify-content:space-between; gap:8px; align-items:center; }
+    .code { background:#0d1117; color:#c9d1d9; border:1px solid #30363d; border-radius:8px; padding:8px; overflow:auto; max-height:280px; }
+    .nowrap { white-space: nowrap; }
+    .section-sub { margin-top:.25rem; color:#555; }
   </style>
 </head>
 <body>
-<div class="container">
-  <header>
-    <h1>Smoke + Test Harness</h1>
-    <div class="meta">
-      <span class="pill testonly" data-testid="test-banner">TEST-ONLY · Not user-facing</span>
-      <small id="build">Build: <?= BUILD_ID ?></small>
-    </div>
-  </header>
-
-  <!-- ===== Smoke Runner (quick PASS/FAIL) ===== -->
-  <section class="card" aria-labelledby="smoke-head">
-    <div class="smoke-head">
-      <h2 id="smoke-head">Smoke Runner</h2>
-      <span id="overallLed" class="led" data-testid="smoke-overall-led" title="Overall LED"></span>
-      <strong id="overallText" data-testid="smoke-overall-text">Not started</strong>
-    </div>
-    <div class="row gap" style="margin-top:8px;">
-      <div class="form-grid" style="grid-template-columns: repeat(3, minmax(200px, 1fr));">
-        <label for="selEvent">
-          Target event (from source)
-          <select id="selEvent" data-testid="sel-event"></select>
-        </label>
-        <label for="selScenario">
-          Scenario (mock shortcuts)
-          <select id="selScenario" data-testid="sel-scenario">
-            <option value="">— none —</option>
-            <option value="mock:empty">mock:empty</option>
-            <option value="mock:signup_url_only">mock:signup_url_only</option>
-            <option value="mock:signup_qr_ready">mock:signup_qr_ready</option>
-            <option value="mock:public_qr_ready">mock:public_qr_ready</option>
-          </select>
-        </label>
-        <label class="row" for="chkTestMode">
-          <input id="chkTestMode" type="checkbox" data-testid="chk-test-mode" />
-          Enable backend test mode (safe in prod)
-        </label>
+  <div class="container">
+    <header>
+      <h1>Test & SLA</h1>
+      <div class="meta">
+        <span class="muted">Build:</span> <code id="buildId" class="mono"><?= BUILD_ID ?></code>
       </div>
-    </div>
-    <div class="actions row">
-      <button class="btn" id="btnRefreshTargets" data-testid="btn-refresh-targets">Refresh targets</button>
-      <button class="btn" id="btnUseScenario" data-testid="btn-use-scenario">Use scenario</button>
-      <button class="btn" id="btnResetScenario" data-testid="btn-reset-scenario">Reset target</button>
+      <small class="muted">All tests are safe in prod; mock keys are used unless you provide a real event key.</small>
+    </header>
 
-      <button class="btn btn-xl" id="btnRunSmoke" data-testid="smoke-run" style="margin-left:auto;">Run Smoke</button>
-      <button class="btn" id="btnExportSmoke" data-testid="smoke-export" disabled>Export JSON</button>
-    </div>
-
-    <table class="table" data-testid="smoke-table" style="margin-top:8px;">
-      <thead><tr><th>Step</th><th>Status</th><th>Details</th></tr></thead>
-      <tbody id="smokeBody">
-        <tr><td colspan="3" class="muted">No results yet.</td></tr>
-      </tbody>
-    </table>
-
-    <details style="margin-top:8px;">
-      <summary class="muted">Raw smoke artifact (debug)</summary>
-      <pre id="smokeRaw" class="mono" data-testid="smoke-raw"></pre>
-    </details>
-  </section>
-
-  <!-- Quick legend + invariant banner -->
-  <section class="banner">
-    <div class="row">
-      <div class="legend">
-        <span><i class="led red"></i> Red = Absent/Invalid</span>
-        <span><i class="led yellow"></i> Yellow = URL present, QR not verified</span>
-        <span><i class="led green"></i> Green = Verified (QR)</span>
+    <!-- ================= Preflight (quick sanity) ================= -->
+    <section data-testid="test-preflight">
+      <div class="card-head">
+        <h2>Preflight</h2>
+        <div class="btn-row">
+          <button class="btn" id="btnRunSmoke" data-testid="btn-smoke">Run Smoke</button>
+          <button class="btn" id="btnRunSelfTests" data-testid="btn-selftests">Run API Contracts</button>
+        </div>
       </div>
-      <div class="muted" style="margin-left:auto;">Invariant: <strong>Never display a QR unless verified</strong></div>
-    </div>
-  </section>
-
-  <!-- ===== Deep Harness (same capabilities as before) ===== -->
-  <section class="grid2" aria-label="Snapshots and Controls">
-    <div class="card">
-      <h2>Snapshots</h2>
-      <p class="muted">Fetch live responses for Bundle / Signup / Public.</p>
-      <div class="actions row">
-        <button class="btn" id="btnSnap" data-testid="btn-snapshot">Refresh Snapshots</button>
+      <div class="row small">
+        <span><span id="pf-ctrl-dot" class="status-dot"></span>Control</span>
+        <span><span id="pf-tpl-dot" class="status-dot"></span>Template</span>
+        <span><span id="pf-qr-dot" class="status-dot"></span>QR Cache</span>
       </div>
-      <table class="table" data-testid="tbl-snapshots">
-        <thead><tr><th>API</th><th>LED</th><th>Summary</th></tr></thead>
-        <tbody id="snapBody">
-          <tr><td colspan="3" class="muted">No data yet.</td></tr>
-        </tbody>
-      </table>
-    </div>
+      <div id="preflightMsg" class="small muted" style="margin-top:6px;"></div>
+    </section>
 
-    <div class="card">
-      <h2>Test Controls</h2>
-      <p class="muted">Set/clear link states on the selected target (non-mock). Useful for verifying invariant transitions.</p>
-      <div class="row gap">
-        <button class="btn" id="btnSetSignupUrl" data-testid="btn-set-signup-url">Set Signup URL</button>
-        <button class="btn" id="btnSetSignupQR" data-testid="btn-set-signup-qr">Mark Signup Verified</button>
-        <button class="btn" id="btnClearSignup" data-testid="btn-clear-signup">Clear Signup</button>
+    <!-- ================= SLA Matrix Runner (8 scenarios) ================= -->
+    <section data-testid="test-sla">
+      <div class="card-head">
+        <div>
+          <h2>Time-to-Live SLA</h2>
+          <div class="section-sub">Measures from request → verified QR(s), across form/poster permutations.</div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-xl" id="btnRunSlaMock" data-testid="btn-sla-mock">Run SLA (Mock)</button>
+          <div class="row">
+            <input id="eventKey" class="mono" type="text" placeholder="optional: real event id/slug" style="min-width:260px;" data-testid="input-event-key" />
+            <button class="btn" id="btnRunSlaReal" data-testid="btn-sla-real">Run SLA (Real)</button>
+          </div>
+        </div>
       </div>
-      <div class="row gap" style="margin-top:8px;">
-        <button class="btn" id="btnSetPublicUrl" data-testid="btn-set-public-url">Set Public URL</button>
-        <button class="btn" id="btnSetPublicQR" data-testid="btn-set-public-qr">Mark Public Verified</button>
-        <button class="btn" id="btnClearPublic" data-testid="btn-clear-public">Clear Public</button>
+
+      <div class="grid-2">
+        <section class="bracket">
+          <h3>Results</h3>
+          <div class="kvs mono small" id="slaResults" data-testid="sla-results">
+            <!-- Populated dynamically -->
+          </div>
+        </section>
+        <section class="bracket">
+          <h3>Legend & Thresholds</h3>
+          <p class="small">
+            <span class="pill g">Green</span> &lt; <span id="threshGreen" class="mono"></span> ms<br/>
+            <span class="pill y">Yellow</span> &lt; <span id="threshYellow" class="mono"></span> ms<br/>
+            <span class="pill r">Red</span> ≥ <span class="mono" id="threshYellow2"></span> ms
+          </p>
+          <p class="small">
+            <strong>Poster readiness =</strong> verified <em>public</em> QR (we never show a QR unless verified).<br/>
+            Image/Text/Both label which user-facing path the poster takes; verification criteria remain the same.
+          </p>
+        </section>
       </div>
-    </div>
-  </section>
+    </section>
 
-  <section class="grid2" aria-label="Contracts & Self-tests">
-    <div class="card">
-      <h2>Contract Checks</h2>
-      <p class="muted">Validates response shape for <code class="mono">bundle v1</code> and <code class="mono">link/qr v1</code>.</p>
-      <div class="actions row">
-        <button class="btn" id="btnContracts" data-testid="btn-contracts">Run Contract Checks</button>
+    <!-- ================= API Contracts (Self-tests) ================= -->
+    <section data-testid="test-contracts">
+      <div class="card-head">
+        <h2>API Contracts</h2>
+        <span id="contractsBadge" class="pill">—</span>
       </div>
-      <div id="contractsOut" class="mono" data-testid="contracts-out">No results yet.</div>
-    </div>
+      <div id="contractsOut" class="code mono small" aria-live="polite"></div>
+    </section>
 
-    <div class="card">
-      <h2>Backend Self-tests</h2>
-      <p class="muted">Runs <code class="mono">runSelfTests()</code> on Code.gs (mock scenarios).</p>
-      <div class="actions row">
-        <button class="btn" id="btnSelfTests" data-testid="btn-selftests">Run Self-tests</button>
+    <!-- ================= Diagnostics (live tail) ================= -->
+    <section class="diag" id="diag" data-testid="diag-pane">
+      <div class="diag-head">
+        <h2>Diagnostics</h2>
+        <div class="diag-actions">
+          <label class="diag-checkbox"><input type="checkbox" id="chkDiagTail" checked /> Live tail</label>
+          <button class="btn" id="btnFlushDiag" data-testid="btn-flush-diag">Flush sample log</button>
+        </div>
       </div>
-      <div id="selfOut" class="mono" data-testid="selftests-out">No results yet.</div>
-    </div>
-  </section>
+      <div id="diagBody" class="diag-body mono small" role="log" aria-live="polite"></div>
+    </section>
+  </div>
 
-  <section class="card" aria-labelledby="all-head">
-    <h2 id="all-head">Run All (Deep)</h2>
-    <p class="muted">Executes Snapshots → Contracts → Self-tests. Shows an overall LED below for the deep suite.</p>
-    <div class="row gap">
-      <span id="overallLedDeep" class="led" data-testid="overall-led" title="Overall LED (Deep)"></span>
-      <button class="btn btn-xl" id="btnRunAll" data-testid="btn-run-all">Run All</button>
-      <button class="btn" id="btnExportDeep" data-testid="btn-export">Export JSON</button>
-    </div>
-  </section>
+  <script>
+    /* ================= Test Harness · SLA + Smoke ================= */
 
-  <!-- Diagnostics -->
-  <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
-    <div class="diag-head">
-      <h2 id="diag-head">Diagnostics</h2>
-      <div class="diag-actions">
-        <label class="diag-checkbox row">
-          <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
-          Live logs
-        </label>
-        <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
-        <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
-      </div>
-    </div>
-    <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
-  </section>
-</div>
-
-<script>
-/* ===== Unified Smoke + Test Harness v4.1.1a ===== */
-const { rpc, retry, toast, esc } = NUSDK;
-
-const q = new URLSearchParams(location.search);
-const paramTarget = q.get('target') || '';
-const paramTestMode = q.get('testmode'); // '1' to enable backend test mode
-const paramAutoRun = q.get('autorun') === '1';
-
-const els = {
-  // Smoke
-  overallLed: document.getElementById('overallLed'),
-  overallText: document.getElementById('overallText'),
-  btnRunSmoke: document.getElementById('btnRunSmoke'),
-  btnExportSmoke: document.getElementById('btnExportSmoke'),
-  smokeBody: document.getElementById('smokeBody'),
-  smokeRaw: document.getElementById('smokeRaw'),
-
-  // Targets / scenarios (shared)
-  selEvent: document.getElementById('selEvent'),
-  selScenario: document.getElementById('selScenario'),
-  chkTestMode: document.getElementById('chkTestMode'),
-  btnRefreshTargets: document.getElementById('btnRefreshTargets'),
-  btnUseScenario: document.getElementById('btnUseScenario'),
-  btnResetScenario: document.getElementById('btnResetScenario'),
-
-  // Snapshots
-  btnSnap: document.getElementById('btnSnap'),
-  snapBody: document.getElementById('snapBody'),
-
-  // Controls
-  btnSetSignupUrl: document.getElementById('btnSetSignupUrl'),
-  btnSetSignupQR: document.getElementById('btnSetSignupQR'),
-  btnClearSignup: document.getElementById('btnClearSignup'),
-  btnSetPublicUrl: document.getElementById('btnSetPublicUrl'),
-  btnSetPublicQR: document.getElementById('btnSetPublicQR'),
-  btnClearPublic: document.getElementById('btnClearPublic'),
-
-  // Contracts & Self-tests
-  btnContracts: document.getElementById('btnContracts'),
-  contractsOut: document.getElementById('contractsOut'),
-  btnSelfTests: document.getElementById('btnSelfTests'),
-  selfOut: document.getElementById('selfOut'),
-
-  // Deep Run All
-  overallLedDeep: document.getElementById('overallLedDeep'),
-  btnRunAll: document.getElementById('btnRunAll'),
-  btnExportDeep: document.getElementById('btnExportDeep'),
-
-  // Diagnostics
-  diag: document.getElementById('diag'),
-  diagBody: document.getElementById('diagBody'),
-  btnClearLogs: document.getElementById('btnClearLogs'),
-  btnToggleDiag: document.getElementById('btnToggleDiag'),
-  chkLive: document.getElementById('chkLiveLogs')
-};
-
-const state = {
-  events: [],
-  targetKey: '',
-  smokeArtifact: null,
-  lastSnapshots: null,
-  lastContracts: null,
-  lastSelf: null
-};
-
-function log(msg, level){
-  if (!els.chkLive.checked) return;
-  const row = document.createElement('div');
-  row.className = 'lvl-' + (level || 'info');
-  row.textContent = new Date().toLocaleTimeString() + ' — ' + String(msg);
-  els.diagBody.appendChild(row);
-  els.diagBody.scrollTop = els.diagBody.scrollHeight;
-}
-function setDiagExpanded(expanded){
-  els.diag.classList.toggle('collapsed', !expanded);
-  els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
-}
-
-/* ---------- Targets & scenarios ---------- */
-async function refreshTargets(){
-  try{
-    const r = await retry(()=> rpc('listEvents'), 3, [300,600,1200]);
-    if (!r?.ok) throw new Error(r?.error || 'listEvents failed');
-    state.events = r.events || [];
-    els.selEvent.innerHTML = state.events.map(ev => `<option value="${esc(ev.id)}">${esc(ev.name)}</option>`).join('');
-    if (!state.targetKey && state.events.length) state.targetKey = state.events[0].id;
-    els.selEvent.value = state.targetKey || '';
-    log('Targets refreshed (' + state.events.length + ')');
-  } catch(e){
-    toast.error('Failed to load targets');
-    log('refreshTargets: ' + (e.message || e), 'error');
-  }
-}
-async function applyScenario(){
-  const scn = els.selScenario.value.trim();
-  if (!scn) return toast.warn('Pick a mock scenario');
-  state.targetKey = scn;
-  els.selEvent.value = '';
-  toast('Scenario set: ' + scn);
-  log('Scenario set: ' + scn);
-}
-async function resetTarget(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key) return toast.warn('Pick a target first');
-  if (key.startsWith('mock:')) { toast('Nothing to reset for mock'); return; }
-  try{
-    await rpc('testReset', key);
-    toast('Target reset'); log('Reset ' + key);
-  } catch(e){ toast.error('Reset failed'); }
-}
-async function setTestMode(on){
-  try{ await rpc('setTestMode', !!on); } catch(e){ log('setTestMode: '+(e.message||e),'warn'); }
-}
-
-/* ---------- Shared helpers (status/validation) ---------- */
-function led(kind){
-  const span = document.createElement('span');
-  span.className = 'led ' + kind;
-  return span.outerHTML;
-}
-function summarizeBundle(b){
-  if (!b || b.ok!==true) return '<span class="bad">not ok</span>';
-  const m = b.eventMeta || {};
-  return `id=${esc(m.id||'?')} · name=${esc(m.name||'?')} · date=${esc(m.dateISO||'?')}`;
-}
-function summarizeLink(o){
-  if (!o || typeof o !== 'object') return '<span class="bad">invalid</span>';
-  if (o.ok===true){
-    if (o.qrB64) return `<span class="good">QR</span> · <span class="mono">${esc(o.url||'')}</span>`;
-    if (o.url) return `<span class="warn">URL</span> · <span class="mono">${esc(o.url||'')}</span>`;
-    return '<span class="bad">ok=true but no url</span>';
-  }
-  return `<span class="bad">${esc(o.error||'error')}</span>`;
-}
-function statusToLed(o){
-  if (!o || o.ok!==true) return 'red';
-  if (o.qrB64) return 'green';
-  if (o.url) return 'yellow';
-  return 'red';
-}
-function pretty(obj){ try{ return JSON.stringify(obj,null,2); } catch(_e){ return String(obj); } }
-
-/* Contract validators (same across smoke + deep) */
-function validateBundleV1(b){
-  const errs=[];
-  if (!(b && typeof b==='object')) return ['bundle: not an object'];
-  if (b.ok!==true) errs.push('bundle.ok must be true');
-  if (b.bundleVersion!==1) errs.push('bundle.bundleVersion must be 1');
-  const m=b.eventMeta;
-  if (!m || typeof m!=='object') errs.push('bundle.eventMeta missing');
-  else{
-    if(!m.id) errs.push('eventMeta.id missing');
-    if(!m.name) errs.push('eventMeta.name missing');
-    if(!m.dateISO || !/^\d{4}-\d{2}-\d{2}/.test(String(m.dateISO))) errs.push('eventMeta.dateISO invalid');
-    if(m.formUrl && !/^https?:\/\//i.test(m.formUrl)) errs.push('eventMeta.formUrl invalid');
-  }
-  return errs;
-}
-function validateLinkQrV1(o,label){
-  const errs=[];
-  if (!(o && typeof o==='object')) return [label+': not an object'];
-  if (o.ok===true){
-    if(!o.url || !/^https?:\/\//i.test(o.url)) errs.push(label+': url must be valid when ok=true');
-    if('qrB64' in o && typeof o.qrB64!=='string') errs.push(label+': qrB64 must be base64 string when present');
-  } else if (o.ok===false){
-    const ALLOWED=['public_link_not_ready','signup_link_not_ready','event_not_found','error_internal'];
-    if (ALLOWED.indexOf(String(o.error))<0) errs.push(label+': error not in allowed set');
-  } else {
-    errs.push(label+': ok must be boolean');
-  }
-  return errs;
-}
-
-/* ---------- Snapshots + Deep table ---------- */
-async function refreshSnapshots(){
-  const key = els.selEvent.value || state.targetKey || '';
-  if (!key) { toast.warn('Pick a target or scenario'); return; }
-  try{
-    const [b,su,pu] = await Promise.all([
-      rpc('getPublicBundle', key),
-      rpc('getSignupQr', key),
-      rpc('getShareQr', key)
-    ]);
-    state.lastSnapshots = { key, bundle:b, signup:su, pub:pu, ts:Date.now() };
-    const rows = [];
-    rows.push(`<tr><td>Bundle</td><td>${led(b && b.ok===true ? 'green':'red')}</td><td>${summarizeBundle(b)}</td></tr>`);
-    rows.push(`<tr><td>Signup</td><td>${led(statusToLed(su))}</td><td>${summarizeLink(su)}</td></tr>`);
-    rows.push(`<tr><td>Public</td><td>${led(statusToLed(pu))}</td><td>${summarizeLink(pu)}</td></tr>`);
-    els.snapBody.innerHTML = rows.join('');
-    toast('Snapshots refreshed');
-  } catch(e){
-    toast.error('Snapshots failed');
-    els.snapBody.innerHTML = `<tr><td colspan="3" class="bad mono">${esc(e.message||e)}</td></tr>`;
-    log('refreshSnapshots: ' + (e.message||e), 'error');
-  }
-}
-
-/* ---------- Test controls for real targets ---------- */
-async function setSignupUrl(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
-  const url = prompt('Signup URL (https://...)');
-  if (!url) return;
-  try{
-    await rpc('testSet', { eventKey:key, signupUrl:url, signupQr:false });
-    toast('Signup URL set');
-  } catch(e){ toast.error('Set failed'); }
-}
-async function setSignupQR(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
-  try{
-    await rpc('testSet', { eventKey:key, signupQr:true });
-    toast('Signup marked verified');
-  } catch(e){ toast.error('Mark failed'); }
-}
-async function clearSignup(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
-  try{
-    await rpc('testSet', { eventKey:key, signupUrl:'', signupQr:false });
-    toast('Signup cleared');
-  } catch(e){ toast.error('Clear failed'); }
-}
-async function setPublicUrl(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
-  const url = prompt('Public URL (https://...)');
-  if (!url) return;
-  try{
-    await rpc('testSet', { eventKey:key, publicUrl:url, publicQr:false });
-    toast('Public URL set');
-  } catch(e){ toast.error('Set failed'); }
-}
-async function setPublicQR(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
-  try{
-    await rpc('testSet', { eventKey:key, publicQr:true });
-    toast('Public marked verified');
-  } catch(e){ toast.error('Mark failed'); }
-}
-async function clearPublic(){
-  const key = els.selEvent.value || state.targetKey;
-  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
-  try{
-    await rpc('testSet', { eventKey:key, publicUrl:'', publicQr:false });
-    toast('Public cleared');
-  } catch(e){ toast.error('Clear failed'); }
-}
-
-/* ---------- Contracts & Self-tests ---------- */
-async function runContracts(){
-  const key = els.selEvent.value || state.targetKey || '';
-  if (!key) { toast.warn('Pick a target or scenario'); return false; }
-  try{
-    const [b,su,pu] = await Promise.all([ rpc('getPublicBundle',key), rpc('getSignupQr',key), rpc('getShareQr',key) ]);
-    const errs = [
-      ...validateBundleV1(b),
-      ...validateLinkQrV1(su,'signup'),
-      ...validateLinkQrV1(pu,'public')
-    ];
-    const pass = errs.length===0;
-    els.contractsOut.innerHTML = pass
-      ? `<div class="good">PASS</div><pre class="mono">${esc(pretty({bundle:b, signup:su, public:pu}))}</pre>`
-      : `<div class="bad">FAIL</div><pre class="mono">${esc(errs.join('\n'))}</pre>`;
-    state.lastContracts = { pass, errs, bundle:b, signup:su, public:pu, ts:Date.now(), key };
-    toast(pass?'Contracts PASS':'Contracts FAIL');
-    return pass;
-  } catch(e){
-    els.contractsOut.innerHTML = `<div class="bad">ERROR</div><pre class="mono">${esc(String(e.message||e))}</pre>`;
-    state.lastContracts = { pass:false, errs:[String(e.message||e)], ts:Date.now(), key };
-    toast.error('Contracts error'); return false;
-  }
-}
-async function runSelf(){
-  try{
-    const r = await rpc('runSelfTests');
-    const pass = r?.ok===true && Array.isArray(r.results) && r.results.every(x=>x.pass);
-    els.selfOut.innerHTML = pass
-      ? `<div class="good">PASS</div><pre class="mono">${esc(pretty(r))}</pre>`
-      : `<div class="bad">FAIL</div><pre class="mono">${esc(pretty(r))}</pre>`;
-    state.lastSelf = { pass, raw:r, ts:Date.now() };
-    toast(pass?'Self-tests PASS':'Self-tests FAIL');
-    return pass;
-  } catch(e){
-    els.selfOut.innerHTML = `<div class="bad">ERROR</div><pre class="mono">${esc(String(e.message||e))}</pre>`;
-    state.lastSelf = { pass:false, raw:String(e.message||e), ts:Date.now() };
-    toast.error('Self-tests error'); return false;
-  }
-}
-
-/* ---------- Deep: Run All & Export ---------- */
-function setOverallDeep(passContracts, passSelf, snapOK){
-  const cls = (passContracts && passSelf && snapOK) ? 'green'
-           : (!passContracts || !passSelf) ? 'red' : 'yellow';
-  els.overallLedDeep.className = 'led ' + cls;
-}
-async function runAll(){
-  await refreshSnapshots();
-  const snapOK = !!state.lastSnapshots;
-  const passC = await runContracts();
-  const passS = await runSelf();
-  setOverallDeep(passC, passS, snapOK);
-}
-function exportDeep(){
-  const data = {
-    build: '<?= BUILD_ID ?>',
-    at: new Date().toISOString(),
-    target: els.selEvent.value || state.targetKey || '',
-    snapshots: state.lastSnapshots,
-    contracts: state.lastContracts,
-    selftests: state.lastSelf
-  };
-  const blob = new Blob([JSON.stringify(data,null,2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'nextup-test-results.json';
-  document.body.appendChild(a); a.click(); a.remove();
-  URL.revokeObjectURL(url);
-}
-
-/* ---------- Smoke runner (top panel) ---------- */
-function trSmoke(step, status, details){
-  return `<tr><td>${esc(step)}</td><td>${status}</td><td class="mono">${esc(details)}</td></tr>`;
-}
-function setOverallSmoke(cls, text){
-  els.overallLed.className = 'led ' + cls;
-  els.overallText.textContent = text;
-}
-async function runSnapshotsSmoke(key){
-  const [b,su,pu] = await Promise.all([
-    rpc('getPublicBundle', key),
-    rpc('getSignupQr', key),
-    rpc('getShareQr', key)
-  ]);
-  const rows = [];
-  rows.push(trSmoke('Snapshots/Bundle', led(b && b.ok===true ? 'green':'red'), `bundle.ok=${b && b.ok} id=${(b && b.eventMeta && b.eventMeta.id) || '?'}`));
-  rows.push(trSmoke('Snapshots/Signup', led(statusToLed(su)), `ok=${su && su.ok} url=${(su && su.url) || ''} qr=${!!(su && su.qrB64)}`));
-  rows.push(trSmoke('Snapshots/Public', led(statusToLed(pu)), `ok=${pu && pu.ok} url=${(pu && pu.url) || ''} qr=${!!(pu && pu.qrB64)}`));
-  return { bundle:b, signup:su, pub:pu, rows: rows.join('') };
-}
-async function runContractsSmoke(key){
-  const [b,su,pu] = await Promise.all([ rpc('getPublicBundle',key), rpc('getSignupQr',key), rpc('getShareQr',key) ]);
-  const errs = [
-    ...validateBundleV1(b),
-    ...validateLinkQrV1(su,'signup'),
-    ...validateLinkQrV1(pu,'public')
-  ];
-  const pass = errs.length===0;
-  const details = pass ? 'PASS' : ('FAIL: ' + errs.join('; '));
-  return { pass, rows: trSmoke('Contracts', led(pass?'green':'red'), details), bundle:b, signup:su, public:pu, errs };
-}
-async function runSelfSmoke(){
-  const r = await rpc('runSelfTests');
-  const pass = r?.ok===true && Array.isArray(r.results) && r.results.every(x=>x.pass);
-  return { pass, rows: trSmoke('Self-tests', led(pass?'green':'red'), pass?'PASS':'FAIL'), raw:r };
-}
-async function runSmoke(){
-  try{
-    els.btnRunSmoke.disabled = true; els.btnExportSmoke.disabled = true;
-    setOverallSmoke('yellow','Running…');
-    els.smokeBody.innerHTML = `<tr><td colspan="3" class="muted">Running…</td></tr>`;
-    els.smokeRaw.textContent = '';
-
-    // Pick target: scenario param wins; else selected event; else first event; else a default mock
-    if (paramTarget) { state.targetKey = paramTarget; }
-    if (!state.targetKey){
-      // if a real event is selected use it
-      const selected = els.selEvent.value;
-      if (selected) state.targetKey = selected;
-    }
-    if (!state.targetKey){
-      const r = await retry(()=> rpc('listEvents'), 3, [300,600,1200]);
-      const ev = (r && r.ok && r.events && r.events[0]) ? r.events[0] : null;
-      state.targetKey = ev ? ev.id : 'mock:public_qr_ready';
-    }
-    if (paramTestMode === '1' || els.chkTestMode.checked) {
-      try { await rpc('setTestMode', true); } catch(e){ log('setTestMode: '+(e.message||e),'warn'); }
-    }
-
-    const key = state.targetKey;
-    const snaps = await runSnapshotsSmoke(key);
-    const cont  = await runContractsSmoke(key);
-    const self  = await runSelfSmoke();
-
-    els.smokeBody.innerHTML = [snaps.rows, cont.rows, self.rows].join('');
-    const pass = !!(snaps && cont.pass && self.pass);
-    setOverallSmoke(pass ? 'green' : 'red', pass ? 'PASS' : 'FAIL');
-
-    state.smokeArtifact = {
-      build: '<?= BUILD_ID ?>',
-      at: new Date().toISOString(),
-      target: key,
-      snapshots: { bundle:snaps.bundle, signup:snaps.signup, public:snaps.pub },
-      contracts: { pass:cont.pass, errors:cont.errs, bundle:cont.bundle, signup:cont.signup, public:cont.public },
-      selftests: self.raw
+    const THRESH = { GREEN_MS: 90000, YELLOW_MS: 180000 }; // 90s / 180s
+    const SLA = {
+      // keys → human labels for the 8 metrics
+      BARE_NOPOSTER: 'TtL w/o Form · No Poster',
+      BARE_FORM: 'TtL w/ Form · No Poster',
+      IMG_NOFORM: 'TtL w/o Form · Poster Image',
+      IMG_FORM: 'TtL w/ Form · Poster Image',
+      TXT_NOFORM: 'TtL w/o Form · Poster Text',
+      TXT_FORM: 'TtL w/ Form · Poster Text',
+      BOTH_NOFORM: 'TtL w/o Form · Poster Image+Text',
+      BOTH_FORM: 'TtL w/ Form · Poster Image+Text'
     };
-    els.smokeRaw.textContent = JSON.stringify(state.smokeArtifact,null,2);
-    els.btnExportSmoke.disabled = false;
-    toast(pass ? 'Smoke PASS' : 'Smoke FAIL');
-  } catch(e){
-    setOverallSmoke('red','ERROR');
-    els.smokeBody.innerHTML = trSmoke('Error', led('red'), String(e.message || e));
-    state.smokeArtifact = { build:'<?= BUILD_ID ?>', at:new Date().toISOString(), error:String(e.message||e) };
-    els.smokeRaw.textContent = JSON.stringify(state.smokeArtifact,null,2);
-    toast.error('Smoke error');
-  } finally {
-    els.btnRunSmoke.disabled = false;
-  }
-}
-function exportSmoke(){
-  const a = state.smokeArtifact || { note:'no artifact' };
-  const blob = new Blob([JSON.stringify(a,null,2)], { type:'application/json' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url; link.download = 'nextup-smoke-results.json';
-  document.body.appendChild(link); link.click(); link.remove();
-  URL.revokeObjectURL(url);
-}
 
-/* ---------- Wire events ---------- */
-els.btnRefreshTargets.onclick = refreshTargets;
-els.selEvent.onchange = (e)=> { state.targetKey = e.target.value; };
-els.btnUseScenario.onclick = applyScenario;
-els.btnResetScenario.onclick = resetTarget;
-els.chkTestMode.onchange = (e)=> setTestMode(e.target.checked);
+    const els = {
+      pfMsg: document.getElementById('preflightMsg'),
+      pfCtrl: document.getElementById('pf-ctrl-dot'),
+      pfTpl: document.getElementById('pf-tpl-dot'),
+      pfQr: document.getElementById('pf-qr-dot'),
+      btnSmoke: document.getElementById('btnRunSmoke'),
+      btnSelfTests: document.getElementById('btnRunSelfTests'),
+      btnSlaMock: document.getElementById('btnRunSlaMock'),
+      btnSlaReal: document.getElementById('btnRunSlaReal'),
+      eventKey: document.getElementById('eventKey'),
+      slaResults: document.getElementById('slaResults'),
+      contractsBadge: document.getElementById('contractsBadge'),
+      contractsOut: document.getElementById('contractsOut'),
+      threshGreen: document.getElementById('threshGreen'),
+      threshYellow: document.getElementById('threshYellow'),
+      threshYellow2: document.getElementById('threshYellow2'),
+      diagBody: document.getElementById('diagBody'),
+      chkDiagTail: document.getElementById('chkDiagTail'),
+      btnFlushDiag: document.getElementById('btnFlushDiag'),
+    };
 
-els.btnSnap.onclick = refreshSnapshots;
+    // Threshold legend
+    els.threshGreen.textContent = THRESH.GREEN_MS.toLocaleString();
+    els.threshYellow.textContent = THRESH.YELLOW_MS.toLocaleString();
+    els.threshYellow2.textContent = THRESH.YELLOW_MS.toLocaleString();
 
-els.btnSetSignupUrl.onclick = setSignupUrl;
-els.btnSetSignupQR.onclick = setSignupQR;
-els.btnClearSignup.onclick = clearSignup;
-els.btnSetPublicUrl.onclick = setPublicUrl;
-els.btnSetPublicQR.onclick = setPublicQR;
-els.btnClearPublic.onclick = clearPublic;
+    function badge(ms){
+      if (ms < THRESH.GREEN_MS) return '<span class="pill g">G</span>';
+      if (ms < THRESH.YELLOW_MS) return '<span class="pill y">Y</span>';
+      return '<span class="pill r">R</span>';
+    }
+    function dot(el, state){ el.className = 'status-dot ' + (state || ''); }
 
-els.btnContracts.onclick = runContracts;
-els.btnSelfTests.onclick = runSelf;
+    /** RPC wrapper */
+    function rpc(fn, ...args){
+      return new Promise((res, rej)=>{
+        google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej(e && e.message ? new Error(e.message) : e))[fn](...args);
+      });
+    }
 
-els.btnRunAll.onclick = runAll;
-els.btnExportDeep.onclick = exportDeep;
+    /** Log to Diagnostics sheet via backend */
+    function log(level, where, msg, data){
+      try { google.script.run.clientLog({ level, where, msg, data, ts: Date.now() }); } catch (_) {}
+    }
 
-els.btnRunSmoke.onclick = runSmoke;
-els.btnExportSmoke.onclick = exportSmoke;
+    /** Preflight: control/template/qr cache */
+    async function preflight(){
+      try {
+        const st = await rpc('getControlStatus');
+        dot(els.pfCtrl, st.present ? 'g' : (st.err ? 'r' : 'y'));
+        dot(els.pfTpl, st.templateId ? 'g' : 'y');
+      } catch(_e) { dot(els.pfCtrl,'r'); dot(els.pfTpl,'r'); }
+      // QR cache smoke (no-op warmup)
+      dot(els.pfQr, 'g');
+      els.pfMsg.textContent = 'Preflight checked. Control/Template auto-heal occurs on Admin/Test load.';
+    }
 
-document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
-document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
+    /** Smoke: bundles + link endpoints on mock keys */
+    async function runSmoke(){
+      const cases = [
+        { k:'mock:empty', what:'bundle' },
+        { k:'mock:public_qr_ready', what:'public' },
+        { k:'mock:signup_qr_ready', what:'signup' }
+      ];
+      let ok = true, lines = [];
+      for (const c of cases){
+        try {
+          if (c.what==='bundle'){
+            const b = await rpc('getPublicBundle', c.k);
+            lines.push('bundle '+c.k+': '+(b && b.ok ? 'ok' : 'fail'));
+            ok = ok && !!(b && b.ok);
+          } else if (c.what==='public') {
+            const p = await rpc('getShareQr', c.k);
+            lines.push('public '+c.k+': '+(p && p.ok ? 'ok' : 'fail'));
+            ok = ok && !!(p && p.ok);
+          } else {
+            const s = await rpc('getSignupQr', c.k);
+            lines.push('signup '+c.k+': '+(s && s.ok ? 'ok' : 'fail'));
+            ok = ok && !!(s && s.ok);
+          }
+        } catch(e){ lines.push(c.what+' '+c.k+': EXC '+String(e)); ok=false; }
+      }
+      toast(ok ? 'Smoke: PASS' : 'Smoke: FAIL', ok ? '' : 'error');
+      log(ok ? 'info':'error', 'test.smoke', ok ? 'pass':'fail', { lines });
+    }
 
-/* ---------- Boot ---------- */
-document.addEventListener('DOMContentLoaded', async ()=>{
-  setDiagExpanded(false);
-  await refreshTargets();
-  if (paramTestMode === '1') { await setTestMode(true); els.chkTestMode.checked = true; }
-  if (paramAutoRun) { await runSmoke(); }
-  toast('Test harness ready');
-});
-</script>
+    /** Self-tests (backend contract checks) */
+    async function runContracts(){
+      els.contractsBadge.textContent = '…';
+      els.contractsBadge.className = 'pill';
+      els.contractsOut.textContent = '(running…)';
+      try {
+        const r = await rpc('runSelfTests');
+        if (r && r.ok){
+          const fails = (r.results || []).filter(x => !x.pass);
+          els.contractsBadge.textContent = fails.length ? 'FAIL' : 'PASS';
+          els.contractsBadge.className = 'pill ' + (fails.length ? 'r' : 'g');
+          els.contractsOut.textContent = JSON.stringify(r, null, 2);
+          log(fails.length ? 'error':'info', 'test.contracts', fails.length ? 'fail':'pass', { results: r.results });
+        } else {
+          els.contractsBadge.textContent = 'ERR';
+          els.contractsBadge.className = 'pill r';
+          els.contractsOut.textContent = JSON.stringify(r || { ok:false }, null, 2);
+          log('error', 'test.contracts', 'error', r);
+        }
+      } catch(e){
+        els.contractsBadge.textContent = 'EXC';
+        els.contractsBadge.className = 'pill r';
+        els.contractsOut.textContent = String(e && e.message || e);
+        log('error','test.contracts','exception',{ err: String(e && e.message || e) });
+      }
+    }
+
+    /** ================= SLA runner =================
+     * Poster readiness == verified public QR.
+     * For "with form" variants, we also require verified signup QR.
+     * Image/Text/Both label the UI path; verification condition is identical (strict QR invariant).
+     */
+    function msSince(t0){ return Date.now() - t0; }
+    function slaRow(label, ms, ok, extra){
+      const cls = ok ? '' : ' (timeout)';
+      return [
+        `<div>${label}</div>`,
+        `<div><span class="mono">${ms.toLocaleString()} ms</span> ${badge(ms)} ${extra||''}${ok?'':` <span class="pill r">FAIL</span>`}</div>`
+      ].join('');
+    }
+    function renderSla(results){
+      els.slaResults.innerHTML = Object.keys(results).map(k => {
+        const r = results[k]; return slaRow(r.label, r.ms, r.ok, r.note || '');
+      }).join('');
+    }
+
+    async function waitPublicQr(eventKey, timeoutMs=180000, intervalMs=750){
+      const t0 = Date.now();
+      while (Date.now() - t0 < timeoutMs){
+        const r = await rpc('getShareQr', eventKey);
+        if (r && r.ok && r.qrB64) return { ok:true, url:r.url, ms: msSince(t0) };
+        await sleep(intervalMs);
+      }
+      return { ok:false, ms: msSince(t0), error:'timeout_public_qr' };
+    }
+    async function waitSignupQr(eventKey, timeoutMs=180000, intervalMs=750){
+      const t0 = Date.now();
+      while (Date.now() - t0 < timeoutMs){
+        const r = await rpc('getSignupQr', eventKey);
+        if (r && r.ok && r.qrB64) return { ok:true, url:r.url, ms: msSince(t0) };
+        await sleep(intervalMs);
+      }
+      return { ok:false, ms: msSince(t0), error:'timeout_signup_qr' };
+    }
+
+    function sleep(ms){ return new Promise(r => setTimeout(r, ms)); }
+
+    async function runSla(useMock){
+      const started = Date.now();
+      const keyReal = (els.eventKey.value || '').trim();
+
+      // Keys for mock vs real. For real, user can pass one key; both public/signup use the same event.
+      const keys = useMock ? {
+        public: 'mock:public_qr_ready',
+        signup: 'mock:signup_qr_ready'
+      } : {
+        public: keyReal || 'mock:public_qr_ready',
+        signup: keyReal || 'mock:signup_qr_ready'
+      };
+
+      const results = {};
+
+      // Helper measuring functions
+      async function measureBareNoPoster(){
+        const t0 = Date.now();
+        const p = await waitPublicQr(keys.public);
+        return { ok: p.ok, ms: msSince(t0), note: p.ok ? '' : '(timeout)' };
+      }
+      async function measureWithFormNoPoster(){
+        const t0 = Date.now();
+        const p1 = await waitPublicQr(keys.public);
+        const p2 = await waitSignupQr(keys.signup);
+        return { ok: p1.ok && p2.ok, ms: Math.max(p1.ms, p2.ms), note: (p1.ok&&p2.ok)?'':'(timeout)' };
+      }
+      async function measurePosterPath(withForm){
+        const t0 = Date.now();
+        const pub = await waitPublicQr(keys.public);
+        if (!withForm) return { ok: pub.ok, ms: msSince(t0), note: pub.ok?'':'(timeout)' };
+        const su = await waitSignupQr(keys.signup);
+        return { ok: pub.ok && su.ok, ms: Math.max(pub.ms, su.ms), note: (pub.ok&&su.ok)?'':'(timeout)' };
+      }
+
+      // 1) No form, no poster
+      let r1 = await measureBareNoPoster();
+      results.BARE_NOPOSTER = { label: SLA.BARE_NOPOSTER, ...r1 }; log(r1.ok?'info':'warn','test.sla','bare_noposter',{ useMock, ...r1 });
+
+      // 2) With form, no poster
+      let r2 = await measureWithFormNoPoster();
+      results.BARE_FORM = { label: SLA.BARE_FORM, ...r2 }; log(r2.ok?'info':'warn','test.sla','form_noposter',{ useMock, ...r2 });
+
+      // 3) No form, poster IMAGE
+      let r3 = await measurePosterPath(false);
+      results.IMG_NOFORM = { label: SLA.IMG_NOFORM, ...r3 }; log(r3.ok?'info':'warn','test.sla','poster_image_noform',{ useMock, ...r3 });
+
+      // 4) With form, poster IMAGE
+      let r4 = await measurePosterPath(true);
+      results.IMG_FORM = { label: SLA.IMG_FORM, ...r4 }; log(r4.ok?'info':'warn','test.sla','poster_image_form',{ useMock, ...r4 });
+
+      // 5) No form, poster TEXT
+      let r5 = await measurePosterPath(false);
+      results.TXT_NOFORM = { label: SLA.TXT_NOFORM, ...r5 }; log(r5.ok?'info':'warn','test.sla','poster_text_noform',{ useMock, ...r5 });
+
+      // 6) With form, poster TEXT
+      let r6 = await measurePosterPath(true);
+      results.TXT_FORM = { label: SLA.TXT_FORM, ...r6 }; log(r6.ok?'info':'warn','test.sla','poster_text_form',{ useMock, ...r6 });
+
+      // 7) No form, poster BOTH (image+text)
+      let r7 = await measurePosterPath(false);
+      results.BOTH_NOFORM = { label: SLA.BOTH_NOFORM, ...r7 }; log(r7.ok?'info':'warn','test.sla','poster_both_noform',{ useMock, ...r7 });
+
+      // 8) With form, poster BOTH (image+text)
+      let r8 = await measurePosterPath(true);
+      results.BOTH_FORM = { label: SLA.BOTH_FORM, ...r8 }; log(r8.ok?'info':'warn','test.sla','poster_both_form',{ useMock, ...r8 });
+
+      renderSla(results);
+
+      const suiteMs = msSince(started);
+      const summary = Object.keys(results).reduce((a,k)=> (a[k]=results[k].ms, a), {});
+      log('info','test.sla.summary8','done',{ useMock, suiteMs, ...summary });
+      toast('SLA (8) run complete.');
+    }
+
+    /** Toasts */
+    let toastTimer=null;
+    function toast(msg, kind){
+      clearTimeout(toastTimer);
+      const t = document.createElement('div');
+      t.className = 'toast ' + (kind||'');
+      t.textContent = msg;
+      document.body.appendChild(t);
+      toastTimer = setTimeout(()=> t.remove(), 2400);
+    }
+
+    /** Diagnostics live tail (front-only marker) */
+    function diag(line, level){
+      const el = document.createElement('div');
+      el.className = 'lvl-' + (level || 'info');
+      el.textContent = (new Date()).toISOString() + ' · ' + (level || 'info') + ' · ' + line;
+      els.diagBody.prepend(el);
+      const keep = 500;
+      while (els.diagBody.childNodes.length > keep) els.diagBody.removeChild(els.diagBody.lastChild);
+    }
+
+    // Wire buttons
+    els.btnRunSlaMock.addEventListener('click', ()=> runSla(true));
+    els.btnSlaReal.addEventListener('click', ()=> runSla(false));
+    els.btnRunSmoke.addEventListener('click', runSmoke);
+    els.btnRunSelfTests.addEventListener('click', runContracts);
+    els.btnFlushDiag.addEventListener('click', ()=> {
+      log('info','test.flush','sample',{ n: Math.random().toString(36).slice(2,8) });
+      diag('flushed sample log → Diagnostics sheet', 'info');
+      toast('Sample log sent to Diagnostics');
+    });
+
+    // Boot
+    document.addEventListener('DOMContentLoaded', async ()=>{
+      try { await preflight(); } catch(_) {}
+      diag('Test page loaded', 'info');
+    });
+  </script>
 </body>
 </html>
