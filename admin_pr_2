@@ -486,36 +486,6 @@ function _maybeTrashIfOurs_(spreadsheetId) {
     if (prov.ok && prov.kind === 'control') DriveApp.getFileById(spreadsheetId).setTrashed(true);
   } catch(_e){}
 }
-function ensureControlWorkbook() {
-  var p = PropertiesService.getScriptProperties();
-  var tplId = p.getProperty(_K.CTRL_TEMPLATE_ID);
-  if (!tplId) return { ok:false, error:'control_template_not_configured' };
-
-  var required = _getRequiredTabs_();
-  var lock = LockService.getScriptLock(); lock.tryLock(5000);
-  try {
-    var cid = p.getProperty(_K.CTRL_BOOK_ID);
-    if (cid) {
-      try {
-        var ex = SpreadsheetApp.openById(cid);
-        var v = _validateWorkbookTabs_(ex, required);
-        if (v.ok) return { ok:true, created:false, controlId: cid, templateId: tplId };
-        _maybeTrashIfOurs_(cid);
-      } catch(_e) { /* stale */ }
-    }
-    for (var i=0;i<3;i++){
-      var ctrl = SpreadsheetApp.openById(tplId).copy('NextUp – control ('+_todayISO_()+')');
-      var ctrlId = ctrl.getId();
-      p.setProperty(_K.CTRL_BOOK_ID, ctrlId);
-      _markWorkbookProvenance_(ctrl, 'control');
-      var v2 = _validateWorkbookTabs_(ctrl, required);
-      if (v2.ok) return { ok:true, created:true, controlId: ctrlId, templateId: tplId };
-      _maybeTrashIfOurs_(ctrlId);
-      Utilities.sleep(200 + Math.floor(Math.random()*200));
-    }
-    return { ok:false, error:'control_setup_failed_after_retries' };
-  } finally { try { lock.releaseLock(); } catch(_e){} }
-}
 function getControlStatus() {
   var p = PropertiesService.getScriptProperties();
   var tpl = p.getProperty(_K.CTRL_TEMPLATE_ID) || '';
