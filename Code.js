@@ -439,6 +439,217 @@ function getPublicBundle(eventId){
   return { ok:true, eventId, build:BUILD_ID, message:'Public bundle placeholder' };
 }
 
+/************************************************************
+ * NextUp · Compat Pack (ensureTemplateWorkbook / ensureControlWorkbook /
+ * createEventFromControl + bootstrap + minimal helpers)
+ * Safe to paste into Code.gs. Idempotent and small-scope.
+ ************************************************************/
+
+/** ---- Small constants/keys (names match earlier discussions) ---- */
+var _NP = (typeof _K === 'object' ? _K : {
+  CTRL_TEMPLATE_ID: 'nu_control_template_id',
+  CTRL_BOOK_ID:     'nu_control_book_id',
+  CTRL_REQ_TABS:    'nu_control_required_tabs',
+  EVENT_BOOK_PREFIX:'nu_event_book_',
+  PU_PREFIX:        'nu_test_pu_',
+  PUQ_PREFIX:       'nu_test_puq_',
+  SU_PREFIX:        'nu_test_su_',
+  SUQ_PREFIX:       'nu_test_suq_',
+  EVENTS_CACHE:     'events_payload_v1',
+  EVENTS_ETAG:      'nu_events_etag_salt'
+});
+
+/** ---- Utilities used by this pack ---- */
+function _np_todayISO_(){ return new Date().toISOString().slice(0,10); }
+function _np_json_(x){ return JSON.stringify(x); }
+function _np_sha1_(s){
+  var b = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, s, Utilities.Charset.UTF_8);
+  return b.map(function(v){v=(v+256)%256; return ('0'+v.toString(16)).slice(-2);}).join('');
+}
+function _np_requiredTabs_(){
+  var csv = PropertiesService.getScriptProperties().getProperty(_NP.CTRL_REQ_TABS) || '';
+  var explicit = csv.split(',').map(function(s){return s.trim();}).filter(Boolean);
+  if (explicit.length) return explicit;
+  // default schema
+  return ['Config','Roster','Schedule'];
+}
+function _np_markProv_(ss, kind){
+  var sh = ss.getSheetByName('__nextup_meta'); if (!sh) { sh = ss.insertSheet('__nextup_meta'); sh.hideSheet(); }
+  sh.getRange(1,1,1,3).setValues([[String(kind||'control'), Utilities.getUuid(), new Date()]]);
+}
+function _np_validTabs_(ss, req){
+  var have = ss.getSheets().map(function(s){return s.getName();});
+  var missing = req.filter(function(n){ return have.indexOf(n) < 0; });
+  return { ok: missing.length===0, missing: missing };
+}
+function _np_templateSchema_(){
+  return {
+    name: 'NextUp – control (template)',
+    tabs: [
+      { name:'Config',   rows:[['Field','Value'],['Event Name',''],['Slug',''],['Date (ISO)',''],['Event ID','']], widths:[140,420] },
+      { name:'Roster',   rows:[['Name','Role','Notes']], widths:[200,140,320] },
+      { name:'Schedule', rows:[['When','Item','Location','Notes']], widths:[120,220,180,260] }
+    ]
+  };
+}
+function _np_buildFromSchema_(schema, kind){
+  var ss = SpreadsheetApp.create(schema.name);
+  var sh0 = ss.getSheets()[0]; if (sh0) ss.deleteSheet(sh0);
+  schema.tabs.forEach(function(t){
+    var sh = ss.insertSheet(t.name);
+    if (t.rows && t.rows.length){
+      var r = sh.getRange(1,1,t.rows.length,t.rows[0].length);
+      r.setValues(t.rows); r.setFontWeight('bold');
+      if (t.rows.length>1) sh.getRange(2,1,t.rows.length-1,t.rows[0].length).setFontWeight('normal');
+    }
+    if (t.widths) t.widths.forEach(function(w,i){ try{ sh.setColumnWidth(i+1,w);}catch(_e){} });
+  });
+  _np_markProv_(ss, kind||'template');
+  return ss;
+}
+
+/** ---- Public: ensureTemplateWorkbook() ----
+ * Creates a template workbook if missing or invalid. Stores id in ScriptProperties.
+ */
+function ensureTemplateWorkbook(){
+  var p = PropertiesService.getScriptProperties();
+  var req = _np_requiredTabs_();
+  var id = p.getProperty(_NP.CTRL_TEMPLATE_ID);
+  // validate existing
+  if (id) {
+    try {
+      var tpl = SpreadsheetApp.openById(id);
+      var v = _np_validTabs_(tpl, req);
+      if (v.ok) return { ok:true, created:false, templateId:id };
+      // If it's our template, trash and recreate
+      _np_markProv_(tpl, 'template'); // ensure marker exists
+      DriveApp.getFileById(id).setTrashed(true);
+      p.deleteProperty(_NP.CTRL_TEMPLATE_ID);
+      id = null;
+    } catch(_e){ p.deleteProperty(_NP.CTRL_TEMPLATE_ID); id=null; }
+  }
+  if (!id){
+    var ss = _np_buildFromSchema_(_np_templateSchema_(), 'template');
+    id = ss.getId();
+    p.setProperty(_NP.CTRL_TEMPLATE_ID, id);
+    return { ok:true, created:true, templateId:id };
+  }
+  return { ok:true, created:false, templateId:id };
+}
+
+/** ---- Public: ensureControlWorkbook() ----
+ * Ensures a Control workbook exists, copying from template if needed.
+ */
+function ensureControlWorkbook(){
+  var p = PropertiesService.getScriptProperties();
+  var et = ensureTemplateWorkbook(); if (!et.ok) return { ok:false, error:'template_bootstrap_failed' };
+  var tplId = et.templateId;
+  var req = _np_requiredTabs_();
+
+  var cid = p.getProperty(_NP.CTRL_BOOK_ID);
+  if (cid){
+    try{
+      var ctrl = SpreadsheetApp.openById(cid);
+      var v = _np_validTabs_(ctrl, req);
+      if (v.ok) return { ok:true, created:false, controlId:cid, templateId:tplId };
+      DriveApp.getFileById(cid).setTrashed(true);
+      p.deleteProperty(_NP.CTRL_BOOK_ID);
+      cid = null;
+    } catch(_e){ p.deleteProperty(_NP.CTRL_BOOK_ID); cid=null; }
+  }
+  // copy from template
+  var ctrlNew = SpreadsheetApp.openById(tplId).copy('NextUp – control ('+_np_todayISO_()+')');
+  _np_markProv_(ctrlNew, 'control');
+  p.setProperty(_NP.CTRL_BOOK_ID, ctrlNew.getId());
+  // validate
+  var v2 = _np_validTabs_(ctrlNew, req);
+  if (!v2.ok) return { ok:false, error:'control_invalid_after_copy', missing:v2.missing, controlId:ctrlNew.getId(), templateId:tplId };
+  return { ok:true, created:true, controlId:ctrlNew.getId(), templateId:tplId };
+}
+
+/** ---- Public: createEventFromControl(payload) ----
+ * Minimal event creator: copies the Control workbook to a per-event workbook,
+ * seeds Config, and persists public/signup URLs into ScriptProperties.
+ * Returns eventBookId + link state. Cache is busted for UI refresh.
+ */
+function createEventFromControl(payload){
+  if (!payload || !payload.id) return { ok:false, error:'missing_event_id' };
+  var eventId = String(payload.id);
+  var slug    = String(payload.slug || payload.id);
+  var name    = String(payload.name || slug);
+  var dateISO = String(payload.dateISO || _np_todayISO_());
+  var includeSignup = !!payload.includeSignup;
+
+  var lock = LockService.getScriptLock(); lock.tryLock(5000);
+  try{
+    var p = PropertiesService.getScriptProperties();
+    // ensure control
+    var boot = ensureControlWorkbook();
+    if (!boot.ok) return { ok:false, error: boot.error || 'control_bootstrap_failed', detail: boot };
+    // reuse existing event workbook if already provisioned
+    var exist = p.getProperty(_NP.EVENT_BOOK_PREFIX + eventId);
+    if (exist){
+      try { SpreadsheetApp.openById(exist); } catch(_e){ exist=''; }
+    }
+    var evId = exist;
+    if (!evId){
+      // copy control as event workbook
+      var ev = SpreadsheetApp.openById(boot.controlId).copy('NextUp – '+slug);
+      evId = ev.getId();
+      p.setProperty(_NP.EVENT_BOOK_PREFIX + eventId, evId);
+      _np_markProv_(ev, 'event');
+      // seed Config sheet if present
+      var cfg = ev.getSheetByName('Config');
+      if (cfg){
+        var map = { 'B2': name, 'B3': slug, 'B4': dateISO, 'B5': eventId };
+        Object.keys(map).forEach(function(a1){ try{ cfg.getRange(a1).setValue(map[a1]); }catch(_e){} });
+      }
+    }
+    // provision links (dummy base; replace with your real URL builder if present)
+    var base = 'https://example.com';
+    var links = { publicUrl: base + '/e/' + encodeURIComponent(slug),
+                  signupUrl: includeSignup ? (base + '/f/' + encodeURIComponent(slug)) : '' };
+    // persist link state (unverified at creation)
+    if (links.publicUrl) { p.setProperty(_NP.PU_PREFIX + eventId, links.publicUrl); p.setProperty(_NP.PUQ_PREFIX + eventId, '0'); }
+    if (links.signupUrl) { p.setProperty(_NP.SU_PREFIX + eventId, links.signupUrl); p.setProperty(_NP.SUQ_PREFIX + eventId, '0'); }
+
+    // bust caches so Admin dropdown refreshes immediately
+    try { bustEventsCache_ && bustEventsCache_(); } catch(_e){}
+    try { bustEventsCache && bustEventsCache(); } catch(_e){ CacheService.getScriptCache().remove(_NP.EVENTS_CACHE); }
+
+    return { ok:true, created: !exist, eventId:eventId, eventBookId:evId,
+             links: links, verified:{ public:false, signup:false } };
+  } finally { try{ lock.releaseLock(); }catch(_e){} }
+}
+
+/** ---- Optional: bootstrap helper for Admin/Test cold-open ---- */
+function bootstrapControlAndTemplate(){
+  var t = ensureTemplateWorkbook();
+  var c = ensureControlWorkbook();
+  return { ok: (t && t.ok!==false) && (c && c.ok!==false), template:t, control:c };
+}
+
+/** ---- Optional: minimal listEvents() if your UI depends on it ----
+ * Reads from ScriptProperties EVENT_BOOK_PREFIX entries and emits a tiny list.
+ * If you already have listEvents(), keep yours and delete this stub.
+ */
+function listEvents(){
+  var p = PropertiesService.getScriptProperties();
+  var all = p.getProperties();
+  var evs = [];
+  Object.keys(all).forEach(function(k){
+    if (k.indexOf(_NP.EVENT_BOOK_PREFIX)===0){
+      var id = k.slice(_NP.EVENT_BOOK_PREFIX.length);
+      evs.push({ id:id, slug:id, name:id, startDateISO:_np_todayISO_() });
+    }
+  });
+  return { ok:true, events: evs };
+}
+
+/** ---- Cache busters (no-ops if you already have them) ---- */
+function bustEventsCache_(){ PropertiesService.getScriptProperties().setProperty(_NP.EVENTS_ETAG, String(Math.random())+':'+Date.now()); }
+function bustEventsCache(){ CacheService.getScriptCache().remove(_NP.EVENTS_CACHE); }
+
 /* ----------------------------- Smoke Tests -------------------------- */
 function runSmokeSafe(opts){
   const started = new Date();
