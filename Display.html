@@ -1,195 +1,249 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta charset="utf-8" />
-    <title>
-        <?= appTitle ?> · Display
-    </title>
-    <?!= include('Styles'); ?>
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta charset="utf-8" />
+  <title><?= appTitle ?> · Display</title>
+  <?!= include('Styles'); ?>
+  <?!= include('NuSdk'); ?>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <style>
+    body { /* TV mode sizing */ }
+    .tv { max-width: 1280px; margin: 0 auto; padding: 16px; }
+    .stage {
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+    .qrbox { border:1px solid var(--line); border-radius:12px; background:#fff; padding:16px; }
+    .qrbox img { display:block; width:100%; height:auto; }
+    .panel { border:1px solid var(--line); border-radius:12px; background:#fff; padding:16px; }
+    .msg { border:1px dashed var(--line); border-radius:8px; padding:12px; background:#fff; }
+    .msg h3 { margin-top:0; }
+    .slug {
+      display:flex; flex-wrap:wrap; gap:.5rem; color:#333;
+    }
+    .slug .pill { border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-weight:700; }
+    @media (max-width: 860px){
+      .stage { grid-template-columns: 1fr; }
+    }
+    @media print { .diag, .actions { display:none !important; } }
+  </style>
 </head>
-
 <body data-tv="1">
-    <main class="container">
-        <header>
-            <h1 id="title">(event)</h1>
-            <div class="meta">
-                <span id="date"></span>
-                <span> · </span>
-                <span id="flow"></span>
-                <span> · </span>
-                <span id="elim"></span>
-                <span> · </span>
-                <span id="seed"></span>
-                <span id="statusBadge" style="margin-left:8px;"></span>
-            </div>
-        </header>
+  <main class="tv container">
+    <header>
+      <h1 id="title" data-testid="display-title">(event)</h1>
+      <div class="meta">
+        <div class="slug">
+          <span class="pill" id="namePill" data-testid="display-name">(name)</span>
+          <span class="pill" id="datePill" data-testid="display-date">(date)</span>
+        </div>
+        <span id="statusBadge" style="margin-left:8px;" data-testid="display-status"></span>
+      </div>
+    </header>
 
-        <section>
-            <h2>Schedule</h2>
-            <table id="scheduleTbl" class="table">
-                <thead>
-                    <tr>
-                        <th>When</th>
-                        <th>Home</th>
-                        <th>Away</th>
-                        <th>Court</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="4" id="schedEmpty">Loading…</td>
-                    </tr>
-                </tbody>
-            </table>
+    <section class="stage" aria-label="Display layout">
+      <!-- Left: Public access (QR if verified, else URL text) -->
+      <div class="qrbox">
+        <h2 class="row gap">
+          Public Access
+          <span id="qrState" class="badge" data-testid="display-public-badge">Loading…</span>
+        </h2>
+        <div id="qr" data-testid="display-public-qr">
+          <div class="spinner" aria-label="Loading Public QR"></div>
+        </div>
+        <small id="url" class="muted" data-testid="display-public-url"></small>
+      </div>
+
+      <!-- Right: Info / Messaging (shows signup form URL if available) -->
+      <div class="panel">
+        <h2>Info</h2>
+        <section class="msg" aria-label="Messaging">
+          <h3 class="row gap">Messaging <span class="muted" id="msgHint" data-testid="display-msg-hint">Short info for attendees</span></h3>
+          <div id="msgBody" class="muted" data-testid="display-msg-body">
+            Welcome! Scan the QR (when available) or use the link below.
+          </div>
+          <div id="signupBlock" class="row" style="margin-top:10px;" data-testid="display-signup-block">
+            <!-- Populated when signup form URL is available -->
+          </div>
         </section>
+      </div>
+    </section>
 
-        <section>
-            <h2>Standings</h2>
-            <table id="standingsTbl" class="table">
-                <thead>
-                    <tr>
-                        <th>Team</th>
-                        <th>Record</th>
-                        <th>GB</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td colspan="3" id="standEmpty">Loading…</td>
-                    </tr>
-                </tbody>
-            </table>
-        </section>
+    <!-- Diagnostics -->
+    <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
+      <div class="diag-head">
+        <h2 id="diag-head">Diagnostics</h2>
+        <div class="diag-actions">
+          <label class="diag-checkbox row">
+            <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
+            Live logs
+          </label>
+          <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
+          <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
+        </div>
+      </div>
+      <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
+    </section>
+  </main>
 
-        <section>
-            <h2>Bracket</h2>
-            <div id="bracketWrap" class="bracket">Loading…</div>
-        </section>
-    </main>
+  <script>
+  /* ===== Display v4.1.1a ===== */
+  const { rpc, retry, toast, esc } = NUSDK;
 
-    <script>
-        /* ================= Display v4.1 ================= */
+  const params = new URLSearchParams(location.search);
+  const eventKey = params.get('event') || '';
 
-        /** 0) Config */
-        const CONFIG = {
-            REFRESH_MS: 15000, // a bit faster for TV
-            FIRST_LOAD_SPINNER_MS: 1000
-        };
+  const els = {
+    title: document.getElementById('title'),
+    namePill: document.getElementById('namePill'),
+    datePill: document.getElementById('datePill'),
+    badge: document.getElementById('statusBadge'),
 
-        /** 1) Params (supports ?event=…&tv=1) */
-        const params = new URLSearchParams(location.search);
-        const eventKey = params.get('event') || '';
-        const tvFlag = params.get('tv') === '1';
-        if (tvFlag) document.body.setAttribute('data-tv', '1');
+    qrState: document.getElementById('qrState'),
+    qr: document.getElementById('qr'),
+    url: document.getElementById('url'),
 
-        /** 2) RPC (hardened) */
-        async function rpc(fn, ...args) {
-            try {
-                return await new Promise((res, rej) =>
-                    google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error(e?.message || String(e))))[fn](...args)
-                );
-            } catch (err) {
-                if (!navigator.onLine) throw new Error('offline');
-                throw err;
-            }
+    msgBody: document.getElementById('msgBody'),
+    signupBlock: document.getElementById('signupBlock'),
+
+    diag: document.getElementById('diag'),
+    diagBody: document.getElementById('diagBody'),
+    btnClearLogs: document.getElementById('btnClearLogs'),
+    btnToggleDiag: document.getElementById('btnToggleDiag'),
+    chkLive: document.getElementById('chkLiveLogs')
+  };
+
+  function log(msg, level){
+    if (!els.chkLive.checked) return;
+    const row = document.createElement('div');
+    row.className = 'lvl-' + (level || 'info');
+    row.textContent = new Date().toLocaleTimeString() + ' — ' + String(msg);
+    els.diagBody.appendChild(row);
+    els.diagBody.scrollTop = els.diagBody.scrollHeight;
+  }
+  function setDiagExpanded(expanded){
+    els.diag.classList.toggle('collapsed', !expanded);
+    els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
+  }
+
+  function setQRState(state){
+    // loading | url | qr | absent
+    const map = {
+      loading:{ cls:'badge', text:'Loading…' },
+      url:    { cls:'badge', text:'URL Ready' },
+      qr:     { cls:'badge', text:'Verified QR' },
+      absent: { cls:'badge badge-warn', text:'Configure' }
+    };
+    const v = map[state] || map.loading;
+    els.qrState.className = v.cls;
+    els.qrState.textContent = v.text;
+  }
+
+  function renderQR(b64, alt){
+    if (!b64) return;
+    els.qr.innerHTML = `<img alt="${esc(alt||'Public QR')}" src="data:image/png;base64,${b64}" data-testid="qr-img" />`;
+  }
+  function renderURL(url){
+    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback">${esc(url)}</div>`;
+  }
+  function renderGuidance(txt){
+    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance">${esc(txt)}</div>`;
+  }
+
+  async function loadMeta(){
+    try{
+      const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
+      if (!r?.ok) throw new Error(r?.error || 'bundle failed');
+      const m = r.eventMeta || {};
+      const name = m.name || '(event)';
+      const date = m.dateISO || '';
+      els.title.textContent = name;
+      els.namePill.textContent = name;
+      els.datePill.textContent = date;
+      if (!m.status || m.status === 'LINKS_READY') {
+        els.badge.innerHTML = '';
+      } else {
+        const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
+        els.badge.innerHTML = `<span class="badge badge-warn">${esc(text)}</span>`;
+      }
+
+      // Messaging panel — surface signup form URL if available
+      const sb = els.signupBlock;
+      sb.replaceChildren();
+      if (m.formUrl) {
+        const a = document.createElement('a');
+        a.href = m.formUrl; a.target = '_blank'; a.rel = 'noopener';
+        a.textContent = m.formUrl;
+        const lbl = document.createElement('div');
+        lbl.className = 'muted';
+        lbl.textContent = 'Signup form:';
+        sb.appendChild(lbl);
+        sb.appendChild(a);
+      } else {
+        const hint = document.createElement('div');
+        hint.className = 'muted';
+        hint.textContent = 'No signup form yet. Enable it in Admin.';
+        sb.appendChild(hint);
+      }
+    } catch(e){
+      log('loadMeta: ' + (e.message || e), 'error');
+      toast.error('Failed to load event');
+    }
+  }
+
+  async function loadPublicQR(){
+    setQRState('loading');
+    try{
+      const r = await retry(()=> rpc('getShareQr', eventKey), 3, [300,600,1200]);
+      if (r?.ok === true) {
+        if (r.qrB64) {
+          renderQR(r.qrB64, 'Public QR');
+          els.url.textContent = r.url || '';
+          setQRState('qr');
+        } else if (r.url) {
+          // TV: show URL text clearly until verified
+          renderURL(r.url);
+          els.url.textContent = r.url || '';
+          setQRState('url');
+        } else {
+          renderGuidance('Public link not ready. Check Admin.');
+          els.url.textContent = '';
+          setQRState('absent');
         }
+      } else {
+        renderGuidance('Public link not ready. Check Admin.');
+        els.url.textContent = '';
+        setQRState('absent');
+      }
+    } catch(e){
+      log('loadPublicQR: ' + (e.message || e), 'error');
+      renderGuidance('Error loading Public link.');
+      setQRState('absent');
+    }
+  }
 
-        /** 3) DOM (defensive) */
-        const els = {
-            title: document.getElementById('title'),
-            date: document.getElementById('date'),
-            flow: document.getElementById('flow'),
-            elim: document.getElementById('elim'),
-            seed: document.getElementById('seed'),
-            status: document.getElementById('statusBadge'),
-            schedBody: document.querySelector('#scheduleTbl tbody'),
-            standBody: document.querySelector('#standingsTbl tbody'),
-            bracket: document.getElementById('bracketWrap'),
-            schedEmpty: document.getElementById('schedEmpty'),
-            standEmpty: document.getElementById('standEmpty'),
-        };
-        function must(el, id) { if (!el) throw new Error('Missing #' + id); return el; }
-        ['title', 'date', 'flow', 'elim', 'seed', 'status', 'schedBody', 'standBody', 'bracket'].forEach(k => must(els[k], k));
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    setDiagExpanded(false);
 
-        /** 4) Render helpers */
-        function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-        function renderRows(tbody, rows, tpl, colspan) {
-            if (!tbody) return;
-            tbody.innerHTML = (rows && rows.length)
-                ? rows.map(tpl).join('')
-                : `<tr><td colspan="${colspan}">No data yet</td></tr>`;
-        }
-        function rowSchedule(it) {
-            return `<tr>
-<td>${esc(it.when || '')}</td>
-<td>${esc(it.home || '')}</td>
-<td>${esc(it.away || '')}</td>
-<td>${esc(it.court || '')}</td>
-</tr>`;
-        }
-        function rowStanding(it) {
-            const rec = `${it.w || 0}-${it.l || 0}`;
-            return `<tr>
-<td>${esc(it.team || '')}</td>
-<td>${esc(rec)}</td>
-<td>${esc(it.gb || '')}</td>
-</tr>`;
-        }
-        function renderBracket(bundle) {
-            const hasRounds = Array.isArray(bundle?.rounds) && bundle.rounds.length;
-            els.bracket.textContent = hasRounds ? 'Bracket ready.' : 'Bracket will appear here';
-        }
+    if (!eventKey){
+      els.title.textContent = '(no event)';
+      els.namePill.textContent = '(name)';
+      els.datePill.textContent = '(date)';
+      renderGuidance('Add ?event=<id-or-slug> to the URL.');
+      setQRState('absent');
+      return;
+    }
 
-        /** 5) First-load UX */
-        let firstPaintDone = false;
-        function firstLoadSpinnerOffSoon() {
-            setTimeout(() => {
-                if (els.schedEmpty) els.schedEmpty.textContent = 'No data yet';
-                if (els.standEmpty) els.standEmpty.textContent = 'No data yet';
-            }, CONFIG.FIRST_LOAD_SPINNER_MS);
-        }
+    await loadMeta();
+    await loadPublicQR();
+    toast('Display ready');
+  });
 
-        /** 6) Refresh loop */
-        async function refreshOnce() {
-            try {
-                const r = await rpc('getPublicBundle', eventKey);
-                if (!r || !r.ok) throw new Error(r?.error || 'load failed');
-
-                const m = r.eventMeta || {};
-                els.title.textContent = m.name || '(event)';
-                els.date.textContent = m.dateISO || '';
-                els.flow.textContent = m.flow || 'Eventbook';
-                els.elim.textContent = m.elimType || '';
-                els.seed.textContent = m.seedMode || '';
-
-                if (!m.status || m.status === 'LINKS_READY') {
-                    els.status.innerHTML = '';
-                } else {
-                    const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
-                    els.status.innerHTML = `<span class="badge badge-warn">${text}</span>`;
-                }
-
-                renderRows(els.schedBody, r.schedule || [], rowSchedule, 4);
-                renderRows(els.standBody, r.standings || [], rowStanding, 3);
-                renderBracket(r.bracket || { type: m.elimType || 'single', rounds: [] });
-
-                if (!firstPaintDone) { firstPaintDone = true; firstLoadSpinnerOffSoon(); }
-            } catch (e) {
-                if (String(e || '').includes('offline')) {
-                    els.status.innerHTML = `<span class="badge badge-warn">Offline — showing cached view</span>`;
-                }
-            }
-        }
-
-        function startLoop() {
-            refreshOnce();
-            setInterval(refreshOnce, CONFIG.REFRESH_MS);
-        }
-
-        document.addEventListener('DOMContentLoaded', startLoop);
-    </script>
+  // Diagnostics controls
+  document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
+  document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
+  </script>
 </body>
-
 </html>
