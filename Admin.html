@@ -1,587 +1,373 @@
-/************************************************************
-* NextUp v4.1 — Server (Google Apps Script)
-* - Router + API for Eventbook v4.0 flow
-* - ETag discipline, idempotent provisioning, input validation
-* - Deep audit endpoints for ?p=status
-************************************************************/
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><?= appTitle ?> · Admin</title>
+  <?!= include('Styles'); ?>
+  <?!= include('NuSdk'); ?>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Admin</h1>
+      <div class="meta">
+        <small id="build">Build: <?= BUILD_ID ?></small>
+      </div>
+    </header>
 
-/** ===== Build / Constants ===== */
-const BUILD_ID = 'nextup-v4.1-eventbooks';
-const STATUS = Object.freeze({
-    CREATED: 'CREATED',
-    WORKBOOK_READY: 'WORKBOOK_READY',
-    LINKS_READY: 'LINKS_READY',
-    ERROR: 'ERROR'
-});
+    <!-- Control preflight banner:
+         Only shows when the control TEMPLATE is not configured.
+         Backend auto-repairs control workbook itself. -->
+    <div id="ctrlBannerMount"></div>
 
-/** Base columns controlled by the app (do not reorder lightly). */
-const CONTROL_HEADERS = Object.freeze([
-    'id', 'name', 'slug', 'startDateISO',
-    'eventSpreadsheetId', 'eventSpreadsheetUrl',
-    'eventTag', 'isDefault',
-    'seedMode', 'elimType',
-    // v4+ operational columns:
-    'status', 'statusMsg', 'updatedAtISO',
-    'publicUrl', 'displayUrl'
-]);
+    <section aria-labelledby="evt-head">
+      <h2 id="evt-head">Event</h2>
+      <div class="form-grid">
+        <label for="chooseEvent" data-sync="" data-testid="event-select-label">
+          Choose event
+          <select id="chooseEvent" data-testid="event-select"></select>
+        </label>
 
-/** Where the control Spreadsheet lives. */
-const PROP_CONTROL_ID = 'nu_control_ss_id';
+        <label for="evtSlug">
+          Slug (read-only)
+          <input id="evtSlug" type="text" readonly data-testid="event-slug" />
+        </label>
 
-/** ===== Router ===== */
-function doGet(e) {
+        <label for="evtDate">
+          Date (from source)
+          <input id="evtDate" type="text" readonly data-testid="event-date" />
+        </label>
+
+        <label for="evtName">
+          Name (from source)
+          <input id="evtName" type="text" readonly data-testid="event-name" />
+        </label>
+      </div>
+
+      <div class="actions row">
+        <button class="btn" id="btnCreateEvent" data-testid="btn-create-event">Create/Ensure Event Workbook</button>
+        <button class="btn" id="btnRefresh" data-testid="btn-refresh">Refresh</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="settings-head">
+      <h2 id="settings-head">Settings</h2>
+      <div class="form-grid">
+        <label class="row" for="chkSignup">
+          <input id="chkSignup" type="checkbox" data-testid="opt-include-signup" />
+          Include signup
+        </label>
+
+        <label for="posterMode">
+          Poster mode
+          <select id="posterMode" data-testid="opt-poster-mode">
+            <option value="image">Image Poster (QR allowed)</option>
+            <option value="text">Text Poster (QR allowed)</option>
+          </select>
+        </label>
+
+        <label class="row" for="chkCoach">
+          <input id="chkCoach" type="checkbox" data-testid="opt-coachmarks" />
+          Show coachmarks (onboarding nudges)
+        </label>
+
+        <div>
+          <div class="muted" style="margin-bottom:6px;">Quick open</div>
+          <div class="row gap">
+            <button class="btn" id="btnOpenPoster" data-testid="btn-open-poster">Open Poster</button>
+            <button class="btn" id="btnOpenPublic" data-testid="btn-open-public">Open Public</button>
+            <button class="btn" id="btnOpenDisplay" data-testid="btn-open-display">Open Display</button>
+          </div>
+        </div>
+      </div>
+      <div class="actions row">
+        <button class="btn btn-xl" id="btnSave" data-testid="btn-save">Save</button>
+      </div>
+    </section>
+
+    <section aria-labelledby="linkstatus-head">
+      <h2 id="linkstatus-head">Link status</h2>
+      <p class="muted">We never show a QR unless verified. URL presence is yellow; verified QR is green.</p>
+      <table class="table" data-testid="table-link-status">
+        <thead>
+          <tr>
+            <th>Channel</th>
+            <th>Status</th>
+            <th>URL</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="linkStatusBody">
+          <!-- rows injected -->
+        </tbody>
+      </table>
+    </section>
+
+    <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
+      <div class="diag-head">
+        <h2 id="diag-head">Diagnostics</h2>
+        <div class="diag-actions">
+          <label class="diag-checkbox row">
+            <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
+            Live logs
+          </label>
+          <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
+          <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
+        </div>
+      </div>
+      <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
+    </section>
+  </div>
+
+  <script>
+  /* ===== Admin logic (v4.1.1a) ===== */
+  const { rpc, retry, toast, esc } = NUSDK;
+
+  const state = {
+    events: [],
+    currentId: '',
+    settings: { includeSignup: false, posterMode: 'image', showCoach: true }
+  };
+
+  const els = {
+    ctrlMount: document.getElementById('ctrlBannerMount'),
+    choose: document.getElementById('chooseEvent'),
+    lblChoose: document.querySelector('label[for="chooseEvent"]'),
+    slug: document.getElementById('evtSlug'),
+    date: document.getElementById('evtDate'),
+    name: document.getElementById('evtName'),
+    btnCreate: document.getElementById('btnCreateEvent'),
+    btnRefresh: document.getElementById('btnRefresh'),
+    chkSignup: document.getElementById('chkSignup'),
+    posterMode: document.getElementById('posterMode'),
+    chkCoach: document.getElementById('chkCoach'),
+    btnSave: document.getElementById('btnSave'),
+    btnOpenPoster: document.getElementById('btnOpenPoster'),
+    btnOpenPublic: document.getElementById('btnOpenPublic'),
+    btnOpenDisplay: document.getElementById('btnOpenDisplay'),
+    linkTbody: document.getElementById('linkStatusBody'),
+    diag: document.getElementById('diag'),
+    diagBody: document.getElementById('diagBody'),
+    btnClearLogs: document.getElementById('btnClearLogs'),
+    btnToggleDiag: document.getElementById('btnToggleDiag'),
+    chkLiveLogs: document.getElementById('chkLiveLogs'),
+  };
+
+  function log(msg, level){
+    if (!els.chkLiveLogs.checked) return;
+    const row = document.createElement('div');
+    row.className = 'lvl-' + (level || 'info');
+    row.textContent = new Date().toLocaleTimeString() + ' — ' + String(msg);
+    els.diagBody.appendChild(row);
+    els.diagBody.scrollTop = els.diagBody.scrollHeight;
+  }
+
+  function setDiagExpanded(expanded){
+    els.diag.classList.toggle('collapsed', !expanded);
+    els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
+  }
+
+  async function preflightControlBanner(){
     try {
-        const page = (e && e.parameter && e.parameter.p || '').trim().toLowerCase();
-        if (!page) return htmlError_(400, 'Missing ?p route');
-
-        // HTML pages
-        if (page === 'admin' || page === 'public' || page === 'display' || page === 'poster' || page === 'status') {
-            const t = HtmlService.createTemplateFromFile(cap_(page));
-            t.appTitle = 'NextUp';
-            t.BUILD_ID = BUILD_ID;
-            t.include = include;
-            return t.evaluate()
-                .setTitle('NextUp · ' + cap_(page))
-                .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
-                .addMetaTag('viewport', 'width=device-width,initial-scale=1,viewport-fit=cover');
-        }
-
-        // Simple text health check
-        if (page === 'ping') {
-            return ContentService.createTextOutput(ping());
-        }
-
-        return htmlError_(404, 'Unknown page: ' + page);
-    } catch (err) {
-        return htmlError_(500, String(err));
-    }
-}
-
-function include(filename) {
-    return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
-
-function cap_(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
-function htmlError_(code, msg) {
-    const html = HtmlService.createHtmlOutput(
-        '<!doctype html><meta charset="utf-8"><title>Error</title><pre>' +
-        escHtml_(String(msg)) + '</pre>'
-    );
-    // Note: Apps Script HtmlOutput does not carry HTTP code; title/body conveys error.
-    return html.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-}
-
-/** ===== Simple health endpoint ===== */
-function ping() {
-    return 'ok ' + BUILD_ID;
-}
-
-/** ===== Control sheet boot / access ===== */
-function getOrCreateControl_() {
-    const props = PropertiesService.getScriptProperties();
-    let ssId = props.getProperty(PROP_CONTROL_ID);
-    let ss;
-    if (ssId) {
-        try { ss = SpreadsheetApp.openById(ssId); }
-        catch (e) { /* fallthrough to create */ }
-    }
-    if (!ss) {
-        ss = SpreadsheetApp.create('NextUp Control');
-        props.setProperty(PROP_CONTROL_ID, ss.getId());
-    }
-    let sh = ss.getSheetByName('Events');
-    if (!sh) sh = ss.insertSheet('Events', 0);
-    ensureHeaders_(sh, CONTROL_HEADERS);
-    return ss;
-}
-
-function ensureHeaders_(sh, headers) {
-    const firstRow = sh.getRange(1, 1, 1, Math.max(headers.length, sh.getMaxColumns()));
-    const values = firstRow.getValues()[0];
-    for (let col = 1; col <= headers.length; col++) {
-        if ((values[col - 1] || '') !== headers[col - 1]) {
-            sh.getRange(1, col).setValue(headers[col - 1]);
-        }
-    }
-    SpreadsheetApp.flush();
-}
-
-/** ===== Events index with ETag discipline ===== */
-function getEventsSafe(etagMaybe) {
-    const out = readEventsIndex_();
-    if (etagMaybe && etagMaybe === out.etag) {
-        return { ok: true, notModified: true, etag: out.etag, items: [] };
-    }
-    return { ok: true, etag: out.etag, items: out.items };
-}
-
-function readEventsIndex_() {
-    const ss = getOrCreateControl_();
-    const sh = ss.getSheetByName('Events');
-    const range = sh.getDataRange().getValues();
-    const headers = range[0];
-    const items = [];
-    for (let r = 1; r < range.length; r++) {
-        const row = toObj_(headers, range[r]);
-        if (!row.id && !row.slug) continue;
-        items.push(row);
-    }
-    const etag = computeEtag_(items);
-    return { items, etag };
-}
-
-function toObj_(headers, arr) {
-    const o = {};
-    const n = Math.min(headers.length, arr.length);
-    for (let i = 0; i < n; i++) {
-        const k = (headers[i] || '').toString().trim();
-        if (!k) continue;
-        o[k] = arr[i];
-    }
-    return o;
-}
-
-/** ===== Create eventbook (validate + normalize) ===== */
-function createEvent(payload) {
-    try {
-        const name = String((payload && payload.name) || '').trim();
-        if (!name) return { ok: false, error: 'Missing name' };
-        const startDateISO = normalizeDateISO_((payload && payload.startDateISO) || null);
-        const elimType = normEnum_((payload && payload.elimType) || 'single', ['single', 'double', 'round-robin']);
-        const seedMode = normEnum_((payload && payload.seedMode) || 'seeded', ['seeded', 'random', 'none']);
-        const slugInput = (payload && payload.slug) || '';
-        const slug = uniqueSlug_(slugify_(slugInput || name));
-
-        const nowISO = todayTimeISO_();
-        const id = genId_();
-        const item = {
-            id, name, slug, startDateISO,
-            eventSpreadsheetId: '', eventSpreadsheetUrl: '',
-            eventTag: makeTag_(name, startDateISO, id),
-            isDefault: false,
-            seedMode, elimType,
-            status: STATUS.CREATED, statusMsg: '',
-            updatedAtISO: nowISO,
-            publicUrl: '', displayUrl: ''
+      const st = await rpc('getControlStatus');
+      // Only show banner if TEMPLATE is not configured.
+      if (st && !st.templateId) {
+        const bar = document.createElement('div');
+        bar.className = 'pfbar';
+        bar.setAttribute('data-testid','ctrl-banner');
+        bar.innerHTML = `
+          <span class="pfpill pferr">Template missing</span>
+          <span class="pfmsg">Set the “NextUp – control (template)” Spreadsheet ID to enable automated control setup.</span>
+          <div style="display:flex;gap:8px;margin-left:auto;">
+            <button class="pfbtn" data-testid="btn-set-template">Set template…</button>
+            <button class="pfbtn pfhide" title="Hide" data-testid="btn-hide-ctrl-banner">×</button>
+          </div>`;
+        bar.querySelector('[data-testid="btn-set-template"]').onclick = async () => {
+          const id = prompt('Paste the Google Spreadsheet ID for the “NextUp – control (template)”.');
+          if (!id) return;
+          try {
+            const r = await rpc('setControlTemplateId', id.trim());
+            if (r?.ok) { toast('Template saved'); bar.remove(); }
+            else toast.error(r?.error || 'Failed to save template');
+          } catch(e){ toast.error('Template save error'); }
         };
-        upsertRow_(item);
-        bustEventsCache_();
-
-        return { ok: true, item };
+        bar.querySelector('[data-testid="btn-hide-ctrl-banner"]').onclick = ()=> bar.remove();
+        els.ctrlMount.replaceChildren(bar);
+      } else {
+        els.ctrlMount.replaceChildren(); // no banner; backend will auto-heal the control
+      }
     } catch (e) {
-        return { ok: false, error: String(e) };
+      log('Control preflight failed: ' + (e.message || e), 'warn');
     }
-}
+  }
 
-/** ===== Provision step (idempotent) =====
-* Steps:
-* CREATED -> create workbook -> WORKBOOK_READY
-* WORKBOOK_READY -> ensure links -> LINKS_READY
-* LINKS_READY -> no-op
-*/
-function provisionStep(key) {
-    const row = findEventRowByKey_(key);
-    if (!row) return { ok: false, error: 'not found' };
+  async function loadEvents(){
+    els.lblChoose?.setAttribute('data-sync','syncing');
+    try{
+      const r = await retry(()=> rpc('listEvents'), 3, [300,600,1200]);
+      if (!r?.ok) throw new Error(r?.error || 'listEvents failed');
+      state.events = r.events || [];
+      els.choose.innerHTML = state.events.map(ev => `<option value="${esc(ev.id)}">${esc(ev.name)}</option>`).join('');
+      if (!state.currentId && state.events.length) state.currentId = state.events[0].id;
+      els.choose.value = state.currentId || '';
+      populateEventMeta();
+      await refreshLinkStatus();
+    } catch(e){
+      toast.error('Failed to load events');
+      log('loadEvents: ' + (e.message || e), 'error');
+    } finally {
+      els.lblChoose?.removeAttribute('data-sync');
+    }
+  }
+
+  function findCurrent(){
+    return state.events.find(e => e.id === state.currentId) || null;
+  }
+
+  function populateEventMeta(){
+    const ev = findCurrent();
+    if (!ev) { els.slug.value=''; els.date.value=''; els.name.value=''; return; }
+    els.slug.value = ev.slug || '';
+    els.date.value = ev.startDateISO || '';
+    els.name.value = ev.name || '';
+    // Load admin settings (from properties) via bundle call:
+    // We rely on UI controls to reflect saved state on Save; for simplicity keep defaults until saved in this session.
+  }
+
+  async function saveSettings(){
+    const ev = findCurrent();
+    if (!ev) return toast.error('Pick an event first');
+    const payload = {
+      eventId: ev.id,
+      includeSignup: !!els.chkSignup.checked,
+      posterMode: els.posterMode.value || 'image',
+      showCoach: !!els.chkCoach.checked
+    };
     try {
-        if (row.status === STATUS.ERROR) {
-            return { ok: false, error: row.statusMsg || 'error' };
-        }
-        if (row.status === STATUS.CREATED) {
-            // Create workbook once
-            if (!row.eventSpreadsheetId) {
-                const ss = SpreadsheetApp.create('NextUp Event · ' + (row.name || row.slug || row.id));
-                row.eventSpreadsheetId = ss.getId();
-                row.eventSpreadsheetUrl = ss.getUrl();
-                // TODO: seed standard tabs if needed
-            }
-            row.status = STATUS.WORKBOOK_READY;
-            row.statusMsg = '';
-            row.updatedAtISO = todayTimeISO_();
-            upsertRow_(row);
-            bustEventsCache_();
-            return { ok: true, status: row.status };
-        }
-        if (row.status === STATUS.WORKBOOK_READY) {
-            // Ensure links; advance only when both present
-            ensureLinks_(row);
-            if (row.publicUrl && row.displayUrl) {
-                row.status = STATUS.LINKS_READY;
-                row.statusMsg = '';
-                row.updatedAtISO = todayTimeISO_();
-                upsertRow_(row);
-                bustEventsCache_();
-            }
-            return { ok: true, status: row.status };
-        }
-        if (row.status === STATUS.LINKS_READY) {
-            // No-op; idempotent
-            return { ok: true, status: row.status };
-        }
-        // Unknown status -> mark error
-        row.status = STATUS.ERROR;
-        row.statusMsg = 'Unknown status';
-        row.updatedAtISO = todayTimeISO_();
-        upsertRow_(row);
-        bustEventsCache_();
-        return { ok: false, error: 'unknown status' };
-    } catch (e) {
-        row.status = STATUS.ERROR;
-        row.statusMsg = String(e);
-        row.updatedAtISO = todayTimeISO_();
-        upsertRow_(row);
-        bustEventsCache_();
-        return { ok: false, error: String(e) };
+      const r = await rpc('saveAdminSettings', payload);
+      if (!r?.ok) throw new Error(r?.error || 'save failed');
+      toast('Saved');
+      log('Saved settings for ' + ev.id);
+      await refreshLinkStatus();
+    } catch(e){
+      toast.error('Save failed');
+      log('saveSettings: ' + (e.message || e), 'error');
     }
-}
+  }
 
-function getProvisionStatus(key) {
-    const row = findEventRowByKey_(key);
-    if (!row) return { ok: false, error: 'not found' };
-    if (row.status === STATUS.ERROR) {
-        return { ok: false, status: row.status, statusMsg: row.statusMsg || 'failed' };
+  function openPoster(){
+    const ev = findCurrent(); if (!ev) return;
+    const mode = els.posterMode.value || 'image';
+    window.open(`?p=poster&event=${encodeURIComponent(ev.slug||ev.id)}&mode=${encodeURIComponent(mode)}`, '_blank');
+  }
+  function openPublic(){
+    const ev = findCurrent(); if (!ev) return;
+    window.open(`?p=public&event=${encodeURIComponent(ev.slug||ev.id)}`, '_blank');
+  }
+  function openDisplay(){
+    const ev = findCurrent(); if (!ev) return;
+    window.open(`?p=display&event=${encodeURIComponent(ev.slug||ev.id)}`, '_blank');
+  }
+
+  async function createEvent(){
+    const ev = findCurrent(); if (!ev) return toast.error('Pick an event first');
+    try{
+      const payload = {
+        id: ev.id, slug: ev.slug, name: ev.name, dateISO: ev.startDateISO,
+        includeSignup: !!els.chkSignup.checked
+      };
+      const r = await rpc('createEventFromControl', payload);
+      if (!r?.ok) throw new Error(r?.error || 'create failed');
+      toast(r.created ? 'Event workbook created' : 'Event workbook ready');
+      log('createEventFromControl ok: ' + JSON.stringify({ id:r.eventId, book:r.eventBookId }));
+      await refreshLinkStatus();
+    } catch(e){
+      toast.error('Create failed');
+      log('createEvent: ' + (e.message || e), 'error');
     }
-    return {
-        ok: true,
-        status: row.status,
-        statusMsg: row.statusMsg || '',
-        hasWorkbook: !!row.eventSpreadsheetId,
-        hasLinks: !!row.publicUrl && !!row.displayUrl
-    };
-}
+  }
 
-/** Fill public/display URLs if missing (safe/idempotent). */
-function ensureLinks_(row) {
-    const base = ScriptApp.getService().getUrl();
-    const key = encodeURIComponent(row.id || row.slug);
-    if (!row.publicUrl) {
-        row.publicUrl = base + '?p=public&event=' + key;
+  function renderLinkRow(label, status, url, verifyAction){
+    // status: 'absent' (red), 'url' (yellow), 'qr' (green)
+    const badge = status === 'qr' ? '<span class="pfpill pfok">Verified QR</span>'
+                 : status === 'url' ? '<span class="pfpill pfwarn">URL only</span>'
+                 : '<span class="pfpill pferr">Absent</span>';
+    const urlCell = url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(url)}</a>` : '<span class="muted">—</span>';
+    const actBtn = (status === 'url' && verifyAction)
+      ? `<button class="btn" data-action="${esc(verifyAction)}">Mark Verified</button>`
+      : '<span class="muted">—</span>';
+    return `<tr data-row="${esc(label)}" data-testid="row-${esc(label)}">
+      <td>${esc(label)}</td>
+      <td>${badge}</td>
+      <td>${urlCell}</td>
+      <td>${actBtn}</td>
+    </tr>`;
+  }
+
+  async function refreshLinkStatus(){
+    const ev = findCurrent(); if (!ev) return;
+    try{
+      const [sSignup, sPublic] = await Promise.all([
+        rpc('getSignupQr', ev.id),  // use id to match property keys
+        rpc('getShareQr', ev.id)
+      ]);
+      const rows = [];
+      // Signup
+      if (sSignup?.ok === true) {
+        const hasQR = !!sSignup.qrB64;
+        rows.push(renderLinkRow('Signup', hasQR ? 'qr':'url', sSignup.url, 'verify-signup'));
+      } else {
+        rows.push(renderLinkRow('Signup', 'absent', '', ''));
+      }
+      // Public
+      if (sPublic?.ok === true) {
+        const hasQR = !!sPublic.qrB64;
+        rows.push(renderLinkRow('Public', hasQR ? 'qr':'url', sPublic.url, 'verify-public'));
+      } else {
+        rows.push(renderLinkRow('Public', 'absent', '', ''));
+      }
+      els.linkTbody.innerHTML = rows.join('');
+      // Wire verify buttons (explicit verification step)
+      els.linkTbody.querySelectorAll('button[data-action]').forEach(btn=>{
+        btn.onclick = async () => {
+          const act = btn.getAttribute('data-action');
+          try{
+            const opts = { public:false, signup:false };
+            if (act === 'verify-public') opts.public = true;
+            if (act === 'verify-signup') opts.signup = true;
+            const r = await rpc('verifyEventLinks', ev.id, opts);
+            if (!r?.ok) throw new Error(r?.error || 'verify failed');
+            toast('Marked verified');
+            await refreshLinkStatus();
+          } catch(e){
+            toast.error('Verify failed');
+            log('verify: ' + (e.message || e), 'error');
+          }
+        };
+      });
+    } catch(e){
+      log('refreshLinkStatus: ' + (e.message || e), 'error');
     }
-    if (!row.displayUrl) {
-        row.displayUrl = base + '?p=display&event=' + key + '&tv=1';
-    }
-}
+  }
 
-/** ===== Public bundle / QR ===== */
-function getPublicBundle(key) {
-    const row = findEventRowByKey_(key);
-    if (!row) return { ok: false, error: 'not found' };
-    return {
-        ok: true,
-        eventMeta: {
-            id: row.id, slug: row.slug, name: row.name || '',
-            dateISO: row.startDateISO || '',
-            flow: 'Eventbook',
-            elimType: row.elimType || '',
-            seedMode: row.seedMode || '',
-            status: row.status,
-            formUrl: '' // optional extension in future
-        },
-        schedule: [], // populate if you have real data
-        standings: [], // populate if you have real data
-        bracket: { type: row.elimType || 'single', rounds: [] }
-    };
-}
+  // Wire UI
+  els.btnSave.onclick = saveSettings;
+  els.btnOpenPoster.onclick = openPoster;
+  els.btnOpenPublic.onclick = openPublic;
+  els.btnOpenDisplay.onclick = openDisplay;
+  els.btnCreate.onclick = createEvent;
+  els.btnRefresh.onclick = async ()=>{ await loadEvents(); };
+  els.choose.onchange = async (e)=>{ state.currentId = e.target.value; populateEventMeta(); await refreshLinkStatus(); };
+  els.btnClearLogs.onclick = ()=> els.diagBody.replaceChildren();
+  els.btnToggleDiag.onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
 
-function getShareQr(key) {
-    const row = findEventRowByKey_(key);
-    if (!row) return { ok: false, error: 'not found' };
-    if (!row.publicUrl) return { ok: false, error: 'not ready' };
-    // QR generation omitted; return URL (and qrB64 if you add a generator)
-    return { ok: true, url: row.publicUrl, qrB64: '' };
-}
-
-/** ===== Default / Archive ===== */
-function setDefaultEvent(key) {
-    const ss = getOrCreateControl_();
-    const sh = ss.getSheetByName('Events');
-    const range = sh.getDataRange().getValues();
-    const headers = range[0];
-    const colDefault = headers.indexOf('isDefault') + 1;
-    const colId = headers.indexOf('id') + 1;
-    const colSlug = headers.indexOf('slug') + 1;
-    if (colDefault <= 0) return { ok: false, error: 'missing column isDefault' };
-
-    for (let r = 2; r <= sh.getLastRow(); r++) {
-        const rowId = sh.getRange(r, colId).getValue();
-        const rowSlug = sh.getRange(r, colSlug).getValue();
-        const on = (rowId === key || rowSlug === key);
-        sh.getRange(r, colDefault).setValue(!!on);
-    }
-    SpreadsheetApp.flush();
-    bustEventsCache_();
-    return { ok: true };
-}
-
-function archiveEvent(key) {
-    const ss = getOrCreateControl_();
-    const sh = ss.getSheetByName('Events');
-    const range = sh.getDataRange().getValues();
-    const headers = range[0];
-    const idx = findRowIndexByKey_(headers, range, key);
-    if (idx <= 0) return { ok: false, error: 'not found' };
-    sh.deleteRow(idx + 1); // +1 for header row
-    SpreadsheetApp.flush();
-    bustEventsCache_();
-    return { ok: true };
-}
-
-/** ===== Helpers: control row CRUD ===== */
-function findEventRowByKey_(key) {
-    const ss = getOrCreateControl_();
-    const sh = ss.getSheetByName('Events');
-    const range = sh.getDataRange().getValues();
-    const headers = range[0];
-    for (let r = 1; r < range.length; r++) {
-        const obj = toObj_(headers, range[r]);
-        if (obj.id === key || obj.slug === key) return obj;
-    }
-    return null;
-}
-
-function findRowIndexByKey_(headers, data, key) {
-    const colId = headers.indexOf('id');
-    const colSlug = headers.indexOf('slug');
-    for (let r = 1; r < data.length; r++) {
-        const row = data[r];
-        if ((colId >= 0 && row[colId] === key) || (colSlug >= 0 && row[colSlug] === key)) return r;
-    }
-    return -1;
-}
-
-function upsertRow_(obj) {
-    const ss = getOrCreateControl_();
-    const sh = ss.getSheetByName('Events');
-    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0];
-
-    const data = sh.getDataRange().getValues();
-    const idx = findRowIndexByKey_(headers, data, obj.id || obj.slug);
-    const targetRow = (idx >= 1) ? idx + 1 : sh.getLastRow() + 1;
-
-    const rowArr = [];
-    for (let i = 0; i < headers.length; i++) {
-        const k = headers[i];
-        rowArr.push(Object.prototype.hasOwnProperty.call(obj, k) ? obj[k] : '');
-    }
-    sh.getRange(targetRow, 1, 1, headers.length).setValues([rowArr]);
-}
-
-/** ===== Utilities ===== */
-function bustEventsCache_() {
-    PropertiesService.getScriptProperties().setProperty(
-        'nu_events_etag_salt',
-        String(Math.random()) + ':' + Date.now()
-    );
-}
-
-function computeEtag_(items) {
-    const salt = PropertiesService.getScriptProperties().getProperty('nu_events_etag_salt') || '';
-    const json = JSON.stringify(items || []);
-    const raw = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, json + '|' + salt);
-    return Utilities.base64Encode(raw);
-}
-
-function todayISO_() {
-    const d = new Date();
-    const y = d.getFullYear();
-    const m = ('' + (d.getMonth() + 1)).padStart(2, '0');
-    const dd = ('' + d.getDate()).padStart(2, '0');
-    return y + '-' + m + '-' + dd;
-}
-function todayTimeISO_() {
-    return new Date().toISOString().replace('Z', '');
-}
-
-function normalizeDateISO_(v) {
-    if (!v) return todayISO_();
-    const s = String(v).trim();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-    const d = new Date(s);
-    if (isNaN(d.getTime())) return todayISO_();
-    return d.toISOString().slice(0, 10);
-}
-
-function normEnum_(v, allowed) {
-    const s = String(v || '').trim().toLowerCase();
-    return allowed.indexOf(s) >= 0 ? s : allowed[0];
-}
-
-function slugify_(s) {
-    return String(s || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '')
-        .slice(0, 48);
-}
-
-function uniqueSlug_(base) {
-    const out = readEventsIndex_();
-    const taken = new Set(out.items.map(function (it) { return (it.slug || '').toLowerCase(); }));
-    if (!taken.has(base)) return base;
-    for (var i = 2; i < 9999; i++) {
-        var candidate = (base + '-' + i).slice(0, 48);
-        if (!taken.has(candidate)) return candidate;
-    }
-    return base + '-' + Utilities.getUuid().slice(0, 4);
-}
-
-function genId_() {
-    return 'ev_' + Utilities.getUuid().replace(/-/g, '').slice(0, 16);
-}
-
-function makeTag_(name, dateISO, id) {
-    const n = (name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 12);
-    const d = (dateISO || todayISO_()).replace(/-/g, '');
-    return n + '-' + d + '-' + String(id || '').slice(-4);
-}
-
-function escHtml_(s) {
-    return String(s).replace(/[&<>\"']/g, function (c) {
-        return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
-    });
-}
-
-/************************************************************
-* v4.1 Audit Endpoints (visualized by Status.html)
-************************************************************/
-
-/** Public entry: runs all audits and returns a structured report */
-function auditDeep() {
-    const secs = [];
-    try { secs.push(auditRouter_()); } catch (e) { secs.push(sectionErr_('Router', e)); }
-    try { secs.push(auditControlSheet_()); } catch (e) { secs.push(sectionErr_('Control Sheet', e)); }
-    try { secs.push(auditProvisionInvariants_()); } catch (e) { secs.push(sectionErr_('Provision Invariants', e)); }
-    try { secs.push(auditEventsCache_()); } catch (e) { secs.push(sectionErr_('ETag / Cache', e)); }
-    try { secs.push(auditClientFiles_()); } catch (e) { secs.push(sectionErr_('Client Files', e)); }
-
-    return {
-        ok: secs.every(function (s) { return s.ok; }),
-        build: BUILD_ID,
-        generatedAt: todayTimeISO_(),
-        sections: secs
-    };
-}
-
-/** ---------- Sections ---------- */
-
-function auditRouter_() {
-    const title = 'Router';
-    const checks = [];
-    ['admin', 'public', 'display', 'poster', 'status'].forEach(function (p) {
-        checks.push(okCheck_('route:' + p, 'Route "' + p + '" registered', true));
-    });
-    checks.push(okCheck_('tmpl:appTitle', 'Template var appTitle provided', true));
-    checks.push(okCheck_('tmpl:BUILD_ID', 'Template var BUILD_ID provided', true));
-    return finalizeSection_(title, checks);
-}
-
-function auditControlSheet_() {
-    const title = 'Control Sheet';
-    const checks = [];
-    const ss = getOrCreateControl_();
-    const sh = ss.getSheetByName('Events');
-    const headers = sh.getRange(1, 1, 1, sh.getLastColumn()).getValues()[0].map(String);
-    CONTROL_HEADERS.forEach(function (h) {
-        const present = headers.indexOf(h) >= 0;
-        checks.push(statusCheck_('hdr:' + h, 'Header "' + h + '" present', present ? 'green' : 'red', present ? '' : 'Missing column'));
-    });
-    checks.push(okCheck_('sheet:name', 'Sheet "Events" exists', !!sh));
-    return finalizeSection_(title, checks);
-}
-
-function auditProvisionInvariants_() {
-    const title = 'Provision Invariants';
-    const checks = [];
-    // Create a temp event, drive it forward, then archive it
-    const name = 'AUDIT-' + Utilities.getUuid().slice(0, 8);
-    const res = createEvent({ name: name, startDateISO: todayISO_(), elimType: 'single', seedMode: 'seeded' });
-    if (!res || !res.ok) {
-        checks.push(statusCheck_('create', 'Create event succeeds', 'red', (res && res.error) || 'create failed'));
-        return finalizeSection_(title, checks);
-    }
-
-    var id = res.item.id;
-
-    // Step 1: workbook
-    var s1 = provisionStep(id);
-    checks.push(okCheck_('prov:step1', 'Provision step 1 ok', !!s1 && !!s1.ok));
-    var st1 = getProvisionStatus(id);
-    var wready = st1 && st1.ok && (st1.status === STATUS.WORKBOOK_READY || st1.status === STATUS.LINKS_READY);
-    checks.push(statusCheck_('prov:wready', 'Status >= WORKBOOK_READY after step1', wready ? 'green' : 'red', wready ? '' : 'not advanced'));
-
-    // Step 2: links (idempotent calls)
-    provisionStep(id);
-    provisionStep(id);
-    var st2 = getProvisionStatus(id);
-    var row = findEventRowByKey_(id);
-    var urlsPresent = !!(row && row.publicUrl && row.displayUrl);
-    var linksReady = st2 && st2.ok && st2.status === STATUS.LINKS_READY;
-    checks.push(statusCheck_('prov:links', 'LINKS_READY implies publicUrl/displayUrl assigned',
-        (linksReady && urlsPresent) ? 'green' : (linksReady ? 'yellow' : 'yellow'),
-        urlsPresent ? '' : 'urls missing'));
-
-    // Cleanup
-    archiveEvent(id);
-
-    return finalizeSection_(title, checks);
-}
-
-function auditEventsCache_() {
-    const title = 'ETag / Cache';
-    const checks = [];
-    var r1 = getEventsSafe(null);
-    var ok1 = !!r1 && !!r1.ok && !!r1.etag;
-    checks.push(statusCheck_('etag:first', 'getEventsSafe(null) ok', ok1 ? 'green' : 'red', ok1 ? '' : 'missing etag/ok'));
-    var r2 = getEventsSafe(ok1 ? r1.etag : null);
-    var notMod = !!r2 && !!r2.notModified;
-    checks.push(statusCheck_('etag:notmod', 'getEventsSafe(etag) returns notModified', notMod ? 'green' : 'red', notMod ? '' : 'no notModified'));
-    return finalizeSection_(title, checks);
-}
-
-function auditClientFiles_() {
-    const title = 'Client Files';
-    const checks = [];
-    var mustHave = {
-        'Admin': [
-            '#eventName', '#eventDate', '#elimType', '#seedMode',
-            '#btnCreateEvent', '#chooseEvent', '#btnOpenPublic', '#btnOpenTV', '#btnCopyLink'
-        ],
-        'Public': ['#title', '#date', '#flow', '#elim', '#seed', '#scheduleTbl', '#standingsTbl', '#bracketWrap'],
-        'Display': ['#title', '#scheduleTbl', '#standingsTbl', '#bracketWrap'],
-        'Poster': ['#posterTitle', '#eventDate', '#qrPublic', '#publicUrlLabel', '#qrForm', '#formUrlLabel'],
-        'Styles': ['.badge', '.toast', '.table', '.pfbar']
-    };
-
-    Object.keys(mustHave).forEach(function (name) {
-        var html = getFileContentSafe_(name);
-        var present = !!html;
-        checks.push(statusCheck_('file:' + name, 'File "' + name + '.html" present', present ? 'green' : 'red', present ? '' : 'missing'));
-        if (present) {
-            mustHave[name].forEach(function (sel) {
-                var found = (html.indexOf(sel.replace(/"/g, '\\"')) >= 0) || (html.indexOf(sel) >= 0);
-                checks.push(statusCheck_('sel:' + name + ':' + sel, '"' + name + '" contains selector ' + sel, found ? 'green' : 'red', found ? '' : 'not found'));
-            });
-        }
-    });
-    return finalizeSection_(title, checks);
-}
-
-/** ---------- Audit helpers ---------- */
-function getFileContentSafe_(name) {
-    try { return HtmlService.createHtmlOutputFromFile(name).getContent(); }
-    catch (e) { return ''; }
-}
-function okCheck_(id, label, cond) { return { id: id, label: label, status: (cond ? 'green' : 'red'), detail: (cond ? '' : 'failed') }; }
-function statusCheck_(id, label, status, detail) { return { id: id, label: label, status: status, detail: String(detail || '') }; }
-
-function finalizeSection_(title, checks) {
-    var sevOrder = { red: 3, yellow: 2, green: 1 };
-    var worst = 'green';
-    for (var i = 0; i < checks.length; i++) {
-        var s = checks[i].status || 'green';
-        if (sevOrder[s] > sevOrder[worst]) worst = s;
-    }
-    return { title: title, ok: worst !== 'red', severity: worst, checks: checks };
-}
-function sectionErr_(title, err) {
-    return { title: title, ok: false, severity: 'red', checks: [{ id: 'error', label: title + ' threw', status: 'red', detail: String(err) }] };
-}
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    setDiagExpanded(false);
+    await preflightControlBanner();
+    await loadEvents();
+    toast('Admin ready');
+  });
+  </script>
+</body>
+</html>
