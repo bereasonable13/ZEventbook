@@ -11,7 +11,7 @@
     header h1 { margin: 0 0 2px; }
     small#build { color:#666 }
     .row { display:flex; gap: var(--gap); flex-wrap: wrap; align-items: flex-end; }
-    .card { border:1px solid #ddd; border-radius:10px; padding:14px; margin:10px 0; }
+    .card { border:1px solid #ddd; border-radius:10px; padding:14px; margin:10px 0; background:#fff; }
     .muted { color:#666; }
     label { display:block; font-size:.9rem; margin:.2rem 0; }
     input, select, button { font-size:1rem; padding:.55rem .7rem; }
@@ -25,319 +25,419 @@
 </head>
 <body>
   <main>
+    <!-- =======================================================
+         0) HEADER
+    ======================================================== -->
     <header>
-      <h1>NextUp Admin</h1>
+      <h1 data-testid="admin-title">NextUp Admin</h1>
       <small id="build">BUILD: <?= BUILD_ID ?></small>
     </header>
 
-    <!-- Create Eventbook -->
+    <!-- =======================================================
+         1) CREATE EVENTBOOK
+    ======================================================== -->
     <section class="card" aria-label="Create Eventbook">
       <h3>Create Eventbook</h3>
       <div class="row">
         <div>
           <label for="evName">Name</label>
-          <input id="evName" placeholder="e.g., Southside Bocce Weeklies"/>
+          <input id="evName" data-testid="ev-name" placeholder="e.g., Southside Bocce Weeklies"/>
         </div>
         <div>
           <label for="evDate">Start Date (ISO)</label>
-          <input id="evDate" type="date"/>
+          <input id="evDate" data-testid="ev-date" type="date"/>
         </div>
         <div>
           <label for="seedMode">Seeding</label>
-          <select id="seedMode">
+          <select id="seedMode" data-testid="ev-seedmode">
             <option value="random">Random</option>
             <option value="seeded">Seeded</option>
           </select>
         </div>
         <div>
           <label for="elimType">Elimination</label>
-          <select id="elimType">
+          <select id="elimType" data-testid="ev-elimtype">
             <option value="single">Single</option>
             <option value="double">Double</option>
           </select>
         </div>
         <div>
-          <button id="btnCreate">Create</button>
+          <button id="btnCreate" data-testid="btn-create">Create</button>
         </div>
       </div>
       <small class="muted">Idempotent on <em>slug + start date</em>.</small>
     </section>
 
-    <!-- Manage Eventbooks -->
+    <!-- =======================================================
+         2) MANAGE EVENTBOOKS
+    ======================================================== -->
     <section class="card" aria-label="Manage Eventbooks">
       <h3>Manage Eventbooks</h3>
       <div class="row">
         <div style="min-width:280px">
           <label for="chooseEvent">Choose</label>
-          <select id="chooseEvent">
+          <select id="chooseEvent" data-testid="select-event">
             <option value="">No events yet — create above</option>
           </select>
         </div>
         <div>
-          <button id="btnMakeDefault" disabled>Make Default</button>
-          <button id="btnArchive" disabled>Archive</button>
+          <button id="btnMakeDefault" data-testid="btn-make-default" disabled>Make Default</button>
+          <button id="btnArchive" data-testid="btn-archive" disabled>Archive</button>
         </div>
       </div>
 
       <div class="row" style="margin-top:10px">
         <div class="links">
-          <a id="openPublic" target="_blank" rel="noopener">Open Public</a>
-          <a id="openDisplay" target="_blank" rel="noopener">Open TV</a>
-          <a id="openPoster"  target="_blank" rel="noopener">Open Poster</a>
-          <button id="btnCopyLinks" disabled>Copy Links</button>
+          <a id="openPublic"  data-testid="link-public"  target="_blank" rel="noopener">Open Public</a>
+          <a id="openDisplay" data-testid="link-display" target="_blank" rel="noopener">Open TV</a>
+          <a id="openPoster"  data-testid="link-poster"  target="_blank" rel="noopener">Open Poster</a>
+          <button id="btnCopyLinks" data-testid="btn-copy-links" disabled>Copy Links</button>
         </div>
       </div>
 
       <div class="row" style="margin-top:10px">
-        <button id="btnConfigureForm" disabled>Configure Signup Form</button>
+        <button id="btnConfigureForm" data-testid="btn-configure-form" disabled>Configure Signup Form</button>
       </div>
 
       <div class="qrwrap" style="margin-top:14px">
         <div><strong>Public QR</strong> <small class="muted">(shown only when verified)</small></div>
-        <img id="qrImg" alt="QR" width="110" height="110" style="display:none;border:1px solid #ddd;border-radius:6px;"/>
-        <a id="qrLink" target="_blank" rel="noopener"></a>
+        <img id="qrImg" data-testid="img-qr" alt="QR" width="110" height="110" style="display:none;border:1px solid #ddd;border-radius:6px;"/>
+        <a id="qrLink" data-testid="link-qr" target="_blank" rel="noopener"></a>
       </div>
     </section>
 
-    <!-- Diagnostics -->
+    <!-- =======================================================
+         3) DIAGNOSTICS
+    ======================================================== -->
     <section class="card" aria-label="Diagnostics">
       <h3>Diagnostics</h3>
       <div class="row">
-        <button id="btnSmoke">Run Smoke</button>
-        <button id="btnViewLogs">View Logs</button>
-        <button id="btnClearLogs">Clear Logs</button>
+        <button id="btnSmoke" data-testid="btn-smoke">Run Smoke</button>
+        <button id="btnViewLogs" data-testid="btn-view-logs">View Logs</button>
+        <button id="btnClearLogs" data-testid="btn-clear-logs">Clear Logs</button>
       </div>
       <div style="margin-top:10px">
-        <pre id="diagOut" class="json" role="status" aria-live="polite">{}</pre>
+        <pre id="diagOut" class="json" role="status" aria-live="polite" data-testid="diag-output">{}</pre>
       </div>
     </section>
 
-    <div id="toast" class="toast" aria-live="polite"></div>
+    <div id="toast" class="toast" aria-live="polite" data-testid="toast"></div>
   </main>
 
   <script>
-  /* ---------------- Toasts ---------------- */
-  const TOAST = {
-    show(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2300); },
-    info(msg){ this.show(msg); console.log('[INFO]', msg); },
-    error(msg){ this.show(msg); console.error('[ERR]', msg); }
-  };
+/* =======================================================
+ * A) TOASTS (UI feedback)
+ * ======================================================= */
+const TOAST = {
+  show(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2300); },
+  info(msg){ this.show(msg); console.log('[INFO]', msg); },
+  error(msg){ this.show(msg); console.error('[ERR]', msg); }
+};
 
-  const STATE = { etag:null, events:[], selected:null, links:null, optimisticId:null };
+/* =======================================================
+ * B) STATE & DOM REFS
+ * ======================================================= */
+const STATE = { etag:null, events:[], selected:null, links:null, optimisticId:null };
 
-  window.addEventListener('DOMContentLoaded', () => {
-    boot();
-    document.getElementById('btnCreate').addEventListener('click', onCreate);
-    document.getElementById('chooseEvent').addEventListener('change', onChoose);
-    document.getElementById('btnMakeDefault').addEventListener('click', onMakeDefault);
-    document.getElementById('btnArchive').addEventListener('click', onArchive);
-    document.getElementById('btnCopyLinks').addEventListener('click', onCopyLinks);
-    document.getElementById('btnConfigureForm').addEventListener('click', onConfigureForm);
+const DOM = {
+  evName:         ()=>document.getElementById('evName'),
+  evDate:         ()=>document.getElementById('evDate'),
+  seedMode:       ()=>document.getElementById('seedMode'),
+  elimType:       ()=>document.getElementById('elimType'),
+  btnCreate:      ()=>document.getElementById('btnCreate'),
+  chooseEvent:    ()=>document.getElementById('chooseEvent'),
+  btnMakeDefault: ()=>document.getElementById('btnMakeDefault'),
+  btnArchive:     ()=>document.getElementById('btnArchive'),
+  btnCopyLinks:   ()=>document.getElementById('btnCopyLinks'),
+  btnConfigureForm:()=>document.getElementById('btnConfigureForm'),
+  openPublic:     ()=>document.getElementById('openPublic'),
+  openDisplay:    ()=>document.getElementById('openDisplay'),
+  openPoster:     ()=>document.getElementById('openPoster'),
+  qrImg:          ()=>document.getElementById('qrImg'),
+  qrLink:         ()=>document.getElementById('qrLink'),
+  diagOut:        ()=>document.getElementById('diagOut')
+};
 
-    document.getElementById('btnSmoke').addEventListener('click', onSmoke);
-    document.getElementById('btnViewLogs').addEventListener('click', onViewLogs);
-    document.getElementById('btnClearLogs').addEventListener('click', onClearLogs);
+/* =======================================================
+ * C) RPC WRAPPER (defensive)
+ * ======================================================= */
+function rpc(fn, ...args){
+  return new Promise((res, rej)=>{
+    if(!window.google || !google.script || !google.script.run){
+      const msg='google.script.run unavailable — open the deployed Web App URL';
+      TOAST.error(msg); return rej(new Error(msg));
+    }
+    google.script.run
+      .withSuccessHandler(res)
+      .withFailureHandler(e=>rej(new Error(e?.message||String(e))))
+      [fn](...args);
   });
+}
 
-  function boot(){
-    google.script.run
-      .withSuccessHandler(() => swrEventsOnce())
-      .withFailureHandler(err => { TOAST.error('Bootstrap failed'); console.error(err); swrEventsOnce(); })
-      .ping();
-  }
+/* =======================================================
+ * D) BOOTSTRAP & WIRING
+ * ======================================================= */
+window.addEventListener('DOMContentLoaded', async () => {
+  wireHandlers();
+  await bootstrap();           // ensure Template + Control (self-heal)
+  await swrEventsOnce();       // populate dropdown
+});
 
-  /* Retry-once SWR to avoid rare null hiccups */
-  function swrEventsOnce(_retried){
-    google.script.run
-      .withSuccessHandler(res => {
-        if (!res || typeof res !== 'object'){
-          if (!_retried){ console.warn('Retrying events after invalid response'); return swrEventsOnce(true); }
-          return TOAST.error('Events: invalid response');
-        }
-        if (res.ok === false) return TOAST.error('Events error');
-        if (res.notModified) return;
-        STATE.events = Array.isArray(res.items) ? res.items : [];
-        STATE.etag   = res.etag || null;
-        paintDropdown(STATE.events);
-      })
-      .withFailureHandler(err => { TOAST.error('Events load failed'); console.error(err); })
-      .getEventsSafe(STATE.etag);
-  }
+function wireHandlers(){
+  DOM.btnCreate().addEventListener('click', onCreate);
+  DOM.chooseEvent().addEventListener('change', onChoose);
+  DOM.btnMakeDefault().addEventListener('click', onMakeDefault);
+  DOM.btnArchive().addEventListener('click', onArchive);
+  DOM.btnCopyLinks().addEventListener('click', onCopyLinks);
+  DOM.btnConfigureForm().addEventListener('click', onConfigureForm);
 
-  function paintDropdown(items){
-    const sel = document.getElementById('chooseEvent');
-    const keep = STATE.optimisticId || sel.value;
-    sel.innerHTML = '';
-    if (!items.length){
-      sel.innerHTML = '<option value="">No events yet — create above</option>';
-      setManageDisabled(true); clearLinks(); clearQr(); STATE.optimisticId=null; return;
+  document.getElementById('btnSmoke').addEventListener('click', onSmoke);
+  document.getElementById('btnViewLogs').addEventListener('click', onViewLogs);
+  document.getElementById('btnClearLogs').addEventListener('click', onClearLogs);
+}
+
+async function bootstrap(){
+  try {
+    // Prefer new bootstrap; fallback to ping() if not present
+    if (typeof google !== 'undefined' && google.script && google.script.run && google.script.run.bootstrapControlAndTemplate) {
+      await rpc('bootstrapControlAndTemplate');
+    } else if (google?.script?.run?.ping) {
+      await rpc('ping');
     }
-    for (const ev of items){
-      const label = (ev.name && String(ev.name).trim()) || ev.slug || ev.id || '(unnamed)';
-      const txt = label + (ev.startDateISO ? ` (${ev.startDateISO})` : '') + (ev.isDefault ? ' ★' : '');
-      const opt = document.createElement('option');
-      opt.value = ev.id; opt.textContent = txt;
-      sel.appendChild(opt);
+  } catch (e) {
+    TOAST.error('Bootstrap failed: ' + (e.message || e));
+  }
+}
+
+/* =======================================================
+ * E) EVENTS LIST (dropdown)
+ * ======================================================= */
+// Retry-once SWR to avoid rare null hiccups
+async function swrEventsOnce(_retried){
+  try {
+    // Prefer newer listEvents(); fallback to legacy getEventsSafe(etag)
+    let res;
+    if (google?.script?.run?.listEvents) {
+      res = await rpc('listEvents');
+      if (!res || res.ok === false) throw new Error('listEvents failed');
+      STATE.events = Array.isArray(res.events) ? res.events : [];
+      STATE.etag = null;
+    } else {
+      res = await rpc('getEventsSafe', STATE.etag);
+      if (!res || typeof res !== 'object') {
+        if (!_retried) return swrEventsOnce(true);
+        throw new Error('invalid response');
+      }
+      if (res.ok === false) throw new Error('events error');
+      if (res.notModified) return;
+      STATE.events = Array.isArray(res.items) ? res.items : [];
+      STATE.etag   = res.etag || null;
     }
-    if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
-    sel.value = sel.value || items[0].id;
-    STATE.selected = sel.value;
-    STATE.optimisticId = null;
-    setManageDisabled(false);
-    hydrateLinksAndQr();
+    paintDropdown(STATE.events);
+  } catch (err) {
+    TOAST.error('Events load failed'); console.error(err);
   }
+}
 
-  function onCreate(){
-    const payload = {
-      name: document.getElementById('evName').value.trim(),
-      startDateISO: document.getElementById('evDate').value || '',
-      seedMode: document.getElementById('seedMode').value,
-      elimType: document.getElementById('elimType').value
-    };
-    if (!payload.name){ TOAST.error('Name is required'); return; }
-
-    TOAST.info('Creating…');
-    google.script.run
-      .withSuccessHandler(res => {
-        if (!res || res.ok === false){ TOAST.error('Create failed'); return; }
-        TOAST.info(res.idempotent ? 'Already existed — selected existing.' : 'Created!');
-
-        // Clear input fields after success
-        document.getElementById('evName').value = '';
-        document.getElementById('evDate').value = '';
-
-        // Optimistically select new event after refresh
-        if (res.id) STATE.optimisticId = res.id;
-
-        STATE.etag = null; swrEventsOnce();
-      })
-      .withFailureHandler(err => { TOAST.error('Create failed'); console.error(err); })
-      .createEventbook(payload);
+function paintDropdown(items){
+  const sel = DOM.chooseEvent();
+  const keep = STATE.optimisticId || sel.value;
+  sel.innerHTML = '';
+  if (!items.length){
+    sel.innerHTML = '<option value="">No events yet — create above</option>';
+    setManageDisabled(true); clearLinks(); clearQr(); STATE.optimisticId=null; return;
   }
+  for (const ev of items){
+    const label = (ev.name && String(ev.name).trim()) || ev.slug || ev.id || '(unnamed)';
+    const txt = label + (ev.startDateISO ? ` (${ev.startDateISO})` : '') + (ev.isDefault ? ' ★' : '');
+    const opt = document.createElement('option');
+    opt.value = ev.id; opt.textContent = txt;
+    sel.appendChild(opt);
+  }
+  if ([...sel.options].some(o => o.value === keep)) sel.value = keep;
+  sel.value = sel.value || items[0].id;
+  STATE.selected = sel.value;
+  STATE.optimisticId = null;
+  setManageDisabled(false);
+  hydrateLinksAndQr();
+}
 
-  function onChoose(){
-    const sel = document.getElementById('chooseEvent');
-    STATE.selected = sel.value || null;
-    setManageDisabled(!STATE.selected);
-    hydrateLinksAndQr();
-  }
+/* =======================================================
+ * F) CREATE EVENTBOOK
+ * ======================================================= */
+async function onCreate(){
+  const payload = {
+    name: DOM.evName().value.trim(),
+    startDateISO: DOM.evDate().value || '',
+    seedMode: DOM.seedMode().value,
+    elimType: DOM.elimType().value
+  };
+  if (!payload.name){ TOAST.error('Name is required'); return; }
 
-  function hydrateLinksAndQr(){
-    if (!STATE.selected){ clearLinks(); clearQr(); return; }
+  TOAST.info('Creating…');
+  try {
+    // Prefer newer createEventFromControl; fallback to createEventbook
+    let res;
+    if (google?.script?.run?.createEventFromControl) {
+      const id = Utilities?.getUuid ? Utilities.getUuid() : ('ev_' + Date.now()); // harmless; will be ignored server-side if not expected
+      res = await rpc('createEventFromControl', {
+        id,
+        name: payload.name,
+        slug: payload.name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''),
+        dateISO: payload.startDateISO,
+        includeSignup: true
+      });
+      if (!res || res.ok === false) throw new Error('createEventFromControl failed');
+      STATE.optimisticId = res.eventId || res.id || null;
+    } else {
+      res = await rpc('createEventbook', payload);
+      if (!res || res.ok === false) throw new Error('createEventbook failed');
+      STATE.optimisticId = res.id || null;
+    }
 
-    google.script.run
-      .withSuccessHandler(res => {
-        if (!res || res.ok === false){ clearLinks(); return; }
-        STATE.links = res;
-        document.getElementById('openPublic').href  = res.publicUrl;
-        document.getElementById('openDisplay').href = res.displayUrl;
-        document.getElementById('openPoster').href  = res.posterUrl;
-        document.getElementById('btnCopyLinks').disabled = false;
+    TOAST.info(res.idempotent ? 'Already existed — selected existing.' : 'Created!');
+    DOM.evName().value = ''; DOM.evDate().value = '';
+    STATE.etag = null;
+    await swrEventsOnce();
+  } catch (err) {
+    TOAST.error('Create failed'); console.error(err);
+  }
+}
 
-        google.script.run
-          .withSuccessHandler(v => {
-            if (!v || v.ok === false || !v.verified){ clearQr(); return; }
-            google.script.run
-              .withSuccessHandler(q => {
-                if (!q || q.ok === false || !q.qrUrl){ clearQr(); return; }
-                const img = document.getElementById('qrImg'); img.src = q.qrUrl; img.style.display = '';
-                const a = document.getElementById('qrLink'); a.href = q.qrUrl; a.textContent = 'Open QR';
-              })
-              .withFailureHandler(_ => clearQr())
-              .getShareQr(STATE.selected);
-          })
-          .withFailureHandler(_ => clearQr())
-          .verifyEventSafe(STATE.selected);
-      })
-      .withFailureHandler(err => { console.error(err); clearLinks(); clearQr(); })
-      .getShareLinks(STATE.selected);
-  }
+/* =======================================================
+ * G) MANAGE ACTIONS (select, default, archive, form)
+ * ======================================================= */
+function onChoose(){
+  const sel = DOM.chooseEvent();
+  STATE.selected = sel.value || null;
+  setManageDisabled(!STATE.selected);
+  hydrateLinksAndQr();
+}
 
-  function onMakeDefault(){
-    if (!STATE.selected) return;
-    google.script.run
-      .withSuccessHandler(_ => { TOAST.info('Default set'); STATE.etag=null; swrEventsOnce(); })
-      .withFailureHandler(err => { TOAST.error('Failed'); console.error(err); })
-      .setDefaultEvent(STATE.selected);
-  }
+async function onMakeDefault(){
+  if (!STATE.selected) return;
+  try {
+    await rpc('setDefaultEvent', STATE.selected);
+    TOAST.info('Default set');
+    STATE.etag=null; await swrEventsOnce();
+  } catch (err) { TOAST.error('Failed'); console.error(err); }
+}
 
-  function onArchive(){
-    if (!STATE.selected) return;
-    if (!confirm('Archive this eventbook?')) return;
-    google.script.run
-      .withSuccessHandler(_ => { TOAST.info('Archived'); STATE.etag=null; swrEventsOnce(); })
-      .withFailureHandler(err => { TOAST.error('Failed'); console.error(err); })
-      .archiveEvent(STATE.selected);
-  }
+async function onArchive(){
+  if (!STATE.selected) return;
+  if (!confirm('Archive this eventbook?')) return;
+  try {
+    await rpc('archiveEvent', STATE.selected);
+    TOAST.info('Archived');
+    STATE.etag=null; await swrEventsOnce();
+  } catch (err) { TOAST.error('Failed'); console.error(err); }
+}
 
-  function onConfigureForm(){
-    if (!STATE.selected) return;
-    TOAST.info('Configuring form…');
-    google.script.run
-      .withSuccessHandler(res => {
-        if (!res || res.ok === false){ TOAST.error('Form setup failed'); return; }
-        TOAST.info(res.idempotent ? 'Form already linked' : 'Form created');
-        if (res.formUrl) window.open(res.formUrl, '_blank');
-      })
-      .withFailureHandler(err => { TOAST.error('Form setup failed'); console.error(err); })
-      .configureSignupForm(STATE.selected);
-  }
+async function onConfigureForm(){
+  if (!STATE.selected) return;
+  TOAST.info('Configuring form…');
+  try {
+    const res = await rpc('configureSignupForm', STATE.selected);
+    if (!res || res.ok === false){ TOAST.error('Form setup failed'); return; }
+    TOAST.info(res.idempotent ? 'Form already linked' : 'Form created');
+    if (res.formUrl) window.open(res.formUrl, '_blank');
+  } catch (err) { TOAST.error('Form setup failed'); console.error(err); }
+}
 
-  function onCopyLinks(){
-    if (!STATE.links) return;
-    const txt = `Public: ${STATE.links.publicUrl}\nDisplay: ${STATE.links.displayUrl}\nPoster: ${STATE.links.posterUrl}`;
-    navigator.clipboard.writeText(txt).then(()=>TOAST.info('Links copied'));
-  }
+/* =======================================================
+ * H) LINKS & QR (strict invariant: only show QR when verified)
+ * ======================================================= */
+async function hydrateLinksAndQr(){
+  if (!STATE.selected){ clearLinks(); clearQr(); return; }
+  try {
+    // Prefer newer quicklinks; fallback to legacy getShareLinks
+    let res;
+    if (google?.script?.run?.getEventQuickLinks) {
+      res = await rpc('getEventQuickLinks', STATE.selected);
+      if (!res || res.ok === false) throw new Error('quicklinks failed');
+      DOM.openPublic().href  = res.publicUrl || '';
+      DOM.openDisplay().href = res.displayUrl || '';
+      DOM.openPoster().href  = res.posterUrl  || '';
+      DOM.btnCopyLinks().disabled = !(res.publicUrl || res.displayUrl || res.posterUrl);
+    } else {
+      res = await rpc('getShareLinks', STATE.selected);
+      if (!res || res.ok === false) throw new Error('sharelinks failed');
+      STATE.links = res;
+      DOM.openPublic().href  = res.publicUrl || '';
+      DOM.openDisplay().href = res.displayUrl || '';
+      DOM.openPoster().href  = res.posterUrl  || '';
+      DOM.btnCopyLinks().disabled = false;
+    }
 
-  function setManageDisabled(disabled){
-    document.getElementById('btnMakeDefault').disabled = disabled;
-    document.getElementById('btnArchive').disabled = disabled;
-    document.getElementById('btnCopyLinks').disabled = disabled;
-    document.getElementById('btnConfigureForm').disabled = disabled;
+    // Strict QR rule: show only when verified
+    if (google?.script?.run?.getShareQr && google?.script?.run?.verifyEventSafe) {
+      const v = await rpc('verifyEventSafe', STATE.selected);
+      if (!v || v.ok === false || !v.verified) { clearQr(); return; }
+      const q = await rpc('getShareQr', STATE.selected);
+      if (!q || q.ok === false || !q.qrUrl){ clearQr(); return; }
+      DOM.qrImg().src = q.qrUrl; DOM.qrImg().style.display = '';
+      DOM.qrLink().href = q.qrUrl; DOM.qrLink().textContent = 'Open QR';
+    } else {
+      // If those endpoints don’t exist, keep invariant: no QR
+      clearQr();
+    }
+  } catch (err) {
+    console.error(err); clearLinks(); clearQr();
   }
-  function clearLinks(){
-    document.getElementById('openPublic').removeAttribute('href');
-    document.getElementById('openDisplay').removeAttribute('href');
-    document.getElementById('openPoster').removeAttribute('href');
-    document.getElementById('btnCopyLinks').disabled = true;
-  }
-  function clearQr(){
-    const img = document.getElementById('qrImg'); img.removeAttribute('src'); img.style.display='none';
-    const a = document.getElementById('qrLink'); a.removeAttribute('href'); a.textContent='';
-  }
+}
 
-  /* ---------------- Diagnostics ---------------- */
-  function onSmoke(){
-    document.getElementById('diagOut').textContent = 'Running…';
-    google.script.run
-      .withSuccessHandler(res => {
-        document.getElementById('diagOut').textContent = JSON.stringify(res, null, 2);
-        TOAST[res.ok ? 'info' : 'error'](res.ok ? 'Smoke OK' : 'Smoke failed');
-        STATE.etag = null; swrEventsOnce();
-      })
-      .withFailureHandler(err => {
-        document.getElementById('diagOut').textContent = String(err);
-        TOAST.error('Smoke failed — see console'); console.error(err);
-      })
-      .runSmokeSafe({ form: false });
+/* =======================================================
+ * I) DIAGNOSTICS (smoke, logs)
+ * ======================================================= */
+async function onSmoke(){
+  DOM.diagOut().textContent = 'Running…';
+  try {
+    const res = await rpc('runSmokeSafe', { form:false });
+    DOM.diagOut().textContent = JSON.stringify(res, null, 2);
+    TOAST[res && res.ok ? 'info' : 'error'](res && res.ok ? 'Smoke OK' : 'Smoke failed');
+    STATE.etag = null; await swrEventsOnce();
+  } catch (err) {
+    DOM.diagOut().textContent = String(err);
+    TOAST.error('Smoke failed — see console'); console.error(err);
   }
-  function onViewLogs(){
-    document.getElementById('diagOut').textContent = 'Loading logs…';
-    google.script.run
-      .withSuccessHandler(res => {
-        if (!res || res.ok === false){ TOAST.error('Log fetch error'); return; }
-        document.getElementById('diagOut').textContent = JSON.stringify(res.items || [], null, 2);
-      })
-      .withFailureHandler(err => { TOAST.error('Log fetch failed'); console.error(err); })
-      .getLogs(300);
-  }
-  function onClearLogs(){
-    if (!confirm('Clear logs?')) return;
-    google.script.run
-      .withSuccessHandler(_ => { TOAST.info('Logs cleared'); onViewLogs(); })
-      .withFailureHandler(err => { TOAST.error('Clear failed'); console.error(err); })
-      .clearLogs();
-  }
+}
+
+async function onViewLogs(){
+  DOM.diagOut().textContent = 'Loading logs…';
+  try {
+    const res = await rpc('getLogs', 300);
+    if (!res || res.ok === false){ TOAST.error('Log fetch error'); return; }
+    DOM.diagOut().textContent = JSON.stringify(res.items || [], null, 2);
+  } catch (err) { TOAST.error('Log fetch failed'); console.error(err); }
+}
+
+async function onClearLogs(){
+  if (!confirm('Clear logs?')) return;
+  try {
+    await rpc('clearLogs');
+    TOAST.info('Logs cleared'); onViewLogs();
+  } catch (err) { TOAST.error('Clear failed'); console.error(err); }
+}
+
+/* =======================================================
+ * J) UTILITIES (enable/disable, clear)
+ * ======================================================= */
+function setManageDisabled(disabled){
+  DOM.btnMakeDefault().disabled = disabled;
+  DOM.btnArchive().disabled = disabled;
+  DOM.btnCopyLinks().disabled = disabled;
+  DOM.btnConfigureForm().disabled = disabled;
+}
+function clearLinks(){
+  DOM.openPublic().removeAttribute('href');
+  DOM.openDisplay().removeAttribute('href');
+  DOM.openPoster().removeAttribute('href');
+  DOM.btnCopyLinks().disabled = true;
+}
+function clearQr(){
+  const img = DOM.qrImg(); img.removeAttribute('src'); img.style.display='none';
+  const a = DOM.qrLink(); a.removeAttribute('href'); a.textContent='';
+}
   </script>
 </body>
 </html>
