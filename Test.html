@@ -1,140 +1,505 @@
-< !DOCTYPE html>
-    <html lang="en">
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title><?= appTitle ?> · Test Harness</title>
+  <?!= include('Styles'); ?>
+  <?!= include('NuSdk'); ?>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <style>
+    /* ===== Test-only styles (scoped to Test.html) ===== */
+    .led { display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid var(--line); vertical-align:middle; }
+    .led.red    { background:#d93025; }
+    .led.yellow { background:#f9ab00; }
+    .led.green  { background:#188038; }
+    .legend span { display:inline-flex; align-items:center; gap:6px; margin-right:12px; }
+    .card { border:1px solid var(--line); border-radius:10px; padding:12px; background:#fff; margin:12px 0; }
+    .kv { display:grid; grid-template-columns: 180px 1fr; gap:8px; }
+    .kv div { padding:4px 0; }
+    .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size:.9rem; }
+    .good { color:var(--ok); }
+    .warn { color:#b07a00; }
+    .bad  { color:#a61c1c; }
+    .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width:800px){ .grid2{ grid-template-columns:1fr; } .kv{ grid-template-columns: 1fr; } }
+    .banner { border:1px dashed var(--line); background:#fff; border-radius:8px; padding:8px 12px; }
+    .pill { border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-weight:700; }
+    .pill.testonly { background: #eef7ff; color:#1b74e4; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1>Test Harness</h1>
+    <div class="meta">
+      <span class="pill testonly" data-testid="test-banner">TEST-ONLY · Not user-facing</span>
+      <small id="build">Build: <?= BUILD_ID ?></small>
+    </div>
+  </header>
 
-    <head>
-        <meta charset="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
-        <title>NextUp · Test</title>
-        <?!= include('Styles'); ?>
-        <style>
-            .container {
-                max - width: 900px;
-                margin: 22px auto;
-                padding: 0 16px;
-            }
+  <section class="banner">
+    <div class="row">
+      <div class="legend">
+        <span><i class="led red"></i> Red = Absent/Invalid</span>
+        <span><i class="led yellow"></i> Yellow = URL present, QR not verified</span>
+        <span><i class="led green"></i> Green = Verified (QR)</span>
+      </div>
+      <div class="muted" style="margin-left:auto;">Invariant: <strong>Never display a QR unless verified</strong></div>
+    </div>
+  </section>
 
-            .card {
-                background: #fff;
-                border-radius: 12px;
-                padding: 16px;
-                box-shadow: 0 6px 16px rgba(0, 0, 0, .06);
-                margin-bottom: 16px;
-            }
+  <section aria-labelledby="sel-head">
+    <h2 id="sel-head">Target & Scenario</h2>
+    <div class="form-grid">
+      <label for="selEvent">
+        Target event (from source)
+        <select id="selEvent" data-testid="sel-event"></select>
+      </label>
+      <label for="selScenario">
+        Scenario (mock shortcuts)
+        <select id="selScenario" data-testid="sel-scenario">
+          <option value="">— none —</option>
+          <option value="mock:empty">mock:empty</option>
+          <option value="mock:signup_url_only">mock:signup_url_only</option>
+          <option value="mock:signup_qr_ready">mock:signup_qr_ready</option>
+          <option value="mock:public_qr_ready">mock:public_qr_ready</option>
+        </select>
+      </label>
+      <label class="row" for="chkTestMode">
+        <input id="chkTestMode" type="checkbox" data-testid="chk-test-mode" />
+        Enable backend test mode (safe in prod)
+      </label>
+    </div>
+    <div class="actions row">
+      <button class="btn" id="btnRefreshTargets" data-testid="btn-refresh-targets">Refresh targets</button>
+      <button class="btn" id="btnUseScenario" data-testid="btn-use-scenario">Use scenario</button>
+      <button class="btn" id="btnResetScenario" data-testid="btn-reset-scenario">Reset target</button>
+    </div>
+  </section>
 
-            .checks li {
-                display: flex;
-                align-items: flex-start;
-                gap: 8px;
-                margin: 8px 0;
-            }
+  <section class="grid2" aria-label="Snapshots and Controls">
+    <div class="card">
+      <h2>Snapshots</h2>
+      <p class="muted">Fetch live responses for Bundle / Signup / Public.</p>
+      <div class="actions row">
+        <button class="btn" id="btnSnap" data-testid="btn-snapshot">Refresh Snapshots</button>
+      </div>
+      <table class="table" data-testid="tbl-snapshots">
+        <thead><tr><th>API</th><th>LED</th><th>Summary</th></tr></thead>
+        <tbody id="snapBody">
+          <tr><td colspan="3" class="muted">No data yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
 
-            .ok {
-                color: #0a7a2f;
-                font-weight: 800;
-            }
+    <div class="card">
+      <h2>Test Controls</h2>
+      <p class="muted">Set/clear link states on the selected target (non-mock). Useful for verifying invariant transitions.</p>
+      <div class="row gap">
+        <button class="btn" id="btnSetSignupUrl" data-testid="btn-set-signup-url">Set Signup URL</button>
+        <button class="btn" id="btnSetSignupQR" data-testid="btn-set-signup-qr">Mark Signup Verified</button>
+        <button class="btn" id="btnClearSignup" data-testid="btn-clear-signup">Clear Signup</button>
+      </div>
+      <div class="row gap" style="margin-top:8px;">
+        <button class="btn" id="btnSetPublicUrl" data-testid="btn-set-public-url">Set Public URL</button>
+        <button class="btn" id="btnSetPublicQR" data-testid="btn-set-public-qr">Mark Public Verified</button>
+        <button class="btn" id="btnClearPublic" data-testid="btn-clear-public">Clear Public</button>
+      </div>
+    </div>
+  </section>
 
-            .bad {
-                color: #b3261e;
-                font-weight: 800;
-            }
+  <section class="grid2" aria-label="Contracts & Self-tests">
+    <div class="card">
+      <h2>Contract Checks</h2>
+      <p class="muted">Validates response shape for <code class="mono">bundle v1</code> and <code class="mono">link/qr v1</code>.</p>
+      <div class="actions row">
+        <button class="btn" id="btnContracts" data-testid="btn-contracts">Run Contract Checks</button>
+      </div>
+      <div id="contractsOut" class="mono" data-testid="contracts-out">No results yet.</div>
+    </div>
 
-            pre {
-                background: #0f172a;
-                color: #e9eef5;
-                padding: 12px;
-                border-radius: 10px;
-                overflow: auto;
-                font-size: .9rem;
-            }
+    <div class="card">
+      <h2>Backend Self-tests</h2>
+      <p class="muted">Runs <code class="mono">runSelfTests()</code> on Code.gs (mock scenarios).</p>
+      <div class="actions row">
+        <button class="btn" id="btnSelfTests" data-testid="btn-selftests">Run Self-tests</button>
+      </div>
+      <div id="selfOut" class="mono" data-testid="selftests-out">No results yet.</div>
+    </div>
+  </section>
 
-            .btn {
-                padding: 12px 16px;
-                border-radius: 12px;
-                border: 0;
-                background: #0f766e;
-                color: #fff;
-                font-weight: 700;
-            }
+  <section class="card" aria-labelledby="all-head">
+    <h2 id="all-head">Run All</h2>
+    <p class="muted">Executes Snapshots → Contracts → Self-tests. Shows an overall LED.</p>
+    <div class="row gap">
+      <span id="overallLed" class="led" data-testid="overall-led" title="Overall LED"></span>
+      <button class="btn btn-xl" id="btnRunAll" data-testid="btn-run-all">Run All</button>
+      <button class="btn" id="btnExport" data-testid="btn-export">Export JSON</button>
+    </div>
+  </section>
 
-            .muted {
-                opacity: .7;
-            }
-        </style>
-    </head>
+  <!-- Diagnostics -->
+  <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
+    <div class="diag-head">
+      <h2 id="diag-head">Diagnostics</h2>
+      <div class="diag-actions">
+        <label class="diag-checkbox row">
+          <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
+          Live logs
+        </label>
+        <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
+        <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
+      </div>
+    </div>
+    <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
+  </section>
+</div>
 
-    <body>
-        <main class="container">
-            <h1>Verification Suite</h1>
-            <p class="muted">Creates a disposable event, verifies links, QR, and bundles. One click.</p>
+<script>
+/* ===== Test Harness v4.1.1a ===== */
+const { rpc, retry, toast, esc } = NUSDK;
 
-            <section class="card">
-                <button id="btnRun" class="btn">Run Full Verification</button>
-                <label style="margin-left:8px;">
-                    <input type="checkbox" id="keepChk" /> Keep test event/workbook for inspection
-                </label>
-                <div id="status" class="muted" style="margin-top:10px;">Idle</div>
-            </section>
+const els = {
+  selEvent: document.getElementById('selEvent'),
+  selScenario: document.getElementById('selScenario'),
+  chkTestMode: document.getElementById('chkTestMode'),
+  btnRefreshTargets: document.getElementById('btnRefreshTargets'),
+  btnUseScenario: document.getElementById('btnUseScenario'),
+  btnResetScenario: document.getElementById('btnResetScenario'),
 
-            <section class="card" id="resultCard" style="display:none;">
-                <h2>Results</h2>
-                <ul id="checks" class="checks"></ul>
+  btnSnap: document.getElementById('btnSnap'),
+  snapBody: document.getElementById('snapBody'),
 
-                <h3>Artifacts</h3>
-                <div id="artifacts"></div>
+  btnSetSignupUrl: document.getElementById('btnSetSignupUrl'),
+  btnSetSignupQR: document.getElementById('btnSetSignupQR'),
+  btnClearSignup: document.getElementById('btnClearSignup'),
+  btnSetPublicUrl: document.getElementById('btnSetPublicUrl'),
+  btnSetPublicQR: document.getElementById('btnSetPublicQR'),
+  btnClearPublic: document.getElementById('btnClearPublic'),
 
-                <h3>Raw (for debugging)</h3>
-                <pre id="raw"></pre>
-            </section>
-        </main>
+  btnContracts: document.getElementById('btnContracts'),
+  contractsOut: document.getElementById('contractsOut'),
 
-        <div id="toast"></div>
+  btnSelfTests: document.getElementById('btnSelfTests'),
+  selfOut: document.getElementById('selfOut'),
 
-        <script>
-            function toast(msg, type) { const t = document.getElementById('toast'); t.textContent = msg; t.className = type === 'error' ? 'error show' : 'show'; setTimeout(() => t.classList.remove('show'), 2600); }
+  btnRunAll: document.getElementById('btnRunAll'),
+  overallLed: document.getElementById('overallLed'),
+  btnExport: document.getElementById('btnExport'),
 
-            async function run() {
-                document.getElementById('status').textContent = 'Running…';
-                document.getElementById('resultCard').style.display = 'none';
-                const keep = document.getElementById('keepChk').checked;
+  diag: document.getElementById('diag'),
+  diagBody: document.getElementById('diagBody'),
+  btnClearLogs: document.getElementById('btnClearLogs'),
+  btnToggleDiag: document.getElementById('btnToggleDiag'),
+  chkLive: document.getElementById('chkLiveLogs')
+};
 
-                const res = await new Promise(resolve => {
-                    google.script.run.withSuccessHandler(resolve).withFailureHandler(err => resolve({ ok: false, error: String(err) })).runVerificationSuite({ keep: keep });
-                });
+const state = {
+  events: [],
+  targetKey: '',
+  lastSnapshots: null,
+  lastContracts: null,
+  lastSelf: null
+};
 
-                document.getElementById('resultCard').style.display = '';
-                document.getElementById('raw').textContent = JSON.stringify(res, null, 2);
+function log(msg, level){
+  if (!els.chkLive.checked) return;
+  const row = document.createElement('div');
+  row.className = 'lvl-' + (level || 'info');
+  row.textContent = new Date().toLocaleTimeString() + ' — ' + String(msg);
+  els.diagBody.appendChild(row);
+  els.diagBody.scrollTop = els.diagBody.scrollHeight;
+}
+function setDiagExpanded(expanded){
+  els.diag.classList.toggle('collapsed', !expanded);
+  els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
+}
 
-                const ul = document.getElementById('checks'); ul.innerHTML = '';
-                const checks = res.checks || [];
-                checks.forEach(c => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `<span class="${c.ok ? 'ok' : 'bad'}">${c.ok ? '✓' : '✗'}</span> ${c.name}`;
-                    ul.appendChild(li);
-                });
+/* ---------- Targets & scenarios ---------- */
+async function refreshTargets(){
+  try{
+    const r = await retry(()=> rpc('listEvents'), 3, [300,600,1200]);
+    if (!r?.ok) throw new Error(r?.error || 'listEvents failed');
+    state.events = r.events || [];
+    els.selEvent.innerHTML = state.events.map(ev => `<option value="${esc(ev.id)}">${esc(ev.name)}</option>`).join('');
+    if (!state.targetKey && state.events.length) state.targetKey = state.events[0].id;
+    els.selEvent.value = state.targetKey || '';
+    log('Targets refreshed (' + state.events.length + ')');
+  } catch(e){
+    toast.error('Failed to load targets');
+    log('refreshTargets: ' + (e.message || e), 'error');
+  }
+}
+async function applyScenario(){
+  const scn = els.selScenario.value.trim();
+  if (!scn) return toast.warn('Pick a mock scenario');
+  try{
+    state.targetKey = scn;
+    els.selEvent.value = '';
+    toast('Scenario set: ' + scn);
+    log('Scenario set: ' + scn);
+  } catch(e){
+    toast.error('Scenario failed');
+    log('applyScenario: ' + (e.message || e), 'error');
+  }
+}
+async function resetTarget(){
+  try{
+    const key = els.selEvent.value || state.targetKey;
+    if (!key) return toast.warn('Pick a target first');
+    if (key.startsWith('mock:')) { toast('Nothing to reset for mock'); return; }
+    await rpc('testReset', key);
+    toast('Target reset');
+    log('Reset ' + key);
+  } catch(e){
+    toast.error('Reset failed'); log('resetTarget: '+(e.message||e),'error');
+  }
+}
+async function setTestMode(on){
+  try{ await rpc('setTestMode', !!on); } catch(e){ log('setTestMode: '+(e.message||e),'warn'); }
+}
 
-                // Artifacts: show handy links if present
-                const a = document.getElementById('artifacts'); a.innerHTML = '';
-                function link(label, url) {
-                    if (!url) return;
-                    const el = document.createElement('div');
-                    el.innerHTML = `<a href="${url}" target="_blank" rel="noopener">${label}</a>`;
-                    a.appendChild(el);
-                }
-                try {
-                    link('Workbook', res.created && res.created.eventSpreadsheetUrl);
-                    link('Public Page', res.displayBundle && res.displayBundle.publicUrl);
-                    link('Poster Page', res.displayBundle && res.displayBundle.posterPageUrl);
-                    link('Admin (this app)', location.href.replace(/p=Test/, 'p=Admin'));
-                } catch (_) { }
+/* ---------- Snapshots & LEDs ---------- */
+function ledCell(kind){
+  const span = document.createElement('span');
+  span.className = 'led ' + kind;
+  return span.outerHTML;
+}
+function summarizeBundle(b){
+  if (!b || b.ok!==true) return '<span class="bad">not ok</span>';
+  const m = b.eventMeta || {};
+  return `id=${esc(m.id||'?')} · name=${esc(m.name||'?')} · date=${esc(m.dateISO||'?')}`;
+}
+function summarizeLink(o){
+  if (!o || typeof o !== 'object') return '<span class="bad">invalid</span>';
+  if (o.ok===true){
+    if (o.qrB64) return `<span class="good">QR</span> · <span class="mono">${esc(o.url||'')}</span>`;
+    if (o.url) return `<span class="warn">URL</span> · <span class="mono">${esc(o.url||'')}</span>`;
+    return '<span class="bad">ok=true but no url</span>';
+  }
+  return `<span class="bad">${esc(o.error||'error')}</span>`;
+}
+function statusToLed(o){
+  if (!o || o.ok!==true) return 'red';
+  if (o.qrB64) return 'green';
+  if (o.url) return 'yellow';
+  return 'red';
+}
+async function refreshSnapshots(){
+  const key = els.selEvent.value || state.targetKey || '';
+  if (!key) { toast.warn('Pick a target or scenario'); return; }
+  try{
+    const [b,su,pu] = await Promise.all([
+      rpc('getPublicBundle', key),
+      rpc('getSignupQr', key),
+      rpc('getShareQr', key)
+    ]);
+    state.lastSnapshots = { key, bundle:b, signup:su, pub:pu, ts:Date.now() };
+    const rows = [];
+    rows.push(`<tr><td>Bundle</td><td>${ledCell(b && b.ok===true ? 'green':'red')}</td><td>${summarizeBundle(b)}</td></tr>`);
+    rows.push(`<tr><td>Signup</td><td>${ledCell(statusToLed(su))}</td><td>${summarizeLink(su)}</td></tr>`);
+    rows.push(`<tr><td>Public</td><td>${ledCell(statusToLed(pu))}</td><td>${summarizeLink(pu)}</td></tr>`);
+    els.snapBody.innerHTML = rows.join('');
+    toast('Snapshots refreshed');
+  } catch(e){
+    toast.error('Snapshots failed');
+    els.snapBody.innerHTML = `<tr><td colspan="3" class="bad mono">${esc(e.message||e)}</td></tr>`;
+    log('refreshSnapshots: ' + (e.message||e), 'error');
+  }
+}
 
-                document.getElementById('status').textContent = res.ok ? 'All checks passed' : 'Some checks failed';
-                toast(res.ok ? 'All checks passed' : 'Some checks failed', res.ok ? 'success' : 'error');
-            }
+/* ---------- Test controls for real targets ---------- */
+async function setSignupUrl(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
+  const url = prompt('Signup URL (https://...)');
+  if (!url) return;
+  try{
+    await rpc('testSet', { eventKey:key, signupUrl:url, signupQr:false });
+    toast('Signup URL set');
+  } catch(e){ toast.error('Set failed'); }
+}
+async function setSignupQR(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
+  try{
+    await rpc('testSet', { eventKey:key, signupQr:true });
+    toast('Signup marked verified');
+  } catch(e){ toast.error('Mark failed'); }
+}
+async function clearSignup(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
+  try{
+    await rpc('testSet', { eventKey:key, signupUrl:'', signupQr:false });
+    toast('Signup cleared');
+  } catch(e){ toast.error('Clear failed'); }
+}
+async function setPublicUrl(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
+  const url = prompt('Public URL (https://...)');
+  if (!url) return;
+  try{
+    await rpc('testSet', { eventKey:key, publicUrl:url, publicQr:false });
+    toast('Public URL set');
+  } catch(e){ toast.error('Set failed'); }
+}
+async function setPublicQR(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
+  try{
+    await rpc('testSet', { eventKey:key, publicQr:true });
+    toast('Public marked verified');
+  } catch(e){ toast.error('Mark failed'); }
+}
+async function clearPublic(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key || key.startsWith('mock:')) return toast.warn('Pick a real target');
+  try{
+    await rpc('testSet', { eventKey:key, publicUrl:'', publicQr:false });
+    toast('Public cleared');
+  } catch(e){ toast.error('Clear failed'); }
+}
 
-            document.getElementById('btnRun').addEventListener('click', run);
-            // Auto-run on load for true one-click experience from bookmark
-            document.addEventListener('DOMContentLoaded', run);
-        </script>
-    </body>
+/* ---------- Contracts & Self-tests ---------- */
+function pretty(obj){ try{ return JSON.stringify(obj,null,2); } catch(_e){ return String(obj); } }
 
-    </html>
+function validateBundleV1(b){
+  const errs=[];
+  if (!(b && typeof b==='object')) return ['bundle: not an object'];
+  if (b.ok!==true) errs.push('bundle.ok must be true');
+  if (b.bundleVersion!==1) errs.push('bundle.bundleVersion must be 1');
+  const m=b.eventMeta;
+  if (!m || typeof m!=='object') errs.push('bundle.eventMeta missing');
+  else{
+    if(!m.id) errs.push('eventMeta.id missing');
+    if(!m.name) errs.push('eventMeta.name missing');
+    if(!m.dateISO || !/^\d{4}-\d{2}-\d{2}/.test(String(m.dateISO))) errs.push('eventMeta.dateISO invalid');
+    if(m.formUrl && !/^https?:\/\//i.test(m.formUrl)) errs.push('eventMeta.formUrl invalid');
+  }
+  return errs;
+}
+function validateLinkQrV1(o,label){
+  const errs=[];
+  if (!(o && typeof o==='object')) return [label+': not an object'];
+  if (o.ok===true){
+    if(!o.url || !/^https?:\/\//i.test(o.url)) errs.push(label+': url must be valid when ok=true');
+    if('qrB64' in o && typeof o.qrB64!=='string') errs.push(label+': qrB64 must be base64 string when present');
+  } else if (o.ok===false){
+    const ALLOWED=['public_link_not_ready','signup_link_not_ready','event_not_found','error_internal'];
+    if (ALLOWED.indexOf(String(o.error))<0) errs.push(label+': error not in allowed set');
+  } else {
+    errs.push(label+': ok must be boolean');
+  }
+  return errs;
+}
+async function runContracts(){
+  const key = els.selEvent.value || state.targetKey || '';
+  if (!key) { toast.warn('Pick a target or scenario'); return; }
+  try{
+    const [b,su,pu] = await Promise.all([ rpc('getPublicBundle',key), rpc('getSignupQr',key), rpc('getShareQr',key) ]);
+    const errs = [
+      ...validateBundleV1(b),
+      ...validateLinkQrV1(su,'signup'),
+      ...validateLinkQrV1(pu,'public')
+    ];
+    const pass = errs.length===0;
+    els.contractsOut.innerHTML = pass
+      ? `<div class="good">PASS</div><pre class="mono">${esc(pretty({bundle:b, signup:su, public:pu}))}</pre>`
+      : `<div class="bad">FAIL</div><pre class="mono">${esc(errs.join('\n'))}</pre>`;
+    state.lastContracts = { pass, errs, bundle:b, signup:su, public:pu, ts:Date.now(), key };
+    toast(pass?'Contracts PASS':'Contracts FAIL');
+    return pass;
+  } catch(e){
+    els.contractsOut.innerHTML = `<div class="bad">ERROR</div><pre class="mono">${esc(String(e.message||e))}</pre>`;
+    state.lastContracts = { pass:false, errs:[String(e.message||e)], ts:Date.now(), key };
+    toast.error('Contracts error'); return false;
+  }
+}
+async function runSelf(){
+  try{
+    const r = await rpc('runSelfTests');
+    const pass = r?.ok===true && Array.isArray(r.results) && r.results.every(x=>x.pass);
+    els.selfOut.innerHTML = pass
+      ? `<div class="good">PASS</div><pre class="mono">${esc(pretty(r))}</pre>`
+      : `<div class="bad">FAIL</div><pre class="mono">${esc(pretty(r))}</pre>`;
+    state.lastSelf = { pass, raw:r, ts:Date.now() };
+    toast(pass?'Self-tests PASS':'Self-tests FAIL');
+    return pass;
+  } catch(e){
+    els.selfOut.innerHTML = `<div class="bad">ERROR</div><pre class="mono">${esc(String(e.message||e))}</pre>`;
+    state.lastSelf = { pass:false, raw:String(e.message||e), ts:Date.now() };
+    toast.error('Self-tests error'); return false;
+  }
+}
+
+/* ---------- Run All & Export ---------- */
+function setOverall(passContracts, passSelf, snapOK){
+  // overall: green only if contracts+ self pass AND snapshots fetched
+  const cls = (passContracts && passSelf && snapOK) ? 'green'
+           : (!passContracts || !passSelf) ? 'red' : 'yellow';
+  els.overallLed.className = 'led ' + cls;
+}
+async function runAll(){
+  // 1) snapshots
+  await refreshSnapshots();
+  const snapOK = !!state.lastSnapshots;
+  // 2) contracts
+  const passC = await runContracts();
+  // 3) self
+  const passS = await runSelf();
+  setOverall(passC, passS, snapOK);
+}
+function exportJson(){
+  const data = {
+    build: '<?= BUILD_ID ?>',
+    at: new Date().toISOString(),
+    target: els.selEvent.value || state.targetKey || '',
+    snapshots: state.lastSnapshots,
+    contracts: state.lastContracts,
+    selftests: state.lastSelf
+  };
+  const blob = new Blob([JSON.stringify(data,null,2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'nextup-test-results.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- Wire events ---------- */
+els.btnRefreshTargets.onclick = refreshTargets;
+els.selEvent.onchange = (e)=> { state.targetKey = e.target.value; };
+els.btnUseScenario.onclick = applyScenario;
+els.btnResetScenario.onclick = resetTarget;
+els.chkTestMode.onchange = (e)=> setTestMode(e.target.checked);
+
+els.btnSnap.onclick = refreshSnapshots;
+
+els.btnSetSignupUrl.onclick = setSignupUrl;
+els.btnSetSignupQR.onclick = setSignupQR;
+els.btnClearSignup.onclick = clearSignup;
+els.btnSetPublicUrl.onclick = setPublicUrl;
+els.btnSetPublicQR.onclick = setPublicQR;
+els.btnClearPublic.onclick = clearPublic;
+
+els.btnContracts.onclick = runContracts;
+els.btnSelfTests.onclick = runSelf;
+
+els.btnRunAll.onclick = runAll;
+els.btnExport.onclick = exportJson;
+
+document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
+document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
+
+/* ---------- Boot ---------- */
+document.addEventListener('DOMContentLoaded', async ()=>{
+  setDiagExpanded(false);
+  await refreshTargets();
+  await setTestMode(els.chkTestMode.checked);
+  toast('Test harness ready');
+});
+</script>
+</body>
+</html>
