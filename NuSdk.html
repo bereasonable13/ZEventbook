@@ -1,0 +1,36 @@
+<script>
+/* ===== NextUp v4.1.1a · NuSdk (client helpers) ===== */
+window.NUSDK = (function(){
+  const toastQ = [];
+  function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function toast(msg, type){
+    const el = document.createElement('div');
+    el.className = 'toast' + (type ? ' ' + type : '');
+    el.textContent = String(msg || '');
+    document.body.appendChild(el);
+    setTimeout(()=> el.remove(), 2400);
+  }
+  toast.error = (m)=>toast(m,'error');
+  toast.warn  = (m)=>toast(m,'warn');
+
+  async function rpc(fn, ...args){
+    return await new Promise((res, rej) =>
+      google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error(e?.message || String(e)) ))[fn](...args)
+    );
+  }
+
+  async function retry(fn, attempts, delaysMs){
+    attempts = attempts || 3;
+    delaysMs = delaysMs || [400, 800, 1200];
+    let err;
+    for (let i=0;i<attempts;i++){
+      try { return await fn(); } catch(e){ err = e; }
+      await new Promise(r=>setTimeout(r, delaysMs[Math.min(i, delaysMs.length-1)]));
+    }
+    throw err || new Error('retry_failed');
+  }
+
+  return { rpc, retry, toast, esc };
+})();
+</script>
