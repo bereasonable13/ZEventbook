@@ -1,15 +1,13 @@
 /** =====================================================================
- * NextUp · Apps Script backend · v4.1.1a (clean)
- * - Sheet-backed events (configurable)
- * - Drive-backed QR cache (cached b64 + fileId)
- * - Automated, self-healing Control flow (provenance + retries)
- * - Idempotent event creation from Control
- * - Strict QR invariant (only emit qrB64 when verified)
- * - Test harness utilities + self-tests
+ * NextUp · Apps Script backend · v4.1.1b (merged)
+ * - v4.0 Control bootstrap (ensure on cold open) + Diagnostics
+ * - v4.1.1 features: sheet-backed events, Drive QR cache, strict QR invariant
+ * - Self-healing template/control; idempotent event creation
+ * - Public/Share/Signup APIs; Test harness + self-tests
  * - Routes: Admin / Poster / Public / Display / Test
  * ===================================================================== */
 
-/** ===== Build metadata ===== */
+/** ---------- Build metadata ---------- */
 function _getBuildId_() {
   var p = PropertiesService.getScriptProperties();
   var id = p.getProperty('nu_build_id');
@@ -17,10 +15,121 @@ function _getBuildId_() {
   return id;
 }
 
-/** ===== HTML router ===== */
+/** ---------- Legacy-compatible constants (v4.0) ---------- */
+var CONTROL_TITLE = 'NextUp - Control';
+var CFG_KEYS = {
+  CONTROL_ID: 'NU_CONTROL_SSID',       // also mirrored to _K.CTRL_BOOK_ID
+  TEMPLATE_ID: 'NU_TEMPLATE_SSID',     // also mirrored to _K.CTRL_TEMPLATE_ID
+  EVENTS_DIR: 'NU_EVENTS_FOLDERID',
+  ORG_URL: 'NU_ORG_BASE_URL',
+  PUB_URL: 'NU_PUBLIC_BASE_URL'
+};
+
+/** ---------- Properties / config helpers (v4.0 style) ---------- */
+function cfgGet_(k, fallbackConst) {
+  var props = PropertiesService.getScriptProperties();
+  var v = props.getProperty(k);
+  if (v) return v;
+  if (fallbackConst &&
+      String(fallbackConst).indexOf('PUT_') === -1 &&
+      String(fallbackConst).indexOf('_DEPLOYMENT_ID') === -1) {
+    props.setProperty(k, fallbackConst);
+    return fallbackConst;
+  }
+  return '';
+}
+function cfgSet_(k, val) { if (val) PropertiesService.getScriptProperties().setProperty(k, val); }
+
+/** ---------- Key map (v4.1.1) ---------- */
+var _K = {
+  EVENTS_ETAG:    'nu_events_etag_salt',
+  EVENTS_CACHE:   'events_payload_v1',
+
+  TEST_MODE:      'nu_test_mode',
+  SCN_PREFIX:     'nu_test_scn_',
+  SU_PREFIX:      'nu_test_su_',
+  SUQ_PREFIX:     'nu_test_suq_',
+  PU_PREFIX:      'nu_test_pu_',
+  PUQ_PREFIX:     'nu_test_puq_',
+
+  ADM_SIGNUP:     'nu_admin_signup_',
+  ADM_MODE:       'nu_admin_mode_',
+  ADM_COACH:      'nu_admin_coach_',
+
+  SHEET_ID:       'nu_events_sheet_id',
+  SHEET_RANGE:    'nu_events_sheet_range',
+
+  QR_FOLDER_ID:   'nu_qr_cache_folder_id',
+  QR_B64_CACHE_PREFIX: 'nu_qr_b64_',
+  QR_FILEID_CACHE_PREFIX: 'nu_qr_id_',
+
+  CTRL_TEMPLATE_ID: 'nu_control_template_id',
+  CTRL_BOOK_ID:     'nu_control_book_id',
+  CTRL_REQ_TABS:    'nu_control_required_tabs',
+  EVENT_BOOK_PREFIX:'nu_event_book_'
+};
+
+/** ---------- Small helpers ---------- */
+function include(name){ return HtmlService.createHtmlOutputFromFile(name).getContent(); }
+function _json_(x){ return JSON.stringify(x); }
+function _todayISO_(){ return new Date().toISOString().slice(0,10); }
+function _isUri_(s){ try{ var u=new URL(s); return !!u.protocol && !!u.host; }catch(_e){ return false; } }
+function _sha1hex_(str){
+  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, str, Utilities.Charset.UTF_8);
+  return bytes.map(function(b){ var v=(b+256)%256; return ('0'+v.toString(16)).slice(-2); }).join('');
+}
+
+/** =====================================================================
+ * Diagnostics (v4.0) + clientLog()
+ * ===================================================================== */
+var DIAG = {
+  LOG_SHEET: 'Diagnostics',
+  log: function(level, where, msg, data){
+    try {
+      var ssId = cfgControlId_(); if (!ssId) return { ok:false, err:'no control' };
+      var ss = SpreadsheetApp.openById(ssId);
+      var sh = ss.getSheetByName(this.LOG_SHEET) || ss.insertSheet(this.LOG_SHEET);
+      if (sh.getLastRow() === 0) {
+        sh.getRange(1,1,1,5).setValues([['ts','level','where','msg','data']]).setFontWeight('bold');
+        sh.setFrozenRows(1);
+      }
+      var row = [[new Date(), String(level||'info'), String(where||''), String(msg||''), data ? JSON.stringify(data) : '']];
+      sh.getRange(sh.getLastRow()+1,1,1,5).setValues(row);
+      return { ok:true };
+    } catch (e) { return { ok:false, err:String(e) }; }
+  }
+};
+
+/** Client → server logging (strict schema). */
+function clientLog(entry) {
+  try {
+    var e = entry || {};
+    var level = String(e.level || 'info');
+    var where = 'client:' + String(e.where || '');
+    var msg = String(e.msg || '');
+    var ts = Number(e.ts);
+    if (!isFinite(ts)) { ts = Date.now(); DIAG.log('warn','clientLog','missing ts; synthesized',{ where, msg }); }
+    var data = (e.data && typeof e.data === 'object') ? Object.assign({}, e.data, { ts: ts }) : { ts: ts };
+    DIAG.log(level, where, msg, data);
+    return { ok:true };
+  } catch (err) {
+    try { DIAG.log('error','clientLog','exception',{ err:String(err) }); } catch (_){}
+    return { ok:false, error:String(err) };
+  }
+}
+
+/** =====================================================================
+ * HTML router — cold-open bootstrap maintained
+ * ===================================================================== */
 function doGet(e) {
-  var p = (e && e.parameter && e.parameter.p) || 'admin';
-  var page = ({ admin:'Admin', poster:'Poster', public:'Public', display:'Display', test:'Test' })[String(p).toLowerCase()] || 'Admin';
+  // v4.0 behavior: ensure control/template/base on cold open
+  ensureControlStrictOnBoot();
+
+  var p = (e && e.parameter) || {};
+  var key = String(p.page || p.p || 'admin').toLowerCase();
+  var map = { admin:'Admin', poster:'Poster', public:'Public', display:'Display', test:'Test' };
+  var page = map[key] || 'Admin';
+
   var tpl = HtmlService.createTemplateFromFile(page);
   tpl.appTitle = 'NextUp';
   tpl.BUILD_ID = _getBuildId_();
@@ -30,49 +139,8 @@ function doGet(e) {
     .addMetaTag('viewport','width=device-width,initial-scale=1,viewport-fit=cover');
 }
 
-/** Include helper for HtmlService */
-function include(name){ return HtmlService.createHtmlOutputFromFile(name).getContent(); }
-
-/** ===== Small helpers ===== */
-function _json_(x){ return JSON.stringify(x); }
-function _todayISO_(){ return new Date().toISOString().slice(0,10); }
-function _isUri_(s){ try{ var u=new URL(s); return !!u.protocol && !!u.host; }catch(_e){ return false; } }
-function _sha1hex_(str){
-  var bytes = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_1, str, Utilities.Charset.UTF_8);
-  return bytes.map(function(b){ var v=(b+256)%256; return ('0'+v.toString(16)).slice(-2); }).join('');
-}
-
-/** ===== Keys (ScriptProperties / Cache) ===== */
-var _K = {
-  EVENTS_ETAG:    'nu_events_etag_salt',
-  EVENTS_CACHE:   'events_payload_v1',
-
-  TEST_MODE:      'nu_test_mode',
-  SCN_PREFIX:     'nu_test_scn_',    // + eventKey
-  SU_PREFIX:      'nu_test_su_',     // + eventKey (signup url)
-  SUQ_PREFIX:     'nu_test_suq_',    // + eventKey (signup verified '1'|'0')
-  PU_PREFIX:      'nu_test_pu_',     // + eventKey (public url)
-  PUQ_PREFIX:     'nu_test_puq_',    // + eventKey (public verified '1'|'0')
-
-  ADM_SIGNUP:     'nu_admin_signup_', // + eventId (includeSignup '1'|'0')
-  ADM_MODE:       'nu_admin_mode_',   // + eventId (image|text)
-  ADM_COACH:      'nu_admin_coach_',  // + eventId ('1'|'0')
-
-  SHEET_ID:       'nu_events_sheet_id',
-  SHEET_RANGE:    'nu_events_sheet_range', // 'Events!A1:Z' default
-
-  QR_FOLDER_ID:   'nu_qr_cache_folder_id',
-  QR_B64_CACHE_PREFIX: 'nu_qr_b64_',     // + sha1(url)
-  QR_FILEID_CACHE_PREFIX: 'nu_qr_id_',   // + sha1(url)
-
-  CTRL_TEMPLATE_ID: 'nu_control_template_id',
-  CTRL_BOOK_ID:     'nu_control_book_id',
-  CTRL_REQ_TABS:    'nu_control_required_tabs', // CSV
-  EVENT_BOOK_PREFIX:'nu_event_book_' // + eventId
-};
-
 /** =====================================================================
- * Drive-backed QR cache (PNG) + memoization
+ * Drive-backed QR cache
  * ===================================================================== */
 function setQrCacheFolderById(folderId){
   if(!folderId) throw new Error('folderId required');
@@ -91,9 +159,8 @@ function _ensureQrCacheFolder_(){
 function _qrFetchBytes_(url){
   var api='https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl='+encodeURIComponent(url);
   var resp = UrlFetchApp.fetch(api, { muteHttpExceptions:true });
-  var code = resp.getResponseCode();
-  if (code>=200 && code<300) return resp.getContent();
-  throw new Error('qr_fetch_failed:'+code);
+  if (resp.getResponseCode()>=200 && resp.getResponseCode()<300) return resp.getContent();
+  throw new Error('qr_fetch_failed:'+resp.getResponseCode());
 }
 function qrCacheGetOrMake_(url){
   if(!url || !_isUri_(url)) throw new Error('invalid_url');
@@ -101,7 +168,6 @@ function qrCacheGetOrMake_(url){
   var key = _sha1hex_(url);
   var c = cache.get(_K.QR_B64_CACHE_PREFIX + key);
   if (c) return c;
-
   var folder = _ensureQrCacheFolder_();
   var fname = 'qr_' + key + '.png';
   var file, fidMemo = cache.get(_K.QR_FILEID_CACHE_PREFIX + key);
@@ -115,13 +181,13 @@ function qrCacheGetOrMake_(url){
     file = folder.createFile(fname, Utilities.newBlob(bytes, 'image/png', fname));
   }
   var b64 = Utilities.base64Encode(file.getBlob().getBytes());
-  cache.put(_K.QR_B64_CACHE_PREFIX + key, b64, 60*60*6);        // 6h
-  cache.put(_K.QR_FILEID_CACHE_PREFIX + key, file.getId(), 60*60*24); // 24h
+  cache.put(_K.QR_B64_CACHE_PREFIX + key, b64, 60*60*6);
+  cache.put(_K.QR_FILEID_CACHE_PREFIX + key, file.getId(), 60*60*24);
   return b64;
 }
 
 /** =====================================================================
- * Sheet-backed event source (configurable)
+ * Sheet-backed event source
  * ===================================================================== */
 function setEventsSheetConfig(sheetId, rangeA1){
   if(!sheetId) throw new Error('sheetId required');
@@ -172,19 +238,14 @@ function _loadEventsFromSource_(){
       if (evs && evs.length) return evs;
     } catch(e){ console.warn('Events sheet load error: '+(e && e.message || e)); }
   }
-  // Fallback demo data
   return [
     { id:'ev_demo_1', slug:'fall-league-1',  name:'Fall League — Court 1',  startDateISO:'2025-10-01' },
     { id:'ev_demo_2', slug:'fall-league-2',  name:'Fall League — Court 2',  startDateISO:'2025-10-01' },
     { id:'ev_demo_3', slug:'open-qualifier', name:'Open Qualifier',        startDateISO:'2025-11-12' }
   ];
 }
-function bustEventsCache_(){
-  PropertiesService.getScriptProperties().setProperty(_K.EVENTS_ETAG, String(Math.random())+':'+Date.now());
-}
-function bustEventsCache(){
-  CacheService.getScriptCache().remove(_K.EVENTS_CACHE);
-}
+function bustEventsCache_(){ PropertiesService.getScriptProperties().setProperty(_K.EVENTS_ETAG, String(Math.random())+':'+Date.now()); }
+function bustEventsCache(){ CacheService.getScriptCache().remove(_K.EVENTS_CACHE); }
 function listEvents(){
   var cache=CacheService.getScriptCache();
   var cached = cache.get(_K.EVENTS_CACHE);
@@ -200,7 +261,7 @@ function _findEvent_(key){
 }
 
 /** =====================================================================
- * Admin settings (per-event)
+ * Admin settings
  * ===================================================================== */
 function saveAdminSettings(payload){
   try{
@@ -222,7 +283,7 @@ function _readAdminSettings_(eventId){
 }
 
 /** =====================================================================
- * Public bundle + Link endpoints (STRICT INVARIANT)
+ * Public bundle + Link endpoints (STRICT QR invariant)
  * ===================================================================== */
 function getPublicBundle(eventKey){
   try{
@@ -255,9 +316,7 @@ function getSignupQr(eventKey){
   } catch(e){ return { ok:false, error:String(e && e.message || e) }; }
 }
 
-/** =====================================================================
- * Event meta & link state resolution (real + mock + manual)
- * ===================================================================== */
+/** ---------- Link state resolution (incl. mocks) ---------- */
 function _resolveEventMeta_(eventKey){
   if (!eventKey) return null;
   if (String(eventKey).indexOf('mock:')===0){
@@ -308,9 +367,8 @@ function _resolveSignupLinkState_(eventKey){
 }
 
 /** =====================================================================
- * AUTO-TEMPLATE SCHEMA + CONTROL/EVENT FLOW (self-healing)
+ * Template schema + Control/Event flow (self-healing)
  * ===================================================================== */
-// Schema used to auto-create the Template on cold open
 function _getTemplateSchema_(){
   return {
     name: 'NextUp – control (template)',
@@ -322,8 +380,8 @@ function _getTemplateSchema_(){
         ['Date (ISO)',''],
         ['Event ID','']
       ], widths:[140,420] },
-      { name:'Roster',   rows:[['Name','Role','Notes']],                 widths:[200,140,320] },
-      { name:'Schedule', rows:[['When','Item','Location','Notes']],      widths:[120,220,180,260] }
+      { name:'Roster',   rows:[['Name','Role','Notes']],            widths:[200,140,320] },
+      { name:'Schedule', rows:[['When','Item','Location','Notes']], widths:[120,220,180,260] }
     ]
   };
 }
@@ -333,14 +391,11 @@ function _createWorkbookFromSchema_(schema, kind){
   schema.tabs.forEach(function(t){
     var sh=ss.insertSheet(t.name);
     if (t.rows && t.rows.length){
-      var r=sh.getRange(1,1,t.rows.length, t.rows[0].length);
-      r.setValues(t.rows);
-      r.setFontWeight('bold');
+      var r=sh.getRange(1,1,t.rows.length,t.rows[0].length);
+      r.setValues(t.rows); r.setFontWeight('bold');
       if (t.rows.length>1) sh.getRange(2,1,t.rows.length-1,t.rows[0].length).setFontWeight('normal');
     }
-    if (t.widths && t.widths.length){
-      t.widths.forEach(function(w,i){ try{ sh.setColumnWidth(i+1,w); }catch(_e){} });
-    }
+    if (t.widths) t.widths.forEach(function(w,i){ try{ sh.setColumnWidth(i+1,w); }catch(_e){} });
   });
   _markWorkbookProvenance_(ss, kind || 'template');
   return ss;
@@ -382,7 +437,7 @@ function _maybeTrashIfOurs_(spreadsheetId){
   } catch(_e){}
 }
 
-/** Ensure a usable TEMPLATE workbook exists; auto-create if missing. */
+/** Ensure TEMPLATE exists (auto-create) */
 function ensureTemplateWorkbook(){
   var p=PropertiesService.getScriptProperties();
   var tplId=p.getProperty(_K.CTRL_TEMPLATE_ID);
@@ -397,28 +452,23 @@ function ensureTemplateWorkbook(){
         var prov=_readProvenance_(tpl);
         if (prov.ok && prov.kind==='template'){
           DriveApp.getFileById(tplId).setTrashed(true);
-          p.deleteProperty(_K.CTRL_TEMPLATE_ID);
-          tplId=null;
+          p.deleteProperty(_K.CTRL_TEMPLATE_ID); tplId=null;
         }
       }catch(_e){ p.deleteProperty(_K.CTRL_TEMPLATE_ID); tplId=null; }
     }
     if (!tplId){
-      var schema=_getTemplateSchema_();
-      var ss=_createWorkbookFromSchema_(schema, 'template');
-      tplId=ss.getId();
-      p.setProperty(_K.CTRL_TEMPLATE_ID, tplId);
+      var ss=_createWorkbookFromSchema_(_getTemplateSchema_(), 'template');
+      tplId=ss.getId(); p.setProperty(_K.CTRL_TEMPLATE_ID, tplId);
       return { ok:true, created:true, templateId:tplId };
     }
     return { ok:true, created:false, templateId:tplId };
   } finally { try{ lock.releaseLock(); }catch(_e){} }
 }
 
-/** Ensure CONTROL exists/healthy by copying TEMPLATE (self-healing). */
+/** Ensure CONTROL exists/healthy by copying TEMPLATE (self-healing) */
 function ensureControlWorkbook(){
   var p=PropertiesService.getScriptProperties();
-
-  var et=ensureTemplateWorkbook();
-  if (!et.ok) return { ok:false, error:'template_bootstrap_failed' };
+  var et=ensureTemplateWorkbook(); if (!et.ok) return { ok:false, error:'template_bootstrap_failed' };
   var tplId=et.templateId;
 
   var required=_getRequiredTabs_();
@@ -429,7 +479,7 @@ function ensureControlWorkbook(){
       try{
         var existing=SpreadsheetApp.openById(cid);
         var v=_validateWorkbookTabsStrict_(existing, required);
-        if (v.ok) return { ok:true, created:false, controlId:cid, templateId:tplId };
+        if (v.ok) { cfgSet_(CFG_KEYS.CONTROL_ID, cid); return { ok:true, created:false, controlId:cid, templateId:tplId }; }
         _maybeTrashIfOurs_(cid);
       }catch(_e){ /* stale */ }
     }
@@ -437,6 +487,7 @@ function ensureControlWorkbook(){
       var ctrl=SpreadsheetApp.openById(tplId).copy('NextUp – control ('+_todayISO_()+')');
       var ctrlId=ctrl.getId();
       p.setProperty(_K.CTRL_BOOK_ID, ctrlId);
+      cfgSet_(CFG_KEYS.CONTROL_ID, ctrlId);
       _markWorkbookProvenance_(ctrl, 'control');
       var v2=_validateWorkbookTabsStrict_(ctrl, required);
       if (v2.ok) return { ok:true, created:true, controlId:ctrlId, templateId:tplId };
@@ -447,7 +498,19 @@ function ensureControlWorkbook(){
   } finally { try{ lock.releaseLock(); }catch(_e){} }
 }
 
-/** Control status that attempts auto-heal before reporting. */
+/** v4.0-style "cold-open" ensure (wrapper) */
+function ensureAll_() {
+  var c = ensureControlWorkbook();
+  var t = ensureTemplateWorkbook();
+  ensureBaseUrls_();
+  return { ok:c && c.ok && t && t.ok, controlId: (c && c.controlId)||'', templateId: (t && t.templateId)||'' };
+}
+function ensureControlStrictOnBoot() {
+  var r = ensureAll_();
+  return r.ok ? { ok:true, created:false, validated:true, id:r.controlId } : { ok:false, error:'bootstrap_failed' };
+}
+
+/** Control status */
 function getControlStatus(){
   var out={ ok:true, templateId:'', controlId:'', present:false, missingTabs:[], err:'' };
   try{
@@ -464,7 +527,7 @@ function getControlStatus(){
         out.controlId=cid; out.present=!!v.ok; out.missingTabs=v.ok?[]:v.missing;
         if (!v.ok) out.err='control_incomplete';
         if (out.present) return out;
-      }catch(e){ /* will attempt repair */ }
+      }catch(e){ /* repair next */ }
     }
     var ec=ensureControlWorkbook();
     if (ec && ec.ok){ out.controlId=ec.controlId||''; out.present=true; out.missingTabs=[]; return out; }
@@ -473,11 +536,12 @@ function getControlStatus(){
   } catch(e){ out.err=String(e && e.message || e); return out; }
 }
 
-/** Required tab config helpers */
+/** Required tabs config */
 function setControlTemplateId(templateSpreadsheetId){
   if(!templateSpreadsheetId) throw new Error('templateSpreadsheetId required');
   SpreadsheetApp.openById(templateSpreadsheetId);
   PropertiesService.getScriptProperties().setProperty(_K.CTRL_TEMPLATE_ID, templateSpreadsheetId);
+  cfgSet_(CFG_KEYS.TEMPLATE_ID, templateSpreadsheetId);
   return { ok:true, templateId: templateSpreadsheetId };
 }
 function setControlRequiredTabs(csv){
@@ -489,7 +553,24 @@ function _getRequiredTabs_(){
   return csv.split(',').map(function(s){return s.trim();}).filter(Boolean);
 }
 
-/** Create/ensure an event workbook from Control; set links; preserve verification flags. */
+/** Base URLs (v4.0 compat) */
+function ensureBaseUrls_() {
+  var props = PropertiesService.getScriptProperties();
+  if (!props.getProperty(CFG_KEYS.ORG_URL)) props.setProperty(CFG_KEYS.ORG_URL, ScriptApp.getService().getUrl());
+  if (!props.getProperty(CFG_KEYS.PUB_URL)) props.setProperty(CFG_KEYS.PUB_URL, ScriptApp.getService().getUrl());
+}
+function cfgOrgUrl_(){ return PropertiesService.getScriptProperties().getProperty(CFG_KEYS.ORG_URL) || ScriptApp.getService().getUrl(); }
+function cfgPubUrl_(){ return PropertiesService.getScriptProperties().getProperty(CFG_KEYS.PUB_URL) || ScriptApp.getService().getUrl(); }
+function cfgControlId_(){
+  var p = PropertiesService.getScriptProperties().getProperty(_K.CTRL_BOOK_ID);
+  if (p) return p;
+  var q = PropertiesService.getScriptProperties().getProperty(CFG_KEYS.CONTROL_ID);
+  return q || '';
+}
+
+/** =====================================================================
+ * Minimal event creation (kept from 4.1.1)
+ * ===================================================================== */
 function createEventFromControl(payload){
   if(!payload || !payload.id) return { ok:false, error:'missing_event_id' };
   var eventId=String(payload.id);
@@ -555,7 +636,7 @@ function _persistEventLinks_(eventId, links, opts){
 function _isVerified(propKey){ return PropertiesService.getScriptProperties().getProperty(propKey)==='1'; }
 
 /** =====================================================================
- * Test harness utilities (safe in prod)
+ * Test harness utilities + self-tests
  * ===================================================================== */
 function setTestMode(on){
   PropertiesService.getScriptProperties().setProperty(_K.TEST_MODE, on ? '1':'0');
@@ -582,10 +663,6 @@ function testReset(eventKey){
   [_K.SCN_PREFIX,_K.SU_PREFIX,_K.SUQ_PREFIX,_K.PU_PREFIX,_K.PUQ_PREFIX].forEach(function(pref){ p.deleteProperty(pref + k); });
   return { ok:true };
 }
-
-/** =====================================================================
- * Self-tests (contracts-light) used by Test.html
- * ===================================================================== */
 function runSelfTests(){
   try{
     function isUri(s){ try{ new URL(s); return true; }catch(_e){ return false; } }
