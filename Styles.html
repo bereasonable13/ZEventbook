@@ -1,192 +1,230 @@
 <style>
-    /* ===== NextUp v4.1.1a · Global Styles =====
-       Note: Test-only LED styles live inside Test.html (by design). */
+/* =========================================================
+   NextUp v4.1.1b · Global Styles (dark-first + toast at top)
+   - Default theme is DARK. Light mode provided via media query.
+   - Toast appears near the top; tweak --toast-top as needed.
+   - Test-only LED styles still live in Test.html
+   =======================================================*/
 
-    /* Base tokens */
-    :root{
-        --fg:#111;
-        --muted:#666;
-        --line:rgba(0,0,0,.12);
-        --bg:#fafafa;
-        --card:#fff;
-        --brand:#1b74e4;
-        --ok:#126e45;
-        --ok-bg:#e8f8f0;
-        --warn:#6a5200;
-        --warn-bg:#fff6dd;
-        --err:#8a1f1f;
-        --err-bg:#ffe5e5;
-    }
+/* -------------------- 1) Design Tokens (DARK DEFAULT) -------------------- */
+:root{
+  /* Layout + type scale */
+  --container-w:980px;
+  --container-w-tv:1280px;
+  --space:16px;
+  --radius:10px;
 
-    *{ box-sizing:border-box; }
+  /* Spinner + toast */
+  --spin-track:#2b2f36;
+  --spin-head:#9aa4b2;
+  --toast-top: 15vh;        /* << move toast position here (e.g., 15vh, 80vh, etc.) */
 
-    html,body{
-        margin:0; padding:0;
-        background:var(--bg); color:var(--fg);
-        font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-        -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
-    }
+  /* Dark palette */
+  --fg:#e8eaed;
+  --muted:#9aa4b2;
+  --line:rgba(255,255,255,.14);
+  --bg:#0c0f14;
+  --card:#131820;
+  --brand:#7da6ff;
 
-    .container{ max-width:980px; margin:0 auto; padding:16px; }
+  /* Semantic colors (dark-optimized) */
+  --ok:#6bd3a7;       --ok-bg:#0d231b;
+  --warn:#ffd66b;     --warn-bg:#2a2306;
+  --err:#ff9b9b;      --err-bg:#2a0f10;
 
-    h1,h2,h3{ margin:0 0 .5rem 0; line-height:1.2; }
-    h1{ font-size:1.75rem; }
-    h2{ font-size:1.25rem; margin-top:1rem; }
-    h3{ font-size:1.05rem; }
+  /* Table */
+  --thead-bg:#171d26;
+}
 
-    header .meta{
-        color:var(--muted);
-        display:flex; align-items:center; gap:.25rem; flex-wrap:wrap;
-    }
-    small#build{ color:var(--muted); display:block; margin-top:.25rem; }
+/* Optional: prefer light if user’s system is light */
+@media (prefers-color-scheme: light){
+  :root{
+    --fg:#111;
+    --muted:#666;
+    --line:rgba(0,0,0,.12);
+    --bg:#fafafa;
+    --card:#fff;
+    --brand:#1b74e4;
 
-    /* Sections / Cards */
-    section{
-        background:var(--card);
-        border:1px solid var(--line);
-        border-radius:10px;
-        padding:12px 12px;
-        margin:12px 0;
-    }
+    --ok:#126e45;       --ok-bg:#e8f8f0;
+    --warn:#6a5200;     --warn-bg:#fff6dd;
+    --err:#8a1f1f;      --err-bg:#ffe5e5;
 
-    /* Forms */
-    .form-grid{
-        display:grid; grid-template-columns:repeat(2, minmax(220px,1fr));
-        gap:12px;
-    }
-    .form-grid label{
-        display:flex; flex-direction:column; gap:.35rem; font-weight:600;
-    }
-    .form-grid input[type="text"],
-    .form-grid input[type="date"],
-    .form-grid select{
-        border:1px solid var(--line);
-        border-radius:8px;
-        padding:8px 10px;
-        font:inherit; background:#fff;
-    }
-    .actions{ margin-top:10px; }
+    --thead-bg:#f6f6f6;
 
-    /* Rows & helpers */
-    .row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
-    .gap{ gap:8px; }
-    .muted{ color:var(--muted); }
-    .hidden{ display:none !important; }
+    --spin-track:#e5e5e5;
+    --spin-head:#777;
+  }
+}
 
-    /* Accessibility helpers */
-    .visually-hidden{
-        position:absolute !important; height:1px; width:1px; overflow:hidden;
-        clip:rect(1px,1px,1px,1px); white-space:nowrap; border:0; padding:0; margin:-1px;
-    }
+/* -------------------- 2) Resets & Base -------------------- */
+*{ box-sizing:border-box; }
 
-    /* Buttons */
-    .btn{
-        border:1px solid var(--line); background:#fff; color:#000;
-        border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:600;
-    }
-    .btn:hover{ filter:brightness(.98); }
-    .btn:disabled{ opacity:.5; cursor:not-allowed; }
-    .btn.btn-xl{ padding:10px 16px; font-size:1.05rem; }
+html,body{
+  margin:0; padding:0;
+  background:var(--bg); color:var(--fg);
+  font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+}
 
-    /* Select label sync indicator (Admin event chooser) */
-    label[for="chooseEvent"][data-sync="syncing"]::after{
-        content:" ⟳ syncing…"; color:var(--muted); font-weight:400;
-    }
+.container{ max-width:var(--container-w); margin:0 auto; padding:var(--space); }
 
-    /* Tables */
-    .table{ width:100%; border-collapse:separate; border-spacing:0; }
-    .table thead th{
-        text-align:left; font-weight:700; color:#333;
-        background:#f6f6f6; border-bottom:1px solid var(--line);
-        padding:8px 10px; position:sticky; top:0; z-index:1;
-    }
-    .table tbody td{ padding:8px 10px; border-bottom:1px solid var(--line); }
+/* Headings & Meta */
+h1,h2,h3{ margin:0 0 .5rem 0; line-height:1.2; }
+h1{ font-size:1.75rem; }
+h2{ font-size:1.25rem; margin-top:1rem; }
+h3{ font-size:1.05rem; }
 
-    /* Badges */
-    .badge{
-        display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700;
-        border:1px solid var(--line); background:#eef2ff; color:#243b8a;
-    }
-    .badge-warn{ background:var(--warn-bg); color:var(--warn); }
+header .meta{
+  color:var(--muted);
+  display:flex; align-items:center; gap:.25rem; flex-wrap:wrap;
+}
+small#build{ color:var(--muted); display:block; margin-top:.25rem; }
 
-    /* Toast */
-    .toast{
-        position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
-        background:#111; color:#fff; border-radius:12px; padding:10px 14px; font-weight:600;
-        box-shadow:0 10px 30px rgba(0,0,0,.2); z-index:9998; max-width:92vw;
-    }
-    .toast.warn{ background:#b07a00; }
-    .toast.error{ background:#a61c1c; }
+/* -------------------- 3) Sections & Layout Helpers -------------------- */
+section{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  padding:12px;
+  margin:12px 0;
+}
 
-    /* Diagnostics */
-    .diag.collapsed .diag-body{ display:none; }
-    .diag-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
-    .diag-actions{ display:flex; align-items:center; gap:8px; }
-    .diag-checkbox{ font-weight:600; color:#333; }
-    .diag-body{
-        background:#0d1117; color:#c9d1d9; border-radius:8px; padding:10px;
-        border:1px solid #30363d; max-height:260px; overflow:auto;
-        font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.85rem;
-    }
-    .diag-body .lvl-info{ color:#c9d1d9; }
-    .diag-body .lvl-warn{ color:#ffd66b; }
-    .diag-body .lvl-error{ color:#ff9b9b; }
+.row{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.gap{ gap:8px; }
+.muted{ color:var(--muted); }
+.hidden{ display:none !important; }
 
-    /* Bracket placeholder */
-    .bracket{
-        padding:12px; border:1px dashed var(--line); border-radius:8px; background:#fff; color:#333;
-    }
+/* Forms */
+.form-grid{
+  display:grid; grid-template-columns:repeat(2, minmax(220px,1fr));
+  gap:12px;
+}
+.form-grid label{
+  display:flex; flex-direction:column; gap:.35rem; font-weight:600; color:var(--fg);
+}
+.form-grid input[type="text"],
+.form-grid input[type="date"],
+.form-grid select{
+  border:1px solid var(--line);
+  border-radius:8px;
+  padding:8px 10px;
+  font:inherit; background:#0f141b; color:var(--fg);
+}
 
-    /* Spinner (used by Poster/Public while loading QR or metadata) */
-    .spinner{
-        width:22px; height:22px; border-radius:50%;
-        border:3px solid #e5e5e5; border-top-color:#777; animation:nu-spin .8s linear infinite;
-        margin:6px auto;
-    }
-    @keyframes nu-spin{ to{ transform:rotate(360deg); } }
+/* -------------------- 4) Tables -------------------- */
+.table{ width:100%; border-collapse:separate; border-spacing:0; }
+.table thead th{
+  text-align:left; font-weight:700; color:var(--fg);
+  background:var(--thead-bg); border-bottom:1px solid var(--line);
+  padding:8px 10px; position:sticky; top:0; z-index:1;
+}
+.table tbody td{ padding:8px 10px; border-bottom:1px solid var(--line); color:var(--fg); }
 
-    /* Poster specifics */
-    .poster h1{ font-size:1.6rem; }
-    .qrgrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
-    .qrbox{ border:1px solid var(--line); border-radius:8px; padding:12px; background:#fff; }
-    .qrbox img{ display:block; width:100%; height:auto; }
-    .qr-fallback{ font-size:.9rem; word-break:break-all; color:#333; }
+/* -------------------- 5) Badges, Buttons, Pills -------------------- */
+.badge{
+  display:inline-block; padding:2px 8px; border-radius:999px; font-weight:700;
+  border:1px solid var(--line); background:#1a2332; color:#a9c3ff;
+}
+.badge-warn{ background:var(--warn-bg); color:var(--warn); }
 
-    /* Preflight bar (used as compact system status/banner) */
-    .pfbar{
-        position:sticky; top:0; z-index:9999; background:#fff;
-        border-bottom:1px solid var(--line); padding:8px 12px;
-        font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-        display:flex; gap:8px; align-items:center; flex-wrap:wrap;
-    }
-    .pfpill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-weight:600; }
-    .pfok{ background:var(--ok-bg); color:var(--ok); }
-    .pfwarn{ background:var(--warn-bg); color:var(--warn); }
-    .pferr{ background:var(--err-bg); color:var(--err); }
-    .pfbtn{ border:1px solid var(--line); background:#fff; border-radius:8px; padding:2px 8px; cursor:pointer; }
-    .pfbtn.pfhide{ margin-left:auto; font-weight:700; line-height:1; }
-    .pfdetails{ padding:8px 0; display:block; width:100%; }
-    .pfrow{ display:flex; gap:8px; align-items:center; padding:4px 0; }
-    .pfrow .pfmsg{ color:#444; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.9rem; }
+.btn{
+  border:1px solid var(--line); background:#0f141b; color:var(--fg);
+  border-radius:10px; padding:8px 12px; cursor:pointer; font-weight:600;
+}
+.btn:hover{ filter:brightness(1.08); }
+.btn:disabled{ opacity:.55; cursor:not-allowed; }
+.btn.btn-xl{ padding:10px 16px; font-size:1.05rem; }
 
-    /* Display (TV) mode */
-    body[data-tv="1"] .container{ max-width:1280px; }
-    body[data-tv="1"] h1{ font-size:2.2rem; }
-    body[data-tv="1"] h2{ font-size:1.35rem; }
-    body[data-tv="1"] .table thead th,
-    body[data-tv="1"] .table tbody td{ padding:10px 12px; }
-    body[data-tv="1"] .badge{ transform:scale(1.05); transform-origin:left center; }
+/* Select label sync indicator (Admin event chooser) */
+label[for="chooseEvent"][data-sync="syncing"]::after{
+  content:" ⟳ syncing…"; color:var(--muted); font-weight:400;
+}
 
-    /* Small screens */
-    @media (max-width:640px){
-        .form-grid{ grid-template-columns:1fr; }
-        .container{ padding:12px; }
-        .qrgrid{ grid-template-columns:1fr; }
-    }
+/* -------------------- 6) Diagnostics -------------------- */
+.diag.collapsed .diag-body{ display:none; }
+.diag-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+.diag-actions{ display:flex; align-items:center; gap:8px; }
+.diag-checkbox{ font-weight:600; color:var(--fg); }
+.diag-body{
+  background:#0b0f14; color:#c9d1d9; border-radius:8px; padding:10px;
+  border:1px solid #263243; max-height:260px; overflow:auto;
+  font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.85rem;
+}
+.diag-body .lvl-info{ color:#c9d1d9; }
+.diag-body .lvl-warn{ color:#ffd66b; }
+.diag-body .lvl-error{ color:#ff9b9b; }
 
-    /* Print */
-    @media print{
-        header,.actions,.diag,.toast,.pfbar{ display:none !important; }
-        section{ border:none; padding:0; }
-    }
+/* -------------------- 7) Poster / QR Blocks -------------------- */
+.poster h1{ font-size:1.6rem; }
+.qrgrid{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+.qrbox{ border:1px solid var(--line); border-radius:8px; padding:12px; background:var(--card); }
+.qrbox img{ display:block; width:100%; height:auto; }
+.qr-fallback{ font-size:.9rem; word-break:break-all; color:var(--fg); }
+
+/* -------------------- 8) Preflight bar -------------------- */
+.pfbar{
+  position:sticky; top:0; z-index:9999; background:var(--card);
+  border-bottom:1px solid var(--line); padding:8px 12px;
+  font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  display:flex; gap:8px; align-items:center; flex-wrap:wrap; color:var(--fg);
+}
+.pfpill{ display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid var(--line); font-weight:600; }
+.pfok{ background:var(--ok-bg); color:var(--ok); }
+.pfwarn{ background:var(--warn-bg); color:var(--warn); }
+.pferr{ background:var(--err-bg); color:var(--err); }
+.pfbtn{ border:1px solid var(--line); background:#0f141b; border-radius:8px; padding:2px 8px; cursor:pointer; color:var(--fg); }
+.pfbtn.pfhide{ margin-left:auto; font-weight:700; line-height:1; }
+.pfdetails{ padding:8px 0; display:block; width:100%; }
+.pfrow{ display:flex; gap:8px; align-items:center; padding:4px 0; }
+.pfrow .pfmsg{ color:#cbd5e1; font-family:ui-monospace, Menlo, Consolas, monospace; font-size:.9rem; }
+
+/* -------------------- 9) Toast (TOP position) -------------------- */
+.toast{
+  position:fixed;
+  left:50%;
+  top:var(--toast-top);    /* moved from bottom → top */
+  transform:translate(-50%, 0);  /* center horizontally */
+  background:#0b0f14; color:#fff; border-radius:12px; padding:10px 14px; font-weight:600;
+  box-shadow:0 10px 30px rgba(0,0,0,.45); z-index:9998; max-width:92vw;
+  border:1px solid #263243;
+}
+.toast.warn{ background:#3b2d09; color:#ffd66b; }
+.toast.error{ background:#3a1414; color:#ff9b9b; }
+
+/* -------------------- 10) Spinner -------------------- */
+.spinner{
+  width:22px; height:22px; border-radius:50%;
+  border:3px solid var(--spin-track); border-top-color:var(--spin-head);
+  animation:nu-spin .8s linear infinite;
+  margin:6px auto;
+}
+@keyframes nu-spin{ to{ transform:rotate(360deg); } }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  .spinner{ animation:none; }
+}
+
+/* -------------------- 11) Display (TV) mode -------------------- */
+body[data-tv="1"] .container{ max-width:var(--container-w-tv); }
+body[data-tv="1"] h1{ font-size:2.2rem; }
+body[data-tv="1"] h2{ font-size:1.35rem; }
+body[data-tv="1"] .table thead th,
+body[data-tv="1"] .table tbody td{ padding:10px 12px; }
+body[data-tv="1"] .badge{ transform:scale(1.05); transform-origin:left center; }
+
+/* -------------------- 12) Small screens -------------------- */
+@media (max-width:640px){
+  .form-grid{ grid-template-columns:1fr; }
+  .container{ padding:12px; }
+  .qrgrid{ grid-template-columns:1fr; }
+}
+
+/* -------------------- 13) Print -------------------- */
+@media print{
+  header,.actions,.diag,.toast,.pfbar{ display:none !important; }
+  section{ border:none; padding:0; }
+}
 </style>
