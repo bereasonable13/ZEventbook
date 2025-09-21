@@ -1,7 +1,7 @@
 /************************************************************
 * NextUp · Code.gs — Suite Index (jump anchors in brackets)
 * [S01] Optional Config (base URLs, IDs, CFG_KEYS/PROP)
-* [S02] Client Logging (DIAG)
+* [S02] Client Logging (DIAG + getLogs/clearLogs)
 * [S03] Config Helpers (cfgGet_/Set_, base URLs, IDs)
 * [S04] Self-Healing Bootstrap (strict Control + Events hdr)
 * [S05] Model / Router (IDX, TABS, doGet, include)
@@ -12,28 +12,22 @@
 * [S10] Bundles (Display/Public/Poster)
 * [S11] Confidence / Visibility (WILL-NOT-SHOW-UNTIL-ACTIVE)
 * [S12] URL Builders & Cache
-* [S13] Data Utils (ensureWorkbook_, worker, kv, header_)
-* [S14] Debug Helpers (NU_Debug_…)
-* [S15] Template Helpers (tplEnsure…)
-*
-* Public endpoints used by UI/Admin:
-* - doGet, getEventsSafe, createEventbook (also: createEventV2/createEvent)
-* - setEventFormId, importSignupsCsv, importSignupsFromSheet
-* - getEventQuickLinks, getDisplayBundle, getPublicBundle, getPosterBundle
-* - getConfidenceState, getShareQrVerified
+* [S13] Data Utils (findEventByIdOrSlug_, ensureWorkbook_, kv, header_)
+* [S14] Debug / Smoke (NU_Debug_… + runSmokeSafe)
+* [S15] Manage Actions (Default / Archive)
+* [S16] Template Helpers (tplEnsure…)
 ************************************************************/
 
 /************************************************************
-* NextUp v4.1.1 — Code.gs (Eventbooks-first + Confidence Gate)
-* - WILL-NOT-SHOW-UNTIL-ACTIVE gating (never show QR unless verified)
-* - Strict Control bootstrap (self-heal, exact Events A–N header)
-* - Eventbook create (idempotent), mirror links into Events!E:F
-* - Stable ETag + SWR-safe getEventsSafe()
-* - Shortlinks + poster/meta wiring intact
+* NextUp v4.1.2 — Code.gs (Merged: eventbooks + confidence)
+* - Self-healing control (canonical “NextUp - Control”)
+* - Idempotent eventbook create + SWR-safe getEventsSafe()
+* - Verified QR only (shortlinks), WILL-NOT-SHOW-UNTIL-ACTIVE
+* - Admin UI endpoints: default, archive, logs, smoke
 ************************************************************/
 
 // [S01] Optional Config (base URLs, IDs, CFG_KEYS/PROP)
-const BUILD_ID = 'nextup-v4.1.1-eventbooks-confidence';
+const BUILD_ID = 'nextup-v4.1.2-merged';
 const CONTROL_TITLE = 'NextUp - Control';
 
 const ORG_BASE_URL    = 'https://script.google.com/macros/s/ORG_DEPLOYMENT_ID/exec';
@@ -56,7 +50,7 @@ const PROP = {
 };
 
 /************************************************************
-* [S02] Client Logging (DIAG)
+* [S02] Client Logging (DIAG + getLogs/clearLogs)
 ************************************************************/
 function clientLog(entry) {
   try {
@@ -90,6 +84,29 @@ const DIAG = {
     } catch (e) { return { ok:false, err:String(e) }; }
   }
 };
+
+/** Admin.html diagnostics buttons expect these: */
+function getLogs(maxRows) {
+  try {
+    const limit = Math.max(1, Math.min(1000, Number(maxRows) || 300));
+    const ss = SpreadsheetApp.openById(cfgControlId_());
+    const sh = ss.getSheetByName(DIAG.LOG_SHEET);
+    if (!sh || sh.getLastRow() < 2) return { ok:true, items:[] };
+    const last = sh.getLastRow();
+    const start = Math.max(2, last - limit + 1);
+    const vals = sh.getRange(start, 1, last - start + 1, 5).getValues();
+    const items = vals.map(r => ({ ts: r[0], level: r[1], where: r[2], msg: r[3], data: r[4] ? JSON.parse(r[4]) : null }));
+    return { ok:true, items };
+  } catch (e) { return { ok:false, error:String(e) }; }
+}
+function clearLogs() {
+  try {
+    const ss = SpreadsheetApp.openById(cfgControlId_());
+    const sh = ss.getSheetByName(DIAG.LOG_SHEET);
+    if (sh && sh.getLastRow() >= 2) sh.getRange(2,1, sh.getLastRow()-1, 5).clearContent();
+    return { ok:true };
+  } catch (e) { return { ok:false, error:String(e) }; }
+}
 
 /************************************************************
 * [S03] Config Helpers (cfgGet_/Set_, base URLs, IDs)
@@ -180,7 +197,7 @@ function getControlTemplateSpec_() {
     { name:'SignupsTemplate', headers:['timestamp','name','email','phone','team','notes'] },
     { name:'ScheduleTemplate', headers:['round','time','activity','notes','table'] },
     { name:'StandingsTemplate', headers:['team','points','tiebreak','notes'] },
-    { name:'Meta', headers:['key','value'], rows:[['version','4.1.1'], ['owner', owner]] }
+    { name:'Meta', headers:['key','value'], rows:[['version','4.1.2'], ['owner', owner]] }
   ];
 }
 function summarizeSpecForCreate_(spec){
@@ -315,7 +332,7 @@ function doGet(e){
     return redirectTo_(target);
   }
 
-  const PAGE = { admin:'Admin', public:'Public', display:'Display', poster:'Poster', test:'Test' };
+  const PAGE = { admin:'Admin', public:'Public', display:'Display', poster:'Poster', status:'Status', test:'Test' };
   const page = PAGE[key] || 'Admin';
   const tpl  = HtmlService.createTemplateFromFile(page);
   tpl.appTitle = 'NextUp';
@@ -604,7 +621,7 @@ function getEventQuickLinks(eventIdOrSlug){
   };
 
   const qr = {
-    // IMPORTANT: Consumers must only use QR that correspond to a shortlink (verified)
+    // STRICT: only QR for verified shortlinks
     form:        short.form        ? QR.image(short.form)        : '',
     display:     short.display     ? QR.image(short.display)     : '',
     public:      short.public      ? QR.image(short.public)      : '',
@@ -776,8 +793,24 @@ function bustEventsCache_(){
 }
 
 /************************************************************
-* [S13] Data Utils (ensureWorkbook_, worker, kv, header_, tables)
+* [S13] Data Utils (findEventByIdOrSlug_, ensureWorkbook_, kv, header_, tables)
 ************************************************************/
+function findEventByIdOrSlug_(key){
+  if (!key) {
+    // if no key, prefer default if present
+    const sh = getEventsSheet_();
+    const last = sh.getLastRow(); if (last<2) return null;
+    const rows = sh.getRange(2,1,last-1,15).getValues();
+    const r = rows.find(rr => String(rr[IDX.isDefault]).toLowerCase()==='true');
+    return r ? rowToEvent_(r) : null;
+  }
+  const sh = getEventsSheet_();
+  const last = sh.getLastRow(); if (last<2) return null;
+  const rows = sh.getRange(2,1,last-1,15).getValues();
+  const hit = rows.find(r => r[IDX.id]===key || r[IDX.slug]===key);
+  return hit ? rowToEvent_(hit) : null;
+}
+
 function ensureWorkbook_(eventIdOrSlug){
   const ev = findEventByIdOrSlug_(eventIdOrSlug);
   if (!ev) return { ok:false, error:'Eventbook not found' };
@@ -910,7 +943,7 @@ function prettyDate_(iso){
 }
 
 /************************************************************
-* [S14] Debug Helpers
+* [S14] Debug / Smoke (NU_Debug_… + runSmokeSafe)
 ************************************************************/
 function NU_Debug_ListEventbooks(){ return getEventbooksSafe(null); }
 function NU_Debug_ListEvents(){ return getEventsSafe(null); }
@@ -919,8 +952,55 @@ function NU_Debug_Display(eid){ return getDisplayBundle(eid); }
 function NU_Debug_Public(eid){ return getPublicBundle(eid); }
 function NU_Debug_Poster(eid){ return getPosterBundle(eid); }
 
+/** Minimal smoke used by Admin.html button (non-destructive). */
+function runSmokeSafe(opts){
+  try {
+    const boot = ensureAll_();
+    const evs = getEventsSafe(null);
+    const checks = {
+      controlId: boot.controlId || '',
+      hasEventsSheet: !!getMain_().getSheetByName('Events'),
+      itemsCount: (evs && evs.status===200 && Array.isArray(evs.items)) ? evs.items.length : 0
+    };
+    return { ok:true, build:BUILD_ID, checks };
+  } catch (e) {
+    return { ok:false, error:String(e) };
+  }
+}
+
 /************************************************************
-* [S15] Template Helpers (tplEnsure…)
+* [S15] Manage Actions (Default / Archive)
+************************************************************/
+function setDefaultEvent(key) {
+  const sh = getEventsSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return { ok:false, error:'no events' };
+  const data = sh.getRange(2, 1, last-1, 15).getValues();
+  for (let i=0;i<data.length;i++){
+    const r = data[i];
+    const on = (r[IDX.id]===key || r[IDX.slug]===key);
+    sh.getRange(i+2, IDX.isDefault+1).setValue(!!on);
+  }
+  SpreadsheetApp.flush();
+  bustEventsCache_();
+  return { ok:true };
+}
+
+function archiveEvent(key) {
+  const sh = getEventsSheet_();
+  const last = sh.getLastRow();
+  if (last < 2) return { ok:false, error:'no events' };
+  const data = sh.getRange(2, 1, last-1, 15).getValues();
+  const idx = data.findIndex(r => r[IDX.id]===key || r[IDX.slug]===key);
+  if (idx < 0) return { ok:false, error:'not found' };
+  sh.deleteRow(idx + 2); // +1 header, +1 to reach row
+  SpreadsheetApp.flush();
+  bustEventsCache_();
+  return { ok:true };
+}
+
+/************************************************************
+* [S16] Template Helpers (tplEnsure…)
 ************************************************************/
 function tplEnsureSheetWithHeader_(ss, name, headers) {
   const sh = ss.getSheetByName(name) || ss.insertSheet(name);
