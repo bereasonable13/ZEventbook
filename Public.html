@@ -14,6 +14,9 @@
     .info { flex: 1 1 300px; min-width:300px; }
     .msg { border:1px dashed var(--line); border-radius:8px; padding:12px; background:#fff; }
     .msg h3 { margin-top:0; }
+    .muted { color: var(--muted); }
+    .row { display:flex; align-items:center; gap:8px; }
+    .gap { gap:8px; }
     @media print { .pfbar, .diag, .actions { display:none !important; } }
   </style>
 </head>
@@ -28,7 +31,7 @@
     </header>
 
     <section class="qrwrap" aria-label="Public QR and Info">
-      <div class="qrbox">
+      <div class="qrbox" data-testid="public-card">
         <h3 class="row gap">Public Access <span id="qrState" class="badge" data-testid="public-badge">Loading…</span></h3>
         <div id="qr" data-testid="public-qr">
           <div class="spinner" aria-label="Loading Public QR"></div>
@@ -36,7 +39,7 @@
         <small id="url" class="muted" data-testid="public-url"></small>
       </div>
 
-      <div class="info">
+      <div class="info" data-testid="public-info-card">
         <section class="msg" aria-label="Messaging">
           <h3 class="row gap">Messaging <span class="muted" id="msgHint" data-testid="public-msg-hint">Short info for attendees</span></h3>
           <div id="msgBody" class="muted" data-testid="public-msg-body">
@@ -67,12 +70,23 @@
   </main>
 
   <script>
-  /* ===== Public v4.1.1a ===== */
+  /* ===== Public v4.1.1a (strict QR invariant + resilient polling) ===== */
   const { rpc, retry, toast, esc } = NUSDK;
 
+  /* ---------------- Params ---------------- */
   const params = new URLSearchParams(location.search);
   const eventKey = params.get('event') || '';
 
+  /* ---------------- State ---------------- */
+  const STATE = {
+    qrVerified: false,
+    lastUrl: '',
+    pollTimer: null,
+    pollMs: 4000,
+    pollMaxMs: 20000
+  };
+
+  /* ---------------- DOM ---------------- */
   const els = {
     title: document.getElementById('title'),
     date: document.getElementById('date'),
@@ -90,6 +104,7 @@
     chkLive: document.getElementById('chkLiveLogs')
   };
 
+  /* ---------------- Diagnostics helpers ---------------- */
   function log(msg, level){
     if (!els.chkLive.checked) return;
     const row = document.createElement('div');
@@ -103,6 +118,7 @@
     els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
   }
 
+  /* ---------------- UI helpers ---------------- */
   function setQRState(state){
     // loading | url | qr | absent
     const map = {
@@ -115,7 +131,6 @@
     els.qrState.className = v.cls;
     els.qrState.textContent = v.text;
   }
-
   function renderQR(b64, alt){
     if (!b64) return;
     els.qr.innerHTML = `<img alt="${esc(alt||'QR')}" src="data:image/png;base64,${b64}" data-testid="qr-img" />`;
@@ -127,74 +142,94 @@
     els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance">${esc(txt)}</div>`;
   }
 
+  /* ---------------- Data loaders ---------------- */
   async function loadMeta(){
-    try{
-      const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
-      if (!r?.ok) throw new Error(r?.error || 'bundle failed');
-      const m = r.eventMeta || {};
-      els.title.textContent = m.name || '(event)';
-      els.date.textContent = m.dateISO || '';
-      if (!m.status || m.status === 'LINKS_READY') {
-        els.badge.innerHTML = '';
-      } else {
-        const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
-        els.badge.innerHTML = `<span class="badge badge-warn">${esc(text)}</span>`;
-      }
+    const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
+    if (!r?.ok) throw new Error(r?.error || 'bundle failed');
 
-      // Messaging window — show signup form URL if available
-      const sb = els.signupBlock;
-      sb.replaceChildren();
-      if (m.formUrl) {
-        const a = document.createElement('a');
-        a.href = m.formUrl; a.target = '_blank'; a.rel = 'noopener';
-        a.textContent = m.formUrl;
-        const lbl = document.createElement('div');
-        lbl.className = 'muted';
-        lbl.textContent = 'Signup form:';
-        sb.appendChild(lbl);
-        sb.appendChild(a);
-      } else {
-        const hint = document.createElement('div');
-        hint.className = 'muted';
-        hint.textContent = 'No signup form yet. Enable it in Admin.';
-        sb.appendChild(hint);
-      }
-    } catch(e){
-      log('loadMeta: ' + (e.message || e), 'error');
-      toast.error('Failed to load event');
+    const m = r.eventMeta || {};
+    els.title.textContent = m.name || '(event)';
+    els.date.textContent = m.dateISO || '';
+
+    if (!m.status || m.status === 'LINKS_READY') {
+      els.badge.innerHTML = '';
+    } else {
+      const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
+      els.badge.innerHTML = `<span class="badge badge-warn">${esc(text)}</span>`;
+    }
+
+    // Messaging window — show signup form URL if available
+    const sb = els.signupBlock;
+    sb.replaceChildren();
+    if (m.formUrl) {
+      const a = document.createElement('a');
+      a.href = m.formUrl; a.target = '_blank'; a.rel = 'noopener';
+      a.textContent = m.formUrl;
+      const lbl = document.createElement('div');
+      lbl.className = 'muted';
+      lbl.textContent = 'Signup form:';
+      sb.appendChild(lbl);
+      sb.appendChild(a);
+    } else {
+      const hint = document.createElement('div');
+      hint.className = 'muted';
+      hint.textContent = 'No signup form yet. Enable it in Admin.';
+      sb.appendChild(hint);
     }
   }
 
-  async function loadPublicQR(){
+  async function loadPublicQROnce(){
     setQRState('loading');
-    try{
-      const r = await retry(()=> rpc('getShareQr', eventKey), 3, [300,600,1200]);
-      if (r?.ok === true) {
-        if (r.qrB64) {
-          renderQR(r.qrB64, 'Public QR');
-          els.url.textContent = r.url || '';
-          setQRState('qr');
-        } else if (r.url) {
+    const r = await retry(()=> rpc('getShareQr', eventKey), 3, [300,600,1200]);
+    if (r?.ok === true) {
+      if (r.qrB64) {
+        // Strict invariant satisfied → show QR
+        renderQR(r.qrB64, 'Public QR');
+        els.url.textContent = r.url || '';
+        setQRState('qr');
+        STATE.qrVerified = true;
+        return true;
+      } else if (r.url) {
+        // URL only (not verified yet) → text fallback
+        if (STATE.lastUrl !== r.url) {
           renderURL(r.url);
           els.url.textContent = r.url || '';
-          setQRState('url');
-        } else {
-          renderGuidance('Public link not ready. Check Admin.');
-          els.url.textContent = '';
-          setQRState('absent');
+          STATE.lastUrl = r.url;
         }
-      } else {
-        renderGuidance('Public link not ready. Check Admin.');
-        els.url.textContent = '';
-        setQRState('absent');
+        setQRState('url');
+        STATE.qrVerified = false;
+        return false;
       }
-    } catch(e){
-      log('loadPublicQR: ' + (e.message || e), 'error');
-      renderGuidance('Error loading Public link.');
-      setQRState('absent');
     }
+    renderGuidance('Public link not ready. Check Admin.');
+    els.url.textContent = '';
+    setQRState('absent');
+    STATE.qrVerified = false;
+    return false;
   }
 
+  /* ---------------- Polling control (backoff until verified) ---------------- */
+  function startPolling(){
+    stopPolling();
+    STATE.pollTimer = setTimeout(async () => {
+      try {
+        const ok = await loadPublicQROnce();
+        if (!ok) {
+          STATE.pollMs = Math.min(STATE.pollMs + 2000, STATE.pollMaxMs);
+          startPolling();
+        }
+      } catch (e) {
+        log('poll error: '+(e.message||e), 'error');
+        STATE.pollMs = Math.min(STATE.pollMs + 2000, STATE.pollMaxMs);
+        startPolling();
+      }
+    }, STATE.pollMs);
+  }
+  function stopPolling(){
+    if (STATE.pollTimer) { clearTimeout(STATE.pollTimer); STATE.pollTimer = null; }
+  }
+
+  /* ---------------- Boot ---------------- */
   document.addEventListener('DOMContentLoaded', async ()=>{
     setDiagExpanded(false);
 
@@ -206,14 +241,28 @@
       return;
     }
 
-    await loadMeta();
-    await loadPublicQR();
-    toast('Public ready');
+    try { await loadMeta(); } catch(e){ log('loadMeta: '+(e.message||e), 'error'); toast.error('Failed to load event'); }
+
+    try {
+      const verified = await loadPublicQROnce();
+      if (!verified) startPolling();
+      else stopPolling();
+    } catch(e){
+      log('loadPublicQROnce: ' + (e.message || e), 'error');
+      renderGuidance('Error loading Public link.');
+      setQRState('absent');
+      startPolling();
+    }
+
+    toast.info('Public ready');
   });
 
   // Diagnostics controls
   document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
   document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
+
+  // Be polite on unload
+  window.addEventListener('beforeunload', stopPolling);
   </script>
 </body>
 </html>
