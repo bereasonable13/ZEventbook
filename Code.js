@@ -47,43 +47,110 @@ function _route_(p){
 function include(name){ return HtmlService.createHtmlOutputFromFile(name).getContent(); }
 
 /* -------------------- Control Cold-Open Guarantee ------------------- */
+/** HARDENED: self-heals if Control is deleted/renamed or tabs/headers drift. Uses LockService to avoid races. */
 function ensureControlStrictOnBoot() {
-  const props = PropertiesService.getScriptProperties();
-  let id = props.getProperty(PROP_CONTROL_ID), ss = null;
+  // Try to serialize bootstrap to prevent duplicate creates under parallel hits
+  const lock = LockService.getScriptLock();
+  try { lock.tryLock(30 * 1000); } catch(_) {}
 
-  if (id) { try { ss = SpreadsheetApp.openById(id); } catch(_) { ss = null; } }
-  if (!ss) {
-    const it = DriveApp.getFilesByName(CONTROL_TITLE);
-    ss = it.hasNext() ? SpreadsheetApp.open(it.next()) : SpreadsheetApp.create(CONTROL_TITLE);
-    props.setProperty(PROP_CONTROL_ID, ss.getId());
+  try {
+    const props = PropertiesService.getScriptProperties();
+
+    // 1) Try by stored ID
+    let ss = null;
+    const savedId = props.getProperty(PROP_CONTROL_ID);
+    if (savedId) {
+      try { ss = SpreadsheetApp.openById(savedId); }
+      catch (_) { ss = null; }
+    }
+
+    // 2) If not found, try by name — pick most recently updated match
+    if (!ss) {
+      const f = _pickMostRecentFileByName_(CONTROL_TITLE);
+      if (f) { try { ss = SpreadsheetApp.open(f); } catch (_) { ss = null; } }
+    }
+
+    // 3) If still none, create fresh
+    if (!ss) {
+      ss = SpreadsheetApp.create(CONTROL_TITLE);
+      props.setProperty(PROP_CONTROL_ID, ss.getId());
+      _logSafe_('info', 'ensureControl', 'created-new', { id: ss.getId() });
+    } else {
+      // Refresh stored ID in case we found by name
+      props.setProperty(PROP_CONTROL_ID, ss.getId());
+    }
+
+    // 4) Normalize title
+    if (ss.getName() !== CONTROL_TITLE) ss.rename(CONTROL_TITLE);
+
+    // 5) Verify/repair structure (tabs, headers, positions, basic formatting)
+    _verifyAndRepairControl_(ss);
+
+    return { id: ss.getId(), url: ss.getUrl(), title: ss.getName() };
+  } finally {
+    try { lock.releaseLock(); } catch(_) {}
   }
-  if (ss.getName() !== CONTROL_TITLE) ss.rename(CONTROL_TITLE);
-
-  // Events first with header
-  let ev = ss.getSheetByName('Events');
-  if (!ev) { ev = ss.getSheets()[0]; if (ev.getName() !== 'Events') ev.setName('Events'); }
-  if (ss.getSheets()[0].getName() !== 'Events') ss.setActiveSheet(ev).moveActiveSheet(1);
-  _ensureHeader_(ev, EVENTS_HEADER);
-
-  _ensureTab_(ss, 'Config',     CONFIG_DEFAULTS);
-  _ensureTab_(ss, 'Shortlinks', SHORTLINKS_HEADER);
-  _ensureTab_(ss, LOGS_SHEET,   LOGS_HEADER);
-
-  return { id: ss.getId(), url: ss.getUrl(), title: ss.getName() };
 }
-function _ensureTab_(ss, name, headerRows) {
+
+/* ---------- internals for hardened bootstrap ---------- */
+
+// Pick most recent Drive file by exact name (handles accidental duplicates)
+function _pickMostRecentFileByName_(name) {
+  const it = DriveApp.getFilesByName(name);
+  let latest = null, latestTs = 0;
+  while (it.hasNext()) {
+    const f = it.next();
+    const ts = f.getLastUpdated().getTime();
+    if (ts > latestTs) { latest = f; latestTs = ts; }
+  }
+  return latest;
+}
+
+// Ensure baseline tabs exist & are well-formed
+function _verifyAndRepairControl_(ss) {
+  // Events must exist, be first, and have correct header
+  let events = ss.getSheetByName('Events');
+  if (!events) {
+    events = ss.getSheets()[0] || ss.insertSheet('Events');
+    if (events.getName() !== 'Events') events.setName('Events');
+  }
+  _ensureHeader_(events, EVENTS_HEADER);
+  _freezeHeader_(events, 1);
+  _moveToFirst_(ss, events);
+  _autoSizeHeaderRow_(events);
+
+  // Ensure other baseline tabs
+  _ensureTabWithData_(ss, 'Config',     CONFIG_DEFAULTS);
+  _ensureTabWithData_(ss, 'Shortlinks', SHORTLINKS_HEADER);
+  _ensureTabWithData_(ss, LOGS_SHEET,   LOGS_HEADER);
+}
+
+// Create or fix a tab with provided header rows; freeze header for readability
+function _ensureTabWithData_(ss, name, headerRows) {
   let sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
   if (headerRows && headerRows.length) {
-    const r = sh.getRange(1,1,headerRows.length, headerRows[0].length);
-    r.setValues(headerRows);
+    const width = headerRows[0].length;
+    const r = sh.getRange(1, 1, headerRows.length, width);
+    const current = r.getValues();
+    const mismatch =
+      current.length !== headerRows.length ||
+      (current[0] || []).join('|') !== headerRows[0].join('|');
+    if (mismatch) r.setValues(headerRows);
+    _freezeHeader_(sh, 1);
   }
   return sh;
 }
-function _ensureHeader_(sh, header){
-  const r = sh.getRange(1,1,1,header.length);
-  const existing = r.getValues()[0] || [];
-  if (existing.join('|') !== header.join('|')) r.setValues([header]);
+function _freezeHeader_(sh, rows) { try { sh.setFrozenRows(rows); } catch(_) {} }
+function _moveToFirst_(ss, sh) {
+  try { if (ss.getSheets()[0].getName() !== sh.getName()) ss.setActiveSheet(sh).moveActiveSheet(1); } catch(_) {}
+}
+function _autoSizeHeaderRow_(sh) {
+  try {
+    sh.setRowHeight(1, 28);
+    const lc = sh.getLastColumn();
+    if (lc) sh.autoResizeColumns(1, lc);
+  } catch(_) {}
 }
 
 /* ------------------------------ Helpers ----------------------------- */
@@ -119,6 +186,17 @@ function _log_(level, where, message, meta){
     }
   } catch(_) {}
 }
+// Safe logger for bootstrap path (works even when Control is being rebuilt)
+function _logSafe_(level, where, message, meta) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const id = props.getProperty(PROP_CONTROL_ID);
+    if (!id) return;
+    const ss = SpreadsheetApp.openById(id);
+    const sh = ss.getSheetByName(LOGS_SHEET) || ss.insertSheet(LOGS_SHEET);
+    sh.appendRow([_iso_(), level, where, message, meta ? JSON.stringify(meta) : '']);
+  } catch(_) {}
+}
 function getLogs(limit){
   try {
     const ss = _control_();
@@ -150,7 +228,7 @@ function getEventsSafe(etagIn){
   try {
     const props = PropertiesService.getScriptProperties();
     if (!props.getProperty(PROP_CONTROL_ID)) {
-      _log_('warn', where, 'no-control-id — healing via ensureControlStrictOnBoot');
+      _logSafe_('warn', where, 'no-control-id — healing via ensureControlStrictOnBoot');
       ensureControlStrictOnBoot();
     }
 
