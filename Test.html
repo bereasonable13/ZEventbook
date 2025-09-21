@@ -2,12 +2,12 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title><?= appTitle ?> · Test Harness</title>
+  <title><?= appTitle ?> · Test & Smoke</title>
   <?!= include('Styles'); ?>
   <?!= include('NuSdk'); ?>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <style>
-    /* ===== Test-only styles (scoped to Test.html) ===== */
+    /* ===== Test-only styles (scoped to this page) ===== */
     .led { display:inline-block; width:12px; height:12px; border-radius:50%; border:1px solid var(--line); vertical-align:middle; }
     .led.red    { background:#d93025; }
     .led.yellow { background:#f9ab00; }
@@ -25,18 +25,71 @@
     .banner { border:1px dashed var(--line); background:#fff; border-radius:8px; padding:8px 12px; }
     .pill { border:1px solid var(--line); border-radius:999px; padding:2px 8px; font-weight:700; }
     .pill.testonly { background: #eef7ff; color:#1b74e4; }
+    .smoke-head { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   </style>
 </head>
 <body>
 <div class="container">
   <header>
-    <h1>Test Harness</h1>
+    <h1>Smoke + Test Harness</h1>
     <div class="meta">
       <span class="pill testonly" data-testid="test-banner">TEST-ONLY · Not user-facing</span>
       <small id="build">Build: <?= BUILD_ID ?></small>
     </div>
   </header>
 
+  <!-- ===== Smoke Runner (quick PASS/FAIL) ===== -->
+  <section class="card" aria-labelledby="smoke-head">
+    <div class="smoke-head">
+      <h2 id="smoke-head">Smoke Runner</h2>
+      <span id="overallLed" class="led" data-testid="smoke-overall-led" title="Overall LED"></span>
+      <strong id="overallText" data-testid="smoke-overall-text">Not started</strong>
+    </div>
+    <div class="row gap" style="margin-top:8px;">
+      <div class="form-grid" style="grid-template-columns: repeat(3, minmax(200px, 1fr));">
+        <label for="selEvent">
+          Target event (from source)
+          <select id="selEvent" data-testid="sel-event"></select>
+        </label>
+        <label for="selScenario">
+          Scenario (mock shortcuts)
+          <select id="selScenario" data-testid="sel-scenario">
+            <option value="">— none —</option>
+            <option value="mock:empty">mock:empty</option>
+            <option value="mock:signup_url_only">mock:signup_url_only</option>
+            <option value="mock:signup_qr_ready">mock:signup_qr_ready</option>
+            <option value="mock:public_qr_ready">mock:public_qr_ready</option>
+          </select>
+        </label>
+        <label class="row" for="chkTestMode">
+          <input id="chkTestMode" type="checkbox" data-testid="chk-test-mode" />
+          Enable backend test mode (safe in prod)
+        </label>
+      </div>
+    </div>
+    <div class="actions row">
+      <button class="btn" id="btnRefreshTargets" data-testid="btn-refresh-targets">Refresh targets</button>
+      <button class="btn" id="btnUseScenario" data-testid="btn-use-scenario">Use scenario</button>
+      <button class="btn" id="btnResetScenario" data-testid="btn-reset-scenario">Reset target</button>
+
+      <button class="btn btn-xl" id="btnRunSmoke" data-testid="smoke-run" style="margin-left:auto;">Run Smoke</button>
+      <button class="btn" id="btnExportSmoke" data-testid="smoke-export" disabled>Export JSON</button>
+    </div>
+
+    <table class="table" data-testid="smoke-table" style="margin-top:8px;">
+      <thead><tr><th>Step</th><th>Status</th><th>Details</th></tr></thead>
+      <tbody id="smokeBody">
+        <tr><td colspan="3" class="muted">No results yet.</td></tr>
+      </tbody>
+    </table>
+
+    <details style="margin-top:8px;">
+      <summary class="muted">Raw smoke artifact (debug)</summary>
+      <pre id="smokeRaw" class="mono" data-testid="smoke-raw"></pre>
+    </details>
+  </section>
+
+  <!-- Quick legend + invariant banner -->
   <section class="banner">
     <div class="row">
       <div class="legend">
@@ -48,35 +101,7 @@
     </div>
   </section>
 
-  <section aria-labelledby="sel-head">
-    <h2 id="sel-head">Target & Scenario</h2>
-    <div class="form-grid">
-      <label for="selEvent">
-        Target event (from source)
-        <select id="selEvent" data-testid="sel-event"></select>
-      </label>
-      <label for="selScenario">
-        Scenario (mock shortcuts)
-        <select id="selScenario" data-testid="sel-scenario">
-          <option value="">— none —</option>
-          <option value="mock:empty">mock:empty</option>
-          <option value="mock:signup_url_only">mock:signup_url_only</option>
-          <option value="mock:signup_qr_ready">mock:signup_qr_ready</option>
-          <option value="mock:public_qr_ready">mock:public_qr_ready</option>
-        </select>
-      </label>
-      <label class="row" for="chkTestMode">
-        <input id="chkTestMode" type="checkbox" data-testid="chk-test-mode" />
-        Enable backend test mode (safe in prod)
-      </label>
-    </div>
-    <div class="actions row">
-      <button class="btn" id="btnRefreshTargets" data-testid="btn-refresh-targets">Refresh targets</button>
-      <button class="btn" id="btnUseScenario" data-testid="btn-use-scenario">Use scenario</button>
-      <button class="btn" id="btnResetScenario" data-testid="btn-reset-scenario">Reset target</button>
-    </div>
-  </section>
-
+  <!-- ===== Deep Harness (same capabilities as before) ===== -->
   <section class="grid2" aria-label="Snapshots and Controls">
     <div class="card">
       <h2>Snapshots</h2>
@@ -129,12 +154,12 @@
   </section>
 
   <section class="card" aria-labelledby="all-head">
-    <h2 id="all-head">Run All</h2>
-    <p class="muted">Executes Snapshots → Contracts → Self-tests. Shows an overall LED.</p>
+    <h2 id="all-head">Run All (Deep)</h2>
+    <p class="muted">Executes Snapshots → Contracts → Self-tests. Shows an overall LED below for the deep suite.</p>
     <div class="row gap">
-      <span id="overallLed" class="led" data-testid="overall-led" title="Overall LED"></span>
+      <span id="overallLedDeep" class="led" data-testid="overall-led" title="Overall LED (Deep)"></span>
       <button class="btn btn-xl" id="btnRunAll" data-testid="btn-run-all">Run All</button>
-      <button class="btn" id="btnExport" data-testid="btn-export">Export JSON</button>
+      <button class="btn" id="btnExportDeep" data-testid="btn-export">Export JSON</button>
     </div>
   </section>
 
@@ -156,10 +181,24 @@
 </div>
 
 <script>
-/* ===== Test Harness v4.1.1a ===== */
+/* ===== Unified Smoke + Test Harness v4.1.1a ===== */
 const { rpc, retry, toast, esc } = NUSDK;
 
+const q = new URLSearchParams(location.search);
+const paramTarget = q.get('target') || '';
+const paramTestMode = q.get('testmode'); // '1' to enable backend test mode
+const paramAutoRun = q.get('autorun') === '1';
+
 const els = {
+  // Smoke
+  overallLed: document.getElementById('overallLed'),
+  overallText: document.getElementById('overallText'),
+  btnRunSmoke: document.getElementById('btnRunSmoke'),
+  btnExportSmoke: document.getElementById('btnExportSmoke'),
+  smokeBody: document.getElementById('smokeBody'),
+  smokeRaw: document.getElementById('smokeRaw'),
+
+  // Targets / scenarios (shared)
   selEvent: document.getElementById('selEvent'),
   selScenario: document.getElementById('selScenario'),
   chkTestMode: document.getElementById('chkTestMode'),
@@ -167,9 +206,11 @@ const els = {
   btnUseScenario: document.getElementById('btnUseScenario'),
   btnResetScenario: document.getElementById('btnResetScenario'),
 
+  // Snapshots
   btnSnap: document.getElementById('btnSnap'),
   snapBody: document.getElementById('snapBody'),
 
+  // Controls
   btnSetSignupUrl: document.getElementById('btnSetSignupUrl'),
   btnSetSignupQR: document.getElementById('btnSetSignupQR'),
   btnClearSignup: document.getElementById('btnClearSignup'),
@@ -177,16 +218,18 @@ const els = {
   btnSetPublicQR: document.getElementById('btnSetPublicQR'),
   btnClearPublic: document.getElementById('btnClearPublic'),
 
+  // Contracts & Self-tests
   btnContracts: document.getElementById('btnContracts'),
   contractsOut: document.getElementById('contractsOut'),
-
   btnSelfTests: document.getElementById('btnSelfTests'),
   selfOut: document.getElementById('selfOut'),
 
+  // Deep Run All
+  overallLedDeep: document.getElementById('overallLedDeep'),
   btnRunAll: document.getElementById('btnRunAll'),
-  overallLed: document.getElementById('overallLed'),
-  btnExport: document.getElementById('btnExport'),
+  btnExportDeep: document.getElementById('btnExportDeep'),
 
+  // Diagnostics
   diag: document.getElementById('diag'),
   diagBody: document.getElementById('diagBody'),
   btnClearLogs: document.getElementById('btnClearLogs'),
@@ -197,6 +240,7 @@ const els = {
 const state = {
   events: [],
   targetKey: '',
+  smokeArtifact: null,
   lastSnapshots: null,
   lastContracts: null,
   lastSelf: null
@@ -233,34 +277,26 @@ async function refreshTargets(){
 async function applyScenario(){
   const scn = els.selScenario.value.trim();
   if (!scn) return toast.warn('Pick a mock scenario');
-  try{
-    state.targetKey = scn;
-    els.selEvent.value = '';
-    toast('Scenario set: ' + scn);
-    log('Scenario set: ' + scn);
-  } catch(e){
-    toast.error('Scenario failed');
-    log('applyScenario: ' + (e.message || e), 'error');
-  }
+  state.targetKey = scn;
+  els.selEvent.value = '';
+  toast('Scenario set: ' + scn);
+  log('Scenario set: ' + scn);
 }
 async function resetTarget(){
+  const key = els.selEvent.value || state.targetKey;
+  if (!key) return toast.warn('Pick a target first');
+  if (key.startsWith('mock:')) { toast('Nothing to reset for mock'); return; }
   try{
-    const key = els.selEvent.value || state.targetKey;
-    if (!key) return toast.warn('Pick a target first');
-    if (key.startsWith('mock:')) { toast('Nothing to reset for mock'); return; }
     await rpc('testReset', key);
-    toast('Target reset');
-    log('Reset ' + key);
-  } catch(e){
-    toast.error('Reset failed'); log('resetTarget: '+(e.message||e),'error');
-  }
+    toast('Target reset'); log('Reset ' + key);
+  } catch(e){ toast.error('Reset failed'); }
 }
 async function setTestMode(on){
   try{ await rpc('setTestMode', !!on); } catch(e){ log('setTestMode: '+(e.message||e),'warn'); }
 }
 
-/* ---------- Snapshots & LEDs ---------- */
-function ledCell(kind){
+/* ---------- Shared helpers (status/validation) ---------- */
+function led(kind){
   const span = document.createElement('span');
   span.className = 'led ' + kind;
   return span.outerHTML;
@@ -285,6 +321,40 @@ function statusToLed(o){
   if (o.url) return 'yellow';
   return 'red';
 }
+function pretty(obj){ try{ return JSON.stringify(obj,null,2); } catch(_e){ return String(obj); } }
+
+/* Contract validators (same across smoke + deep) */
+function validateBundleV1(b){
+  const errs=[];
+  if (!(b && typeof b==='object')) return ['bundle: not an object'];
+  if (b.ok!==true) errs.push('bundle.ok must be true');
+  if (b.bundleVersion!==1) errs.push('bundle.bundleVersion must be 1');
+  const m=b.eventMeta;
+  if (!m || typeof m!=='object') errs.push('bundle.eventMeta missing');
+  else{
+    if(!m.id) errs.push('eventMeta.id missing');
+    if(!m.name) errs.push('eventMeta.name missing');
+    if(!m.dateISO || !/^\d{4}-\d{2}-\d{2}/.test(String(m.dateISO))) errs.push('eventMeta.dateISO invalid');
+    if(m.formUrl && !/^https?:\/\//i.test(m.formUrl)) errs.push('eventMeta.formUrl invalid');
+  }
+  return errs;
+}
+function validateLinkQrV1(o,label){
+  const errs=[];
+  if (!(o && typeof o==='object')) return [label+': not an object'];
+  if (o.ok===true){
+    if(!o.url || !/^https?:\/\//i.test(o.url)) errs.push(label+': url must be valid when ok=true');
+    if('qrB64' in o && typeof o.qrB64!=='string') errs.push(label+': qrB64 must be base64 string when present');
+  } else if (o.ok===false){
+    const ALLOWED=['public_link_not_ready','signup_link_not_ready','event_not_found','error_internal'];
+    if (ALLOWED.indexOf(String(o.error))<0) errs.push(label+': error not in allowed set');
+  } else {
+    errs.push(label+': ok must be boolean');
+  }
+  return errs;
+}
+
+/* ---------- Snapshots + Deep table ---------- */
 async function refreshSnapshots(){
   const key = els.selEvent.value || state.targetKey || '';
   if (!key) { toast.warn('Pick a target or scenario'); return; }
@@ -296,9 +366,9 @@ async function refreshSnapshots(){
     ]);
     state.lastSnapshots = { key, bundle:b, signup:su, pub:pu, ts:Date.now() };
     const rows = [];
-    rows.push(`<tr><td>Bundle</td><td>${ledCell(b && b.ok===true ? 'green':'red')}</td><td>${summarizeBundle(b)}</td></tr>`);
-    rows.push(`<tr><td>Signup</td><td>${ledCell(statusToLed(su))}</td><td>${summarizeLink(su)}</td></tr>`);
-    rows.push(`<tr><td>Public</td><td>${ledCell(statusToLed(pu))}</td><td>${summarizeLink(pu)}</td></tr>`);
+    rows.push(`<tr><td>Bundle</td><td>${led(b && b.ok===true ? 'green':'red')}</td><td>${summarizeBundle(b)}</td></tr>`);
+    rows.push(`<tr><td>Signup</td><td>${led(statusToLed(su))}</td><td>${summarizeLink(su)}</td></tr>`);
+    rows.push(`<tr><td>Public</td><td>${led(statusToLed(pu))}</td><td>${summarizeLink(pu)}</td></tr>`);
     els.snapBody.innerHTML = rows.join('');
     toast('Snapshots refreshed');
   } catch(e){
@@ -363,40 +433,9 @@ async function clearPublic(){
 }
 
 /* ---------- Contracts & Self-tests ---------- */
-function pretty(obj){ try{ return JSON.stringify(obj,null,2); } catch(_e){ return String(obj); } }
-
-function validateBundleV1(b){
-  const errs=[];
-  if (!(b && typeof b==='object')) return ['bundle: not an object'];
-  if (b.ok!==true) errs.push('bundle.ok must be true');
-  if (b.bundleVersion!==1) errs.push('bundle.bundleVersion must be 1');
-  const m=b.eventMeta;
-  if (!m || typeof m!=='object') errs.push('bundle.eventMeta missing');
-  else{
-    if(!m.id) errs.push('eventMeta.id missing');
-    if(!m.name) errs.push('eventMeta.name missing');
-    if(!m.dateISO || !/^\d{4}-\d{2}-\d{2}/.test(String(m.dateISO))) errs.push('eventMeta.dateISO invalid');
-    if(m.formUrl && !/^https?:\/\//i.test(m.formUrl)) errs.push('eventMeta.formUrl invalid');
-  }
-  return errs;
-}
-function validateLinkQrV1(o,label){
-  const errs=[];
-  if (!(o && typeof o==='object')) return [label+': not an object'];
-  if (o.ok===true){
-    if(!o.url || !/^https?:\/\//i.test(o.url)) errs.push(label+': url must be valid when ok=true');
-    if('qrB64' in o && typeof o.qrB64!=='string') errs.push(label+': qrB64 must be base64 string when present');
-  } else if (o.ok===false){
-    const ALLOWED=['public_link_not_ready','signup_link_not_ready','event_not_found','error_internal'];
-    if (ALLOWED.indexOf(String(o.error))<0) errs.push(label+': error not in allowed set');
-  } else {
-    errs.push(label+': ok must be boolean');
-  }
-  return errs;
-}
 async function runContracts(){
   const key = els.selEvent.value || state.targetKey || '';
-  if (!key) { toast.warn('Pick a target or scenario'); return; }
+  if (!key) { toast.warn('Pick a target or scenario'); return false; }
   try{
     const [b,su,pu] = await Promise.all([ rpc('getPublicBundle',key), rpc('getSignupQr',key), rpc('getShareQr',key) ]);
     const errs = [
@@ -434,24 +473,20 @@ async function runSelf(){
   }
 }
 
-/* ---------- Run All & Export ---------- */
-function setOverall(passContracts, passSelf, snapOK){
-  // overall: green only if contracts+ self pass AND snapshots fetched
+/* ---------- Deep: Run All & Export ---------- */
+function setOverallDeep(passContracts, passSelf, snapOK){
   const cls = (passContracts && passSelf && snapOK) ? 'green'
            : (!passContracts || !passSelf) ? 'red' : 'yellow';
-  els.overallLed.className = 'led ' + cls;
+  els.overallLedDeep.className = 'led ' + cls;
 }
 async function runAll(){
-  // 1) snapshots
   await refreshSnapshots();
   const snapOK = !!state.lastSnapshots;
-  // 2) contracts
   const passC = await runContracts();
-  // 3) self
   const passS = await runSelf();
-  setOverall(passC, passS, snapOK);
+  setOverallDeep(passC, passS, snapOK);
 }
-function exportJson(){
+function exportDeep(){
   const data = {
     build: '<?= BUILD_ID ?>',
     at: new Date().toISOString(),
@@ -465,6 +500,105 @@ function exportJson(){
   const a = document.createElement('a');
   a.href = url; a.download = 'nextup-test-results.json';
   document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/* ---------- Smoke runner (top panel) ---------- */
+function trSmoke(step, status, details){
+  return `<tr><td>${esc(step)}</td><td>${status}</td><td class="mono">${esc(details)}</td></tr>`;
+}
+function setOverallSmoke(cls, text){
+  els.overallLed.className = 'led ' + cls;
+  els.overallText.textContent = text;
+}
+async function runSnapshotsSmoke(key){
+  const [b,su,pu] = await Promise.all([
+    rpc('getPublicBundle', key),
+    rpc('getSignupQr', key),
+    rpc('getShareQr', key)
+  ]);
+  const rows = [];
+  rows.push(trSmoke('Snapshots/Bundle', led(b && b.ok===true ? 'green':'red'), `bundle.ok=${b && b.ok} id=${(b && b.eventMeta && b.eventMeta.id) || '?'}`));
+  rows.push(trSmoke('Snapshots/Signup', led(statusToLed(su)), `ok=${su && su.ok} url=${(su && su.url) || ''} qr=${!!(su && su.qrB64)}`));
+  rows.push(trSmoke('Snapshots/Public', led(statusToLed(pu)), `ok=${pu && pu.ok} url=${(pu && pu.url) || ''} qr=${!!(pu && pu.qrB64)}`));
+  return { bundle:b, signup:su, pub:pu, rows: rows.join('') };
+}
+async function runContractsSmoke(key){
+  const [b,su,pu] = await Promise.all([ rpc('getPublicBundle',key), rpc('getSignupQr',key), rpc('getShareQr',key) ]);
+  const errs = [
+    ...validateBundleV1(b),
+    ...validateLinkQrV1(su,'signup'),
+    ...validateLinkQrV1(pu,'public')
+  ];
+  const pass = errs.length===0;
+  const details = pass ? 'PASS' : ('FAIL: ' + errs.join('; '));
+  return { pass, rows: trSmoke('Contracts', led(pass?'green':'red'), details), bundle:b, signup:su, public:pu, errs };
+}
+async function runSelfSmoke(){
+  const r = await rpc('runSelfTests');
+  const pass = r?.ok===true && Array.isArray(r.results) && r.results.every(x=>x.pass);
+  return { pass, rows: trSmoke('Self-tests', led(pass?'green':'red'), pass?'PASS':'FAIL'), raw:r };
+}
+async function runSmoke(){
+  try{
+    els.btnRunSmoke.disabled = true; els.btnExportSmoke.disabled = true;
+    setOverallSmoke('yellow','Running…');
+    els.smokeBody.innerHTML = `<tr><td colspan="3" class="muted">Running…</td></tr>`;
+    els.smokeRaw.textContent = '';
+
+    // Pick target: scenario param wins; else selected event; else first event; else a default mock
+    if (paramTarget) { state.targetKey = paramTarget; }
+    if (!state.targetKey){
+      // if a real event is selected use it
+      const selected = els.selEvent.value;
+      if (selected) state.targetKey = selected;
+    }
+    if (!state.targetKey){
+      const r = await retry(()=> rpc('listEvents'), 3, [300,600,1200]);
+      const ev = (r && r.ok && r.events && r.events[0]) ? r.events[0] : null;
+      state.targetKey = ev ? ev.id : 'mock:public_qr_ready';
+    }
+    if (paramTestMode === '1' || els.chkTestMode.checked) {
+      try { await rpc('setTestMode', true); } catch(e){ log('setTestMode: '+(e.message||e),'warn'); }
+    }
+
+    const key = state.targetKey;
+    const snaps = await runSnapshotsSmoke(key);
+    const cont  = await runContractsSmoke(key);
+    const self  = await runSelfSmoke();
+
+    els.smokeBody.innerHTML = [snaps.rows, cont.rows, self.rows].join('');
+    const pass = !!(snaps && cont.pass && self.pass);
+    setOverallSmoke(pass ? 'green' : 'red', pass ? 'PASS' : 'FAIL');
+
+    state.smokeArtifact = {
+      build: '<?= BUILD_ID ?>',
+      at: new Date().toISOString(),
+      target: key,
+      snapshots: { bundle:snaps.bundle, signup:snaps.signup, public:snaps.pub },
+      contracts: { pass:cont.pass, errors:cont.errs, bundle:cont.bundle, signup:cont.signup, public:cont.public },
+      selftests: self.raw
+    };
+    els.smokeRaw.textContent = JSON.stringify(state.smokeArtifact,null,2);
+    els.btnExportSmoke.disabled = false;
+    toast(pass ? 'Smoke PASS' : 'Smoke FAIL');
+  } catch(e){
+    setOverallSmoke('red','ERROR');
+    els.smokeBody.innerHTML = trSmoke('Error', led('red'), String(e.message || e));
+    state.smokeArtifact = { build:'<?= BUILD_ID ?>', at:new Date().toISOString(), error:String(e.message||e) };
+    els.smokeRaw.textContent = JSON.stringify(state.smokeArtifact,null,2);
+    toast.error('Smoke error');
+  } finally {
+    els.btnRunSmoke.disabled = false;
+  }
+}
+function exportSmoke(){
+  const a = state.smokeArtifact || { note:'no artifact' };
+  const blob = new Blob([JSON.stringify(a,null,2)], { type:'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url; link.download = 'nextup-smoke-results.json';
+  document.body.appendChild(link); link.click(); link.remove();
   URL.revokeObjectURL(url);
 }
 
@@ -488,7 +622,10 @@ els.btnContracts.onclick = runContracts;
 els.btnSelfTests.onclick = runSelf;
 
 els.btnRunAll.onclick = runAll;
-els.btnExport.onclick = exportJson;
+els.btnExportDeep.onclick = exportDeep;
+
+els.btnRunSmoke.onclick = runSmoke;
+els.btnExportSmoke.onclick = exportSmoke;
 
 document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
 document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
@@ -497,7 +634,8 @@ document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag
 document.addEventListener('DOMContentLoaded', async ()=>{
   setDiagExpanded(false);
   await refreshTargets();
-  await setTestMode(els.chkTestMode.checked);
+  if (paramTestMode === '1') { await setTestMode(true); els.chkTestMode.checked = true; }
+  if (paramAutoRun) { await runSmoke(); }
   toast('Test harness ready');
 });
 </script>
