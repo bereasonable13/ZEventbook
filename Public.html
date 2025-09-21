@@ -1,11 +1,33 @@
+<!--
+/************************************************************
+* NextUp · Public.html — Suite Index
+* [H01] Head / Meta (title, styles, SDK)
+* [H02] Inline Styles (layout)
+* [H03] Layout / DOM (header, qr + info, diagnostics)
+* [H04] Params / State / Refs
+* [H05] Diagnostics helpers
+* [H06] UI helpers (badges, QR/URL render, guidance)
+* [H07] Data loaders
+*       - loadBundleAndHeader()  ← getPublicBundle
+*       - loadPublicQROnce()     ← getShareQrVerified (verified-only)
+*       - hydrateSignupBlock()   ← getEventQuickLinks (form link + shortlink-aware)
+* [H08] Polling control (exponential-ish backoff until verified)
+* [H09] Boot (DOMContentLoaded)
+* [H10] Cleanup + diag controls
+************************************************************/
+-->
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+  <!-- [H01] Head / Meta -->
   <meta charset="utf-8" />
   <title><?= appTitle ?> · Public</title>
   <?!= include('Styles'); ?>
   <?!= include('NuSdk'); ?>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+
+  <!-- [H02] Inline Styles -->
   <style>
     .pub { max-width: 920px; margin: 0 auto; padding: 16px; }
     .qrwrap { display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap; }
@@ -17,11 +39,13 @@
     .muted { color: var(--muted); }
     .row { display:flex; align-items:center; gap:8px; }
     .gap { gap:8px; }
+    .qr-fallback { padding:10px; border:1px dashed var(--line); border-radius:6px; word-break:break-all; }
     @media print { .pfbar, .diag, .actions { display:none !important; } }
   </style>
 </head>
 <body>
   <main class="pub">
+    <!-- [H03] Layout / DOM: header -->
     <header>
       <h1 id="title" data-testid="public-title">(event)</h1>
       <div class="meta">
@@ -30,6 +54,7 @@
       </div>
     </header>
 
+    <!-- [H03] Layout / DOM: QR + info -->
     <section class="qrwrap" aria-label="Public QR and Info">
       <div class="qrbox" data-testid="public-card">
         <h3 class="row gap">Public Access <span id="qrState" class="badge" data-testid="public-badge">Loading…</span></h3>
@@ -46,13 +71,13 @@
             Welcome! Scan the QR (when available) or use the link below.
           </div>
           <div id="signupBlock" class="row" style="margin-top:10px;" data-testid="public-signup-block">
-            <!-- Populated when signup form URL is available -->
+            <!-- Filled if the signup form URL is available -->
           </div>
         </section>
       </div>
     </section>
 
-    <!-- Diagnostics -->
+    <!-- [H03] Layout / DOM: diagnostics -->
     <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
       <div class="diag-head">
         <h2 id="diag-head">Diagnostics</h2>
@@ -70,14 +95,25 @@
   </main>
 
   <script>
-  /* ===== Public v4.1.1a (strict QR invariant + resilient polling) ===== */
-  const { rpc, retry, toast, esc } = NUSDK;
+  /* =====================================================
+   * [H04] Params / State / Refs
+   * ===================================================== */
+  const SDK = (typeof NUSDK !== 'undefined') ? NUSDK : {
+    rpc: (fn, ...args) => new Promise((res, rej)=>{
+      if (!google?.script?.run) return rej(new Error('RPC unavailable'));
+      google.script.run.withSuccessHandler(res).withFailureHandler(e=>rej(new Error(e?.message||String(e))))[fn](...args);
+    }),
+    retry: async (fn, times=3, waits=[300,700,1200])=>{
+      let last; for (let i=0;i<times;i++){ try{ return await fn(); } catch(e){ last=e; if (i<times-1) await new Promise(r=>setTimeout(r, waits[i]||500)); } } throw last;
+    },
+    toast: { info:console.log, error:console.error },
+    esc: (s)=> String(s||'').replace(/[&<>"]/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]))
+  };
+  const { rpc, retry, toast, esc } = SDK;
 
-  /* ---------------- Params ---------------- */
   const params = new URLSearchParams(location.search);
   const eventKey = params.get('event') || '';
 
-  /* ---------------- State ---------------- */
   const STATE = {
     qrVerified: false,
     lastUrl: '',
@@ -86,7 +122,6 @@
     pollMaxMs: 20000
   };
 
-  /* ---------------- DOM ---------------- */
   const els = {
     title: document.getElementById('title'),
     date: document.getElementById('date'),
@@ -104,7 +139,9 @@
     chkLive: document.getElementById('chkLiveLogs')
   };
 
-  /* ---------------- Diagnostics helpers ---------------- */
+  /* =====================================================
+   * [H05] Diagnostics helpers
+   * ===================================================== */
   function log(msg, level){
     if (!els.chkLive.checked) return;
     const row = document.createElement('div');
@@ -118,7 +155,9 @@
     els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
   }
 
-  /* ---------------- UI helpers ---------------- */
+  /* =====================================================
+   * [H06] UI helpers
+   * ===================================================== */
   function setQRState(state){
     // loading | url | qr | absent
     const map = {
@@ -131,9 +170,9 @@
     els.qrState.className = v.cls;
     els.qrState.textContent = v.text;
   }
-  function renderQR(b64, alt){
-    if (!b64) return;
-    els.qr.innerHTML = `<img alt="${esc(alt||'QR')}" src="data:image/png;base64,${b64}" data-testid="qr-img" />`;
+  function renderQRUrl(imgUrl, alt){
+    if (!imgUrl) return;
+    els.qr.innerHTML = `<img alt="${esc(alt||'Public QR')}" src="${esc(imgUrl)}" data-testid="qr-img" />`;
   }
   function renderURL(url){
     els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback">${esc(url)}</div>`;
@@ -142,65 +181,88 @@
     els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance">${esc(txt)}</div>`;
   }
 
-  /* ---------------- Data loaders ---------------- */
-  async function loadMeta(){
+  /* =====================================================
+   * [H07] Data loaders
+   * ===================================================== */
+  async function loadBundleAndHeader(){
+    // Code.gs v4.1.1 getPublicBundle: { ok, eventTag, title, datePretty, place, public_name_mode, standings, schedule, posterPageUrl }
     const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
     if (!r?.ok) throw new Error(r?.error || 'bundle failed');
 
-    const m = r.eventMeta || {};
-    els.title.textContent = m.name || '(event)';
-    els.date.textContent = m.dateISO || '';
+    els.title.textContent = r.title || '(event)';
+    els.date.textContent  = r.datePretty || '';
+    els.badge.innerHTML   = ''; // not showing internal phases here
 
-    if (!m.status || m.status === 'LINKS_READY') {
-      els.badge.innerHTML = '';
-    } else {
-      const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
-      els.badge.innerHTML = `<span class="badge badge-warn">${esc(text)}</span>`;
-    }
+    // Enrich messaging with signup link (if present)
+    await hydrateSignupBlock();
+  }
 
-    // Messaging window — show signup form URL if available
+  // Populate signup block via quicklinks (shows URL; QR only if shortlink verified is present)
+  async function hydrateSignupBlock(){
     const sb = els.signupBlock;
     sb.replaceChildren();
-    if (m.formUrl) {
-      const a = document.createElement('a');
-      a.href = m.formUrl; a.target = '_blank'; a.rel = 'noopener';
-      a.textContent = m.formUrl;
-      const lbl = document.createElement('div');
-      lbl.className = 'muted';
-      lbl.textContent = 'Signup form:';
-      sb.appendChild(lbl);
-      sb.appendChild(a);
-    } else {
-      const hint = document.createElement('div');
-      hint.className = 'muted';
-      hint.textContent = 'No signup form yet. Enable it in Admin.';
+    try {
+      const ql = await rpc('getEventQuickLinks', eventKey);
+      const formUrl = ql?.formUrlView || '';
+      if (formUrl) {
+        const lbl = document.createElement('div'); lbl.className='muted'; lbl.textContent='Signup form:';
+        const a   = document.createElement('a');   a.href=formUrl; a.target='_blank'; a.rel='noopener'; a.textContent=formUrl;
+        sb.appendChild(lbl); sb.appendChild(a);
+      } else {
+        const hint = document.createElement('div'); hint.className='muted'; hint.textContent='No signup form yet. Enable it in Admin.';
+        sb.appendChild(hint);
+      }
+    } catch (e) {
+      const hint = document.createElement('div'); hint.className='muted'; hint.textContent='Unable to resolve signup link right now.';
       sb.appendChild(hint);
     }
   }
 
+  // Strict invariant: show QR only if server verifies shortlink exists
   async function loadPublicQROnce(){
     setQRState('loading');
-    const r = await retry(()=> rpc('getShareQr', eventKey), 3, [300,600,1200]);
-    if (r?.ok === true) {
-      if (r.qrB64) {
-        // Strict invariant satisfied → show QR
-        renderQR(r.qrB64, 'Public QR');
-        els.url.textContent = r.url || '';
-        setQRState('qr');
-        STATE.qrVerified = true;
-        return true;
-      } else if (r.url) {
-        // URL only (not verified yet) → text fallback
-        if (STATE.lastUrl !== r.url) {
-          renderURL(r.url);
+
+    // Preferred v4.1.1 path
+    if (google?.script?.run?.getShareQrVerified) {
+      const r = await retry(()=> rpc('getShareQrVerified', eventKey), 3, [300,600,1200]);
+      if (r?.ok) {
+        if (r.qrUrlVerified) {
+          renderQRUrl(r.qrUrlVerified, 'Public QR');
           els.url.textContent = r.url || '';
-          STATE.lastUrl = r.url;
+          setQRState('qr');
+          STATE.qrVerified = true;
+          return true;
+        } else if (r.url) {
+          if (STATE.lastUrl !== r.url) {
+            renderURL(r.url);
+            els.url.textContent = r.url || '';
+            STATE.lastUrl = r.url;
+          }
+          setQRState('url');
+          STATE.qrVerified = false;
+          return false;
         }
+      }
+      renderGuidance('Public link not ready. Check Admin.');
+      els.url.textContent = '';
+      setQRState('absent');
+      STATE.qrVerified = false;
+      return false;
+    }
+
+    // Legacy fallback: never show QR; text URL only if quicklinks available
+    try {
+      const ql = await rpc('getEventQuickLinks', eventKey);
+      const url = ql?.publicUrl || '';
+      if (url) {
+        renderURL(url);
+        els.url.textContent = url;
         setQRState('url');
         STATE.qrVerified = false;
         return false;
       }
-    }
+    } catch (e) { /* ignore */ }
+
     renderGuidance('Public link not ready. Check Admin.');
     els.url.textContent = '';
     setQRState('absent');
@@ -208,7 +270,9 @@
     return false;
   }
 
-  /* ---------------- Polling control (backoff until verified) ---------------- */
+  /* =====================================================
+   * [H08] Polling control (backoff until verified)
+   * ===================================================== */
   function startPolling(){
     stopPolling();
     STATE.pollTimer = setTimeout(async () => {
@@ -229,24 +293,26 @@
     if (STATE.pollTimer) { clearTimeout(STATE.pollTimer); STATE.pollTimer = null; }
   }
 
-  /* ---------------- Boot ---------------- */
+  /* =====================================================
+   * [H09] Boot
+   * ===================================================== */
   document.addEventListener('DOMContentLoaded', async ()=>{
     setDiagExpanded(false);
 
     if (!eventKey){
       els.title.textContent = '(no event)';
-      els.date.textContent = '';
+      els.date.textContent  = '';
       renderGuidance('Add ?event=<id-or-slug> to the URL.');
       setQRState('absent');
       return;
     }
 
-    try { await loadMeta(); } catch(e){ log('loadMeta: '+(e.message||e), 'error'); toast.error('Failed to load event'); }
+    try { await loadBundleAndHeader(); }
+    catch(e){ log('loadBundle: '+(e.message||e), 'error'); toast?.error?.('Failed to load event'); }
 
     try {
       const verified = await loadPublicQROnce();
-      if (!verified) startPolling();
-      else stopPolling();
+      if (!verified) startPolling(); else stopPolling();
     } catch(e){
       log('loadPublicQROnce: ' + (e.message || e), 'error');
       renderGuidance('Error loading Public link.');
@@ -254,14 +320,14 @@
       startPolling();
     }
 
-    toast.info('Public ready');
+    toast?.info?.('Public ready');
   });
 
-  // Diagnostics controls
+  /* =====================================================
+   * [H10] Cleanup + diag controls
+   * ===================================================== */
   document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
   document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
-
-  // Be polite on unload
   window.addEventListener('beforeunload', stopPolling);
   </script>
 </body>
