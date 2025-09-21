@@ -35,22 +35,22 @@
       <h3>Create Eventbook</h3>
       <div class="row">
         <div>
-          <label>Name</label>
+          <label for="evName">Name</label>
           <input id="evName" placeholder="e.g., Southside Bocce Weeklies"/>
         </div>
         <div>
-          <label>Start Date (ISO)</label>
+          <label for="evDate">Start Date (ISO)</label>
           <input id="evDate" type="date"/>
         </div>
         <div>
-          <label>Seeding</label>
+          <label for="seedMode">Seeding</label>
           <select id="seedMode">
             <option value="random">Random</option>
             <option value="seeded">Seeded</option>
           </select>
         </div>
         <div>
-          <label>Elimination</label>
+          <label for="elimType">Elimination</label>
           <select id="elimType">
             <option value="single">Single</option>
             <option value="double">Double</option>
@@ -68,7 +68,7 @@
       <h3>Manage Eventbooks</h3>
       <div class="row">
         <div style="min-width:280px">
-          <label>Choose</label>
+          <label for="chooseEvent">Choose</label>
           <select id="chooseEvent">
             <option value="">No events yet — create above</option>
           </select>
@@ -108,11 +108,11 @@
         <button id="btnClearLogs">Clear Logs</button>
       </div>
       <div style="margin-top:10px">
-        <pre id="diagOut" class="json" aria-live="polite">{}</pre>
+        <pre id="diagOut" class="json" role="status" aria-live="polite">{}</pre>
       </div>
     </section>
 
-    <div id="toast" class="toast"></div>
+    <div id="toast" class="toast" aria-live="polite"></div>
   </main>
 
   <script>
@@ -202,14 +202,13 @@
         if (!res || res.ok === false){ TOAST.error('Create failed'); return; }
         TOAST.info(res.idempotent ? 'Already existed — selected existing.' : 'Created!');
 
-        // Clear form on success
+        // Clear input fields after success
         document.getElementById('evName').value = '';
         document.getElementById('evDate').value = '';
 
-        // Optimistically remember new id so dropdown selects it after refresh
+        // Optimistically select new event after refresh
         if (res.id) STATE.optimisticId = res.id;
 
-        // Force reload of events
         STATE.etag = null; swrEventsOnce();
       })
       .withFailureHandler(err => { TOAST.error('Create failed'); console.error(err); })
