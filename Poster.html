@@ -8,7 +8,15 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <style>
     .poster { max-width: 840px; margin: 0 auto; padding: 16px; }
-    @media print { .pfbar { display:none !important; } }
+    .qrgrid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start; }
+    .qrbox { border:1px solid var(--line); border-radius:8px; padding:12px; background:#fff; }
+    .qrbox img { display:block; width:240px; max-width:100%; height:auto; margin:auto; }
+    .row { display:flex; align-items:center; gap:8px; }
+    .gap { gap:8px; }
+    .muted { color: var(--muted); }
+    .qr-fallback { padding:10px; border:1px dashed var(--line); border-radius:6px; word-break:break-all; }
+    @media (max-width: 760px){ .qrgrid { grid-template-columns: 1fr; } }
+    @media print { .pfbar, .diag, .actions { display:none !important; } }
   </style>
 </head>
 <body>
@@ -22,7 +30,7 @@
       </div>
     </header>
 
-    <!-- Optional compact preflight/status bar (can be toggled from code if needed) -->
+    <!-- Optional compact preflight/status mount -->
     <div id="pfMount"></div>
 
     <section class="qrgrid" aria-label="Poster QRs/Links">
@@ -53,7 +61,7 @@
 
     <section aria-label="Poster Tips">
       <p class="muted" data-testid="poster-tip">
-        Tip: We only show a QR code once its link is verified. Until then you’ll see the URL text so you can still share it.
+        We only show a QR code once its link is <strong>verified</strong>. Until then you’ll see the URL as a fallback so you can still share it.
       </p>
     </section>
 
@@ -75,13 +83,13 @@
   </main>
 
   <script>
-  /* ===== Poster v4.1.1a ===== */
+  /* ===== Poster v4.1.1a (strict QR invariant + resilient backoff) ===== */
   const { rpc, retry, toast, esc } = NUSDK;
 
   // Params
   const params = new URLSearchParams(location.search);
   const eventKey = params.get('event') || '';
-  const mode = (params.get('mode') || 'image').toLowerCase(); // 'image' | 'text'
+  const mode = (params.get('mode') || 'image').toLowerCase(); // 'image' | 'text' (label only)
 
   // Elements
   const els = {
@@ -106,6 +114,7 @@
     chkLive: document.getElementById('chkLiveLogs')
   };
 
+  /* --------------- Diagnostics helpers --------------- */
   function log(msg, level){
     if (!els.chkLive.checked) return;
     const row = document.createElement('div');
@@ -118,8 +127,10 @@
     els.diag.classList.toggle('collapsed', !expanded);
     els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
   }
+  document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
+  document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
 
-  // Render helpers
+  /* --------------- UI helpers --------------- */
   function setBadge(el, state){
     // state: loading | absent | url | qr
     const map = {
@@ -132,11 +143,9 @@
     el.className = b.cls;
     el.textContent = b.text;
   }
-
   function renderQR(container, b64, alt){
-    if (b64) {
-      container.innerHTML = `<img alt="${esc(alt||'QR')}" src="data:image/png;base64,${b64}" data-testid="qr-img" />`;
-    }
+    if (!b64) return;
+    container.innerHTML = `<img alt="${esc(alt||'QR')}" src="data:image/png;base64,${b64}" data-testid="qr-img" />`;
   }
   function renderURLFallback(container, url){
     container.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback">${esc(url)}</div>`;
@@ -145,98 +154,108 @@
     container.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance">${esc(text)}</div>`;
   }
 
-  // Load meta once
+  /* --------------- Meta --------------- */
   async function loadMeta(){
-    try {
-      const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
-      if (!r?.ok) throw new Error(r?.error || 'bundle failed');
-      const m = r.eventMeta || {};
-      els.title.textContent = m.name || '(event)';
-      els.date.textContent = m.dateISO || '';
-      els.modeBadge.textContent = mode === 'text' ? 'Poster: Text mode' : 'Poster: Image mode';
-      if (!m.status || m.status === 'LINKS_READY') {
-        els.badge.innerHTML = '';
-      } else {
-        const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
-        els.badge.innerHTML = `<span class="badge badge-warn">${esc(text)}</span>`;
-      }
-    } catch(e){
-      log('loadMeta: ' + (e.message || e), 'error');
-      toast.error('Failed to load event');
+    const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
+    if (!r?.ok) throw new Error(r?.error || 'bundle failed');
+    const m = r.eventMeta || {};
+    els.title.textContent = m.name || '(event)';
+    els.date.textContent = m.dateISO || '';
+    els.modeBadge.textContent = mode === 'text' ? 'Poster: Text mode' : 'Poster: Image mode';
+    if (!m.status || m.status === 'LINKS_READY') {
+      els.badge.innerHTML = '';
+    } else {
+      const text = (m.status === 'CREATED') ? 'Preparing workbook…' : 'Preparing links…';
+      els.badge.innerHTML = `<span class="badge badge-warn">${esc(text)}</span>`;
     }
   }
 
-  // Public QR (strict invariant)
-  async function loadPublic(){
+  /* --------------- Public (strict QR invariant) --------------- */
+  const POLL = { publicMs: 4000, signupMs: 4000, maxMs: 20000, tPub: null, tSign: null };
+
+  async function loadPublicOnce(){
     setBadge(els.publicBadge, 'loading');
-    try{
-      const r = await retry(()=> rpc('getShareQr', eventKey), 3, [300,600,1200]);
-      if (r?.ok === true) {
-        if (r.qrB64) {
-          renderQR(els.qrPublic, r.qrB64, 'Public QR');
-          els.publicUrlLabel.textContent = r.url || '';
-          setBadge(els.publicBadge, 'qr');
-        } else if (r.url) {
-          // URL only
-          renderURLFallback(els.qrPublic, r.url);
-          els.publicUrlLabel.textContent = r.url || '';
-          setBadge(els.publicBadge, 'url');
-        } else {
-          // Should not happen with ok=true, but guard
-          renderGuidance(els.qrPublic, 'Public link not ready. Configure in Admin.');
-          els.publicUrlLabel.textContent = '';
-          setBadge(els.publicBadge, 'absent');
-        }
-      } else {
-        renderGuidance(els.qrPublic, 'Public link not ready. Configure in Admin.');
-        els.publicUrlLabel.textContent = '';
-        setBadge(els.publicBadge, 'absent');
+    const r = await retry(()=> rpc('getShareQr', eventKey), 3, [300,600,1200]);
+    if (r?.ok === true) {
+      if (r.qrB64) {
+        renderQR(els.qrPublic, r.qrB64, 'Public QR');
+        els.publicUrlLabel.textContent = r.url || '';
+        setBadge(els.publicBadge, 'qr');
+        return true; // verified
+      } else if (r.url) {
+        renderURLFallback(els.qrPublic, r.url);
+        els.publicUrlLabel.textContent = r.url || '';
+        setBadge(els.publicBadge, 'url');
+        return false; // not yet verified
       }
-    } catch(e){
-      log('loadPublic: ' + (e.message || e), 'error');
-      renderGuidance(els.qrPublic, 'Error loading Public link.');
-      setBadge(els.publicBadge, 'absent');
     }
+    renderGuidance(els.qrPublic, 'Public link not ready. Configure in Admin.');
+    els.publicUrlLabel.textContent = '';
+    setBadge(els.publicBadge, 'absent');
+    return false;
   }
 
-  // Signup: poll for URL presence, but only show QR when verified
-  let signupPollTimer = null;
+  function schedulePublicPoll(){
+    clearTimeout(POLL.tPub);
+    POLL.publicMs = Math.min(POLL.publicMs + 2000, POLL.maxMs);
+    POLL.tPub = setTimeout(async () => {
+      try {
+        const ok = await loadPublicOnce();
+        if (!ok) schedulePublicPoll();
+      } catch (e) {
+        log('public poll error: ' + (e.message||e), 'error');
+        schedulePublicPoll();
+      }
+    }, POLL.publicMs);
+  }
+
+  /* --------------- Signup (URL first, QR when verified) --------------- */
   async function loadSignupOnce(){
-    try{
-      const r = await rpc('getSignupQr', eventKey);
-      if (r?.ok === true) {
-        if (r.qrB64) {
-          renderQR(els.qrSignup, r.qrB64, 'Signup QR');
-          els.signupUrlLabel.textContent = r.url || '';
-          setBadge(els.signupBadge, 'qr');
-          if (signupPollTimer) { clearInterval(signupPollTimer); signupPollTimer = null; }
-        } else if (r.url) {
-          // URL present but not verified — show URL text until verified
-          renderURLFallback(els.qrSignup, r.url);
-          els.signupUrlLabel.textContent = r.url || '';
-          setBadge(els.signupBadge, 'url');
-        } else {
-          renderGuidance(els.qrSignup, 'Enable “Include signup” in Admin, then create/verify.');
-          els.signupUrlLabel.textContent = '';
-          setBadge(els.signupBadge, 'absent');
-        }
-      } else {
-        renderGuidance(els.qrSignup, 'Signup not configured yet.');
-        els.signupUrlLabel.textContent = '';
-        setBadge(els.signupBadge, 'absent');
+    setBadge(els.signupBadge, 'loading');
+    const r = await rpc('getSignupQr', eventKey);
+    if (r?.ok === true) {
+      if (r.qrB64) {
+        renderQR(els.qrSignup, r.qrB64, 'Signup QR');
+        els.signupUrlLabel.textContent = r.url || '';
+        setBadge(els.signupBadge, 'qr');
+        return true; // verified
+      } else if (r.url) {
+        renderURLFallback(els.qrSignup, r.url);
+        els.signupUrlLabel.textContent = r.url || '';
+        setBadge(els.signupBadge, 'url');
+        return false; // not yet verified
       }
-    } catch(e){
-      log('loadSignup: ' + (e.message || e), 'error');
-      renderGuidance(els.qrSignup, 'Error loading signup link.');
-      setBadge(els.signupBadge, 'absent');
     }
+    renderGuidance(els.qrSignup, 'Enable “Include signup” in Admin, then create/verify.');
+    els.signupUrlLabel.textContent = '';
+    setBadge(els.signupBadge, 'absent');
+    return false;
   }
 
+  function scheduleSignupPoll(){
+    clearTimeout(POLL.tSign);
+    POLL.signupMs = Math.min(POLL.signupMs + 2000, POLL.maxMs);
+    POLL.tSign = setTimeout(async () => {
+      try {
+        const ok = await loadSignupOnce();
+        if (!ok) scheduleSignupPoll();
+      } catch (e) {
+        log('signup poll error: ' + (e.message||e), 'error');
+        scheduleSignupPoll();
+      }
+    }, POLL.signupMs);
+  }
+
+  function stopPolling(){
+    clearTimeout(POLL.tPub); clearTimeout(POLL.tSign);
+    POLL.tPub = POLL.tSign = null;
+  }
+
+  /* --------------- Boot --------------- */
   document.addEventListener('DOMContentLoaded', async ()=>{
     setDiagExpanded(false);
 
     if (!eventKey) {
-      // No event provided
       els.title.textContent = '(no event)';
       els.date.textContent = '';
       els.modeBadge.textContent = '';
@@ -247,19 +266,22 @@
       return;
     }
 
-    await loadMeta();
-    await loadPublic();
-    await loadSignupOnce();
-    // Poll signup URL presence every 4s until we either see a verified QR or a URL (keeps URL updated)
-    signupPollTimer = setInterval(loadSignupOnce, 4000);
+    try { await loadMeta(); } catch(e){ log('loadMeta: '+(e.message||e), 'error'); toast.error('Failed to load event'); }
 
-    // Small UX ping
-    toast('Poster ready');
+    try {
+      const pubOk = await loadPublicOnce();
+      if (!pubOk) schedulePublicPoll();
+    } catch(e){ log('public first-load: '+(e.message||e), 'error'); schedulePublicPoll(); }
+
+    try {
+      const signOk = await loadSignupOnce();
+      if (!signOk) scheduleSignupPoll();
+    } catch(e){ log('signup first-load: '+(e.message||e), 'error'); scheduleSignupPoll(); }
+
+    toast.info('Poster ready');
   });
 
-  // Diagnostics controls
-  document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
-  document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
+  window.addEventListener('beforeunload', stopPolling);
   </script>
 </body>
 </html>
