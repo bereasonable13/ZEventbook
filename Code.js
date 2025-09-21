@@ -1,16 +1,8 @@
 /************************************************************
- * NextUp v4.1.1.1 — Eventbooks + Diagnostics (FULL REWRITE)
- * - Router (?p=admin|public|display|poster|status)
- * - Cold/Warm open: guaranteed "NextUp - Control"
- * - Events API (SWR-safe), idempotent createEventbook
- * - setDefaultEvent, archiveEvent
- * - configureSignupForm (idempotent)
- * - Share links, QR (with verification gate)
- * - Structured logging + ring buffer; log fetch/clear
- * - Smoke test runner (server) for Diagnostics card
+ * NextUp v4.1.1.2 — Eventbooks + Diagnostics (HARDENED)
  ************************************************************/
 
-const BUILD_ID = 'nextup-v4.1.1.1-full';
+const BUILD_ID = 'nextup-v4.1.1.2';
 const CONTROL_TITLE = 'NextUp - Control';
 const PROP_CONTROL_ID = 'NEXTUP_CONTROL_SSID';
 
@@ -28,14 +20,13 @@ const CONFIG_DEFAULTS = [
 ];
 
 const SHORTLINKS_HEADER = [['token','kind','targetUrl','createdISO']];
-const LOGS_HEADER       = [['tsISO','level','where','message','meta']];
-
-const LOGS_SHEET = 'Logs';
-const LOG_LIMIT = 1500;  // keep last N rows
+const LOGS_SHEET  = 'Logs';
+const LOGS_HEADER = [['tsISO','level','where','message','meta']];
+const LOG_LIMIT   = 1500;
 
 /* ------------------------------ Router ------------------------------ */
 function doGet(e) {
-  try { ensureControlStrictOnBoot(); } 
+  try { ensureControlStrictOnBoot(); }
   catch (err) { return HtmlService.createHtmlOutput(`<pre>Bootstrap failed:\n${String(err)}</pre>`); }
 
   const p = (e && (e.parameter.p || e.parameter.page)) || 'admin';
@@ -46,15 +37,13 @@ function doGet(e) {
   t.query    = e ? e.parameter : {};
   return t.evaluate().setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
-
 function _route_(p){
   if (p === 'public')  return 'Public';
   if (p === 'display') return 'Display';
   if (p === 'poster')  return 'Poster';
-  if (p === 'status')  return 'Test';    // lightweight page; optional
+  if (p === 'status')  return 'Test';
   return 'Admin';
 }
-
 function include(name){ return HtmlService.createHtmlOutputFromFile(name).getContent(); }
 
 /* -------------------- Control Cold-Open Guarantee ------------------- */
@@ -76,14 +65,12 @@ function ensureControlStrictOnBoot() {
   if (ss.getSheets()[0].getName() !== 'Events') ss.setActiveSheet(ev).moveActiveSheet(1);
   _ensureHeader_(ev, EVENTS_HEADER);
 
-  // Baseline tabs
   _ensureTab_(ss, 'Config',     CONFIG_DEFAULTS);
   _ensureTab_(ss, 'Shortlinks', SHORTLINKS_HEADER);
   _ensureTab_(ss, LOGS_SHEET,   LOGS_HEADER);
 
   return { id: ss.getId(), url: ss.getUrl(), title: ss.getName() };
 }
-
 function _ensureTab_(ss, name, headerRows) {
   let sh = ss.getSheetByName(name);
   if (!sh) sh = ss.insertSheet(name);
@@ -93,7 +80,6 @@ function _ensureTab_(ss, name, headerRows) {
   }
   return sh;
 }
-
 function _ensureHeader_(sh, header){
   const r = sh.getRange(1,1,1,header.length);
   const existing = r.getValues()[0] || [];
@@ -126,11 +112,10 @@ function _log_(level, where, message, meta){
     const ss = _control_();
     const sh = ss.getSheetByName(LOGS_SHEET) || ss.insertSheet(LOGS_SHEET);
     sh.appendRow([_iso_(), level, where, message, meta ? JSON.stringify(meta) : '']);
-    // keep to LOG_LIMIT rows (cheap trim occasionally)
-    const lastRow = sh.getLastRow();
-    if (lastRow > LOG_LIMIT + 100) {
-      const toDelete = lastRow - LOG_LIMIT;
-      sh.deleteRows(2, Math.max(0, Math.min(toDelete, lastRow-1)));
+    const last = sh.getLastRow();
+    if (last > LOG_LIMIT + 100) {
+      const toDelete = last - LOG_LIMIT;
+      sh.deleteRows(2, Math.max(0, Math.min(toDelete, last-1)));
     }
   } catch(_) {}
 }
@@ -140,16 +125,14 @@ function getLogs(limit){
     const sh = ss.getSheetByName(LOGS_SHEET);
     if (!sh) return { ok:true, items:[] };
     const last = sh.getLastRow();
-    const width = LOGS_HEADER[0].length;
     if (last < 2) return { ok:true, items:[] };
-    const take = Math.max(1, Math.min(Number(limit||200), 1000));
+    const width = LOGS_HEADER[0].length;
+    const take = Math.max(1, Math.min(Number(limit||300), 1000));
     const start = Math.max(2, last - take + 1);
     const vals = sh.getRange(start,1,last-start+1,width).getValues();
     const items = vals.map(r => ({tsISO:r[0], level:r[1], where:r[2], message:r[3], meta:r[4]}));
     return { ok:true, items };
-  } catch(e){
-    return { ok:false, error:String(e) };
-  }
+  } catch(e){ return { ok:false, error:String(e) }; }
 }
 function clearLogs(){
   try {
@@ -157,31 +140,44 @@ function clearLogs(){
     const sh = ss.getSheetByName(LOGS_SHEET) || ss.insertSheet(LOGS_SHEET);
     sh.clear(); sh.appendRow(LOGS_HEADER[0]);
     return { ok:true };
-  } catch(e){
-    return { ok:false, error:String(e) };
-  }
+  } catch(e){ return { ok:false, error:String(e) }; }
 }
 
 /* -------------------------------- API ------------------------------- */
-// SWR-safe Events list
+// HARDENED: never returns null/undefined; self-heals control on the fly
 function getEventsSafe(etagIn){
+  const where = 'getEventsSafe';
   try {
-    const ss = _control_(); const sh = ss.getSheetByName('Events');
-    if (!sh) return { ok:true, items:[], etag:'0', notModified: etagIn==='0' };
+    const props = PropertiesService.getScriptProperties();
+    if (!props.getProperty(PROP_CONTROL_ID)) {
+      _log_('warn', where, 'no-control-id — healing via ensureControlStrictOnBoot');
+      ensureControlStrictOnBoot();
+    }
+
+    const ss = _control_();
+    const sh = ss.getSheetByName('Events');
+    if (!sh) {
+      _log_('warn', where, 'no-events-sheet');
+      return { ok:true, items:[], etag:'0', notModified: etagIn==='0' };
+    }
+
     const last = sh.getLastRow();
     if (last < 2) return { ok:true, items:[], etag:'0', notModified: etagIn==='0' };
+
     const vals = sh.getRange(2,1,last-1+1, EVENTS_HEADER.length).getValues();
     const items = vals.filter(r => r.some(v => v !== '')).map(r => _rowToObj_(EVENTS_HEADER, r));
+
     const etag = String(items.length);
     if (etagIn && etagIn === etag) return { ok:true, items:[], etag, notModified:true };
+
     return { ok:true, items, etag, notModified:false };
   } catch (e) {
-    _log_('error','getEventsSafe',String(e));
-    return { ok:false, items:[], error:String(e) };
+    _log_('error', where, String(e));
+    return { ok:false, items:[], etag:'0', notModified:false, error:String(e) };
   }
 }
 
-// Create Eventbook (idempotent on slug+startDateISO)
+// Create Eventbook (idempotent on slug + startDateISO)
 function createEventbook(payload){
   const where = 'createEventbook';
   try {
@@ -196,7 +192,7 @@ function createEventbook(payload){
     const ss = _control_();
     const sh = ss.getSheetByName('Events');
 
-    // Find existing by slug+date
+    // Existing?
     const last = sh.getLastRow();
     if (last >= 2) {
       const vals = sh.getRange(2,1,last-1+1, EVENTS_HEADER.length).getValues();
@@ -209,13 +205,12 @@ function createEventbook(payload){
       }
     }
 
-    // Create Eventbook workbook
+    // New workbook
     const id6 = _id6_();
     const eventTag = _eventTag_(slug, startDateISO, id6);
     const wbTitle = `EVT__${eventTag}`;
     const wb = SpreadsheetApp.create(wbTitle);
 
-    // Ensure Events header in the workbook
     let ev = wb.getSheets()[0];
     if (ev.getName()!=='Events') ev.setName('Events');
     _ensureHeader_(ev, EVENTS_HEADER);
@@ -282,7 +277,7 @@ function archiveEvent(eventId){
   }
 }
 
-// Form creation/linking (idempotent)
+// Signup Form (idempotent)
 function configureSignupForm(eventId){
   const where='configureSignupForm';
   try {
@@ -335,8 +330,6 @@ function getShareLinks(eventId){
 }
 
 function verifyEventSafe(eventId){
-  // Hook for your real checks later: workbook exists, links present, not archived, etc.
-  // For now: valid event id present in Events and NOT archived.
   try{
     const ss=_control_(), sh=ss.getSheetByName('Events');
     const last=sh.getLastRow(); if (last<2) return { ok:true, verified:false, reason:'no-events' };
@@ -355,7 +348,7 @@ function verifyEventSafe(eventId){
 function getShareQr(eventId){
   const check = verifyEventSafe(eventId);
   if (!check.ok) return check;
-  if (!check.verified) return { ok:true, verified:false, qrUrl:null, url:null }; // honor north-star
+  if (!check.verified) return { ok:true, verified:false, qrUrl:null, url:null };
   const links = getShareLinks(eventId);
   if (!links.ok) return links;
   const url = links.publicUrl;
@@ -377,47 +370,41 @@ function runSmokeSafe(opts){
     const t0 = new Date();
     try {
       const out = fn();
-      const dt = new Date() - t0;
-      report.steps.push({ name, ok:true, ms:dt, out });
+      const ms = new Date() - t0;
+      report.steps.push({ name, ok:true, ms, out });
     } catch (e) {
-      const dt = new Date() - t0;
-      report.steps.push({ name, ok:false, ms:dt, error:String(e) });
+      const ms = new Date() - t0;
+      report.steps.push({ name, ok:false, ms, error:String(e) });
       report.ok = false;
     }
   }
 
-  // 1) Control present
   step('ensureControlStrictOnBoot', () => ensureControlStrictOnBoot());
-
-  // 2) Events read
   step('getEventsSafe(empty-ok)', () => getEventsSafe(null));
 
-  // 3) Create eventbook
-  const name = `Smoke ${_ymd_()} ${_id6_()}`;
-  let created = null;
+  let created=null;
   step('createEventbook', () => {
-    const res = createEventbook({ name, startDateISO: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'), seedMode:'random', elimType:'single' });
+    const res = createEventbook({
+      name:`Smoke ${_ymd_()} ${_id6_()}`,
+      startDateISO: Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd'),
+      seedMode:'random', elimType:'single'
+    });
     if (!res || res.ok===false) throw new Error('create failed');
     created = res.item || res;
     return { id: res.id, tag: created.eventTag };
   });
 
-  // 4) ETag delta
-  step('getEventsSafe(etag)', () => {
+  step('etag-delta', () => {
     const first = getEventsSafe(null);
     const second = getEventsSafe(first.etag);
-    return { firstCount:first?.etag, secondNotModified: second?.notModified===true };
+    return { firstEtag:first?.etag, notModified: second?.notModified===true };
   });
 
-  // 5) Links + verify + QR (may be gated)
-  step('getShareLinks', () => getShareLinks(created.id));
-  step('verifyEventSafe', () => verifyEventSafe(created.id));
-  step('getShareQr', () => getShareQr(created.id));
+  step('links',   () => getShareLinks(created.id));
+  step('verify',  () => verifyEventSafe(created.id));
+  step('qr',      () => getShareQr(created.id));
 
-  // optional: Form dry-run (no-op if you don’t want to create real forms during smoke)
-  if (opts && opts.form === true) {
-    step('configureSignupForm', () => configureSignupForm(created.id));
-  }
+  if (opts && opts.form === true) step('configureForm', () => configureSignupForm(created.id));
 
   report.durationMs = new Date() - started;
   _log_(report.ok ? 'info' : 'error', 'runSmokeSafe', report.ok ? 'ok' : 'failed', { durationMs: report.durationMs });
