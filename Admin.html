@@ -430,6 +430,162 @@ async function onCopyLinks(){
     TOAST.info('Links copied');
   }
 }
+
+
+/* [J10] ───────── NextUp · Admin SWR Loader + Breadcrumbs ───────── */
+const DEBUG_ERROR_TOASTS = true;
+
+/** [J10.1] Breadcrumb logger */
+const BREAD = (msg, ctx={}) => {
+  const t = new Date().toISOString().slice(11,23);
+  console.info(`[SWR ${t}] ${msg}`, ctx);
+};
+const OOPS = (msg, err) => {
+  console.error(`[SWR ERR] ${msg}`, err);
+  if (DEBUG_ERROR_TOASTS && window.TOAST?.error) TOAST.error(msg);
+};
+
+/** [J10.2] App state (selection is sticky across updates) */
+const STATE = {
+  etag: null,                 // last server etag
+  items: [],                  // last events array
+  selectedId: null,           // event id currently selected in dropdown
+  swrRunning: false,
+  backoffMs: 1000,            // starts at 1s, caps at 10s
+};
+
+/** [J10.3] Helpers: safe array, stable selection, render */
+function normArray(x) { return Array.isArray(x) ? x : []; }
+function choiceLabel(ev) {
+  // name > slug > id fallback; append date if present; show ★ on default
+  const name = (ev?.name||'').trim();
+  const slug = (ev?.slug||'').trim();
+  const id   = (ev?.id||ev?.eventId||ev?.sid||'').toString();
+  const date = (ev?.startDateISO||ev?.startDate||ev?.dateISO||'').slice(0,10);
+  const star = ev?.isDefault ? ' ★' : '';
+  const head = name || slug || id || '(unnamed)';
+  return date ? `${head} (${date})${star}` : `${head}${star}`;
+}
+function renderEventsDropdown(items) {
+  try {
+    const sel = document.querySelector('#chooseEvent');
+    if (!sel) return;
+    const prev = STATE.selectedId;
+    // Clear carefully: keep current selection visible until we have new items
+    const options = items.map(ev => {
+      const id = ev?.id || ev?.eventId || ev?.sid || '';
+      return `<option value="${id}">${choiceLabel(ev)}</option>`;
+    }).join('');
+    sel.innerHTML = options || `<option value="">(no events yet — create above)</option>`;
+    // Restore selection if still present; else pick first
+    const ids = items.map(ev => ev?.id || ev?.eventId || ev?.sid || '');
+    const nextSel = (prev && ids.includes(prev)) ? prev : ids[0] || '';
+    sel.value = nextSel;
+    STATE.selectedId = nextSel || null;
+    // Enable “Open Workbook” if URL exists on selected
+    const current = items.find(ev => (ev?.id||ev?.eventId||ev?.sid||'') === STATE.selectedId) || null;
+    toggleWorkbookButton(!!current?.eventSpreadsheetUrl, current?.eventTag);
+  } catch (e) {
+    OOPS('renderEventsDropdown failed', e);
+  }
+}
+function toggleWorkbookButton(enabled, tagText) {
+  const btn = document.querySelector('#btnOpenWorkbook');
+  const lbl = document.querySelector('#btnOpenWorkbookLabel');
+  if (!btn) return;
+  btn.disabled = !enabled;
+  if (lbl) lbl.textContent = tagText ? `Open Workbook (${tagText})` : 'Open Workbook';
+}
+
+/** [J10.4] Strong client contract guard */
+function validateEventsResponse(res) {
+  if (!res || typeof res !== 'object') throw new Error('Non-object response from getEventsSafe');
+  if (res.notModified) return { notModified: true, items: STATE.items, etag: STATE.etag };
+  if (res.ok !== true) throw new Error(`Bad ok/status: ${res.ok}/${res.status}`);
+  const items = normArray(res.items);
+  const etag  = res.etag || null;
+  return { notModified: false, items, etag };
+}
+
+/** [J10.5] Single SWR poller with backoff (no overlapping runs) */
+async function swrTick() {
+  if (STATE.swrRunning) return;
+  STATE.swrRunning = true;
+  try {
+    BREAD('tick → calling getEventsSafe', { etagIn: STATE.etag });
+    const res = await new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .getEventsSafe(STATE.etag);
+    });
+    const { notModified, items, etag } = validateEventsResponse(res);
+    if (notModified) {
+      BREAD('notModified — keeping current list', { etag: STATE.etag, count: STATE.items.length });
+    } else {
+      BREAD('updated — applying fresh list', { etag, count: items.length });
+      STATE.items = items;
+      STATE.etag  = etag;
+      renderEventsDropdown(items);
+      if (window.TOAST?.info) TOAST.info('Events updated');
+    }
+    // success → reset backoff
+    STATE.backoffMs = 1000;
+  } catch (err) {
+    OOPS('swrTick failed', err);
+    // failure → increase backoff
+    STATE.backoffMs = Math.min(STATE.backoffMs * 2, 10000);
+  } finally {
+    STATE.swrRunning = false;
+    setTimeout(swrTick, STATE.backoffMs);
+  }
+}
+
+/** [J10.6] Call after a successful createEventbook/createEvent */
+function optimisticAddEvent(newItem) {
+  try {
+    const id = newItem?.id || newItem?.eventId || newItem?.sid;
+    if (!id) return;
+    BREAD('optimisticAddEvent', { id, name: newItem?.name });
+    // Insert or replace locally
+    const map = new Map(STATE.items.map(ev => [(ev.id||ev.eventId||ev.sid), ev]));
+    map.set(id, { ...map.get(id), ...newItem });
+    STATE.items = Array.from(map.values());
+    STATE.selectedId = id;
+    renderEventsDropdown(STATE.items);
+    // Nudge SWR to fetch the authoritative version next tick
+    setTimeout(swrTick, 250);
+  } catch (e) {
+    OOPS('optimisticAddEvent failed', e);
+  }
+}
+
+/** [J10.7] Wire your Create button’s success handler to this */
+async function handleCreateClicked(payload) {
+  try {
+    BREAD('create: submitting', payload);
+    const res = await new Promise((resolve, reject) => {
+      google.script.run
+        .withSuccessHandler(resolve)
+        .withFailureHandler(reject)
+        .createEventbook(payload);   // or createEvent(payload) legacy alias
+    });
+    if (res?.idempotent) {
+      window.TOAST?.info?.('Already existed — selected existing.');
+    } else {
+      window.TOAST?.success?.('Event created');
+    }
+    optimisticAddEvent(res?.item || res); // support either shape
+  } catch (err) {
+    OOPS('create failed', err);
+  }
+}
+
+/** [J10.8] Boot */
+window.addEventListener('DOMContentLoaded', () => {
+  BREAD('boot');
+  swrTick(); // starts the single poller
+});
   </script>
 </body>
 </html>
