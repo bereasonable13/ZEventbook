@@ -676,6 +676,13 @@ function getEventQuickLinks(eventIdOrSlug){
   };
 }
 
+// Legacy name: getShareQr → returns verified QR (url + qrUrlVerified), qrB64 kept as '' for back-compat.
+function getShareQr(key){
+  const v = getShareQrVerified(key);
+  if (!v.ok) return v;
+  return { ok:true, url: v.url || '', qrB64:'', qrUrlVerified: v.qrUrlVerified || '' };
+}
+
 /************************************************************
 * [S10] Bundles (unchanged shapes)
 ************************************************************/
