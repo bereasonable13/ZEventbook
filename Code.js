@@ -352,17 +352,20 @@ Redirecting… <a href="${safe}">Continue</a></body></html>`;
 }
 
 /************************************************************
-* [S06] Events Index (ETag + SWR) — getEventsSafe()
+* [S06] Events Index (ETag + SWR) — unified envelope
 ************************************************************/
 function getMain_(){ ensureAll_(); return SpreadsheetApp.openById(cfgControlId_()); }
 function getEventsSheet_(){ const ss = getMain_(); return ss.getSheetByName(EVENTS_SHEET) || ss.insertSheet(EVENTS_SHEET); }
 
+/** Compute a stable event tag from slug/date/id (kept from your file) */
 function computeEventTag_(slug, dateISO, id){
   const s = (String(slug||'event').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')||'event').slice(0,48);
   const ymd = String(dateISO||'').replace(/-/g,'') || Utilities.formatDate(new Date(), Session.getScriptTimeZone(),'yyyyMMdd');
   const id6 = String(id||'').replace(/-/g,'').slice(0,6) || 'xxxxxx';
   return `${s}-${ymd}-${id6}`;
 }
+
+/** Row → canonical event object (kept from your file) */
 function rowToEvent_(r){
   const safe = i => (i < r.length ? r[i] : '');
   const id = safe(IDX.id);
@@ -383,41 +386,50 @@ function rowToEvent_(r){
     elimType: safe(IDX.elimType) || 'none'
   };
 }
+
+/** Stable ETag over a lightweight projection */
 function _eventsEtag_(items){
-  const lite = items.map(x => [x.id,x.slug,x.startDateISO,x.eventSpreadsheetId,x.formId,x.eventTag,x.seedMode,x.elimType]);
+  const lite = (items||[]).map(x => [x.id,x.slug,x.startDateISO,x.eventSpreadsheetId,x.formId,x.eventTag,x.seedMode,x.elimType]);
   const b = Utilities.newBlob(JSON.stringify(lite)).getBytes();
   return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, b)).slice(0,16);
 }
-// Unified list endpoint (S06)
-function getEventbooksSafe(etagOpt){ return getEventsSafe(etagOpt); }
 
-function getEventsSafe(etagOpt){
-  ensureAll_();
+/** Internal: read full index + compute etag */
+function _readEventsIndex_(){
   const sh = getEventsSheet_();
   const last = sh.getLastRow();
-
-  let items = [];
-  let etag = 'empty';
-
-  if (last >= 2) {
-    const data = sh.getRange(2,1,last-1,15).getValues();
-    items = data
-      .filter(r => String(r[IDX.id]||'').trim())
-      .map(rowToEvent_);
-    etag = _eventsEtag_(items);
-  }
-
-  PropertiesService.getScriptProperties().setProperty(PROP.EVENTS_ETAG, etag);
-
-  const notModified = !!etagOpt && etagOpt === etag;
-  return {
-    ok: true,
-    status: notModified ? 304 : 200,
-    etag,
-    notModified,
-    items: notModified ? [] : items
-  };
+  if (last < 2) return { items: [], etag: 'empty' };
+  const data = sh.getRange(2,1,last-1,15).getValues();
+  const items = data
+    .filter(r => String(r[IDX.id]||'').trim())
+    .map(rowToEvent_);
+  const etag = _eventsEtag_(items);
+  return { items, etag };
 }
+
+/** Public: unified envelope (SWR-safe) */
+function getEventsSafe(etagOpt){
+  try {
+    ensureAll_();
+    const { items, etag } = _readEventsIndex_();
+
+    // persist etag for debugging/telemetry if you like
+    try { PropertiesService.getScriptProperties().setProperty(PROP.EVENTS_ETAG, etag); } catch(_){}
+
+    const notModified = !!etagOpt && etagOpt === etag;
+    if (notModified) {
+      return { ok: true, status: 304, etag, notModified: true, items: [] };
+    }
+    return { ok: true, status: 200, etag, notModified: false, items };
+  } catch (e) {
+    try { DIAG.log('error','getEventsSafe','exception',{ err:String(e) }); } catch(_) {}
+    // On error, still conform to envelope with items:[]
+    return { ok: false, status: 500, etag: '', notModified: false, items: [], error: String(e) };
+  }
+}
+
+/** Back-compat alias (same unified envelope) */
+function getEventbooksSafe(etagOpt){ return getEventsSafe(etagOpt); }
 
 /************************************************************
 * [S07] Eventbook Creation (workbook-first, idempotent)
