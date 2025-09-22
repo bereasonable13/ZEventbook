@@ -16,6 +16,7 @@
 * [S14] Debug / Smoke (NU_Debug_… + runSmokeSafe)
 * [S15] Manage Actions (Default / Archive)
 * [S16] Template Helpers (tplEnsure…)
+* [S17] Audit (Status.html)
 ************************************************************/
 
 /************************************************************
@@ -540,6 +541,53 @@ function _createEventbookImpl(payload){
   } catch (e) {
     DIAG.log('error','createEventbook','exception',{ err:String(e), stack:e && e.stack });
     return { ok:false, phase:'error', error:String(e) };
+  }
+}
+
+/************************************************************
+* [S07b] Provisioning (compat shims for old callers)
+* - CREATED→WORKBOOK_READY→LINKS_READY collapsed:
+*   we just ensure the workbook + links now.
+************************************************************/
+function provisionStep(key){
+  try {
+    const ev = ensureWorkbook_(key);
+    if (!ev.ok) return { ok:false, status:404, error:'not found' };
+
+    // When workbook is present, links are derivable immediately in new arch.
+    const ql = getEventQuickLinks(ev.id);
+    const hasLinks = !!(ql && ql.publicUrl && ql.displayUrl);
+
+    return {
+      ok: true,
+      status: 200,
+      state: hasLinks ? 'LINKS_READY' : 'WORKBOOK_READY'
+    };
+  } catch (e) {
+    DIAG.log('error','provisionStep','exception',{ err:String(e) });
+    return { ok:false, status:500, error:String(e) };
+  }
+}
+
+function getProvisionStatus(key){
+  try {
+    const ev = findEventByIdOrSlug_(key);
+    if (!ev) return { ok:false, status:404, error:'not found' };
+
+    const workbook = !!(ev.eventSpreadsheetId && ev.eventSpreadsheetUrl);
+    if (!workbook) return { ok:true, status:200, state:'CREATED', hasWorkbook:false, hasLinks:false };
+
+    const ql = getEventQuickLinks(ev.id);
+    const hasLinks = !!(ql && ql.publicUrl && ql.displayUrl);
+    return {
+      ok:true, status:200,
+      state: hasLinks ? 'LINKS_READY' : 'WORKBOOK_READY',
+      hasWorkbook: true,
+      hasLinks
+    };
+  } catch (e) {
+    DIAG.log('error','getProvisionStatus','exception',{ err:String(e) });
+    return { ok:false, status:500, error:String(e) };
   }
 }
 
@@ -1095,4 +1143,116 @@ function ctlPosterDefaults_() {
     const obj = {}; vals.forEach(r => { const k = String(r[0]||'').trim(); if(k) obj[k]=r[1]; });
     return obj;
   } catch(_) { return {}; }
+}
+
+/************************************************************
+* [S17] Audit (Status.html)
+************************************************************/
+function auditDeep(){
+  const secs = [];
+  try { secs.push(auditRouter_()); }              catch(e){ secs.push(sectionErr_('Router', e)); }
+  try { secs.push(auditControlSheet_()); }        catch(e){ secs.push(sectionErr_('Control Sheet', e)); }
+  try { secs.push(auditEventsCache_()); }         catch(e){ secs.push(sectionErr_('ETag / Cache', e)); }
+  try { secs.push(auditClientFiles_()); }         catch(e){ secs.push(sectionErr_('Client Files', e)); }
+  try { secs.push(auditProvision_()); }           catch(e){ secs.push(sectionErr_('Provision', e)); }
+
+  return {
+    ok: secs.every(s => s.ok),
+    build: BUILD_ID,
+    generatedAt: new Date().toISOString(),
+    sections: secs
+  };
+}
+
+/** ---------- Sections ---------- */
+function auditRouter_(){
+  const checks = [];
+  ['admin','public','display','poster','status','ping','r'].forEach(p=>{
+    checks.push(okCheck_('route:'+p, `Route "${p}" registered`, true));
+  });
+  return finalizeSection_('Router', checks);
+}
+
+function auditControlSheet_(){
+  const checks = [];
+  const ctlId = cfgControlId_();
+  const ss = SpreadsheetApp.openById(ctlId);
+  const sh = ss.getSheetByName('Events');
+  checks.push(okCheck_('sheet:events', 'Sheet "Events" exists', !!sh));
+  if (sh){
+    const want = ['id','name','slug','startDateISO','eventSpreadsheetId','eventSpreadsheetUrl','formId','eventTag','isDefault','seedMode','elimType','reserved1','reserved2','reserved3'];
+    const have = sh.getRange(1,1,1,want.length).getValues()[0].map(String);
+    want.forEach(h=>{
+      const present = have.indexOf(h) >= 0;
+      checks.push(statusCheck_('hdr:'+h, 'Header "'+h+'" present', present ? 'green':'red', present ? '' : 'missing'));
+    });
+  }
+  return finalizeSection_('Control Sheet', checks);
+}
+
+function auditEventsCache_(){
+  const checks = [];
+  const r1 = getEventsSafe(null);
+  const ok1 = !!r1 && !!r1.ok && !!r1.etag && r1.status === 200;
+  checks.push(statusCheck_('events:initial','getEventsSafe(null) ok', ok1 ? 'green':'red', ok1 ? '' : JSON.stringify(r1)));
+
+  const r2 = getEventsSafe(r1 && r1.etag);
+  const notMod = !!r2 && r2.ok && r2.status === 304 && r2.notModified === true && Array.isArray(r2.items) && r2.items.length === 0;
+  checks.push(statusCheck_('events:notmod','getEventsSafe(etag) -> 304 + items:[]', notMod ? 'green':'red', notMod ? '' : JSON.stringify(r2)));
+  return finalizeSection_('ETag / Cache', checks);
+}
+
+function auditClientFiles_(){
+  // Ensure the core client templates exist and expose expected selectors.
+  const mustHave = {
+    'Admin':   ['#eventName','#eventDate','#elimType','#seedMode','#btnCreateEvent','#chooseEvent','#btnOpenPublic','#btnOpenTV','#btnCopyLink'],
+    'Public':  ['#title','#date','#flow','#elim','#seed','#scheduleTbl','#standingsTbl','#bracketWrap'],
+    'Display': ['#title','#scheduleTbl','#standingsTbl','#bracketWrap'],
+    'Poster':  ['#posterTitle','#eventDate','#qrPublic','#publicUrlLabel','#qrForm','#formUrlLabel'],
+    'Styles':  ['.badge','.toast','.table','.pfbar']
+  };
+  const checks = [];
+  Object.keys(mustHave).forEach(name=>{
+    const html = getFileContentSafe_(name);
+    const present = !!html;
+    checks.push(statusCheck_('file:'+name, `File "${name}.html" present`, present ? 'green':'red', present ? '' : 'missing'));
+    if (present){
+      mustHave[name].forEach(sel=>{
+        const found = html.indexOf(sel.replace(/"/g,'\\"')) >= 0 || html.indexOf(sel) >= 0;
+        checks.push(statusCheck_('sel:'+name+':'+sel, `"${name}" contains selector ${sel}`, found ? 'green':'red', found ? '' : 'not found'));
+      });
+    }
+  });
+  return finalizeSection_('Client Files', checks);
+}
+
+function auditProvision_(){
+  const checks = [];
+  // Non-destructive: we only check that provisioning shims behave.
+  const evs = getEventsSafe(null);
+  const hasAny = evs && evs.ok && Array.isArray(evs.items) && evs.items.length > 0;
+  checks.push(statusCheck_('events:exists','At least one event present (optional)', hasAny ? 'green':'yellow', hasAny ? '' : 'no events yet'));
+
+  if (hasAny){
+    const first = evs.items[0];
+    const s1 = provisionStep(first.id);
+    checks.push(statusCheck_('prov:step','provisionStep returns ok', (s1 && s1.ok) ? 'green':'red', JSON.stringify(s1 || {})));
+    const st = getProvisionStatus(first.id);
+    checks.push(statusCheck_('prov:status','getProvisionStatus ok', (st && st.ok) ? 'green':'red', JSON.stringify(st || {})));
+  }
+  return finalizeSection_('Provision', checks);
+}
+
+/** ---------- Audit helpers ---------- */
+function getFileContentSafe_(name){ try{ return HtmlService.createHtmlOutputFromFile(name).getContent(); } catch(e){ return ''; } }
+function okCheck_(id,label,cond){ return { id, label, status:(cond?'green':'red'), detail:(cond?'':'failed') }; }
+function statusCheck_(id,label,status,detail){ return { id, label, status, detail:String(detail||'') }; }
+function finalizeSection_(title, checks){
+  var sevOrder = { red:3, yellow:2, green:1 };
+  var worst = 'green';
+  for (var i=0;i<checks.length;i++){ var s = checks[i].status || 'green'; if (sevOrder[s] > sevOrder[worst]) worst = s; }
+  return { title, ok: worst !== 'red', severity: worst, checks };
+}
+function sectionErr_(title, err){
+  return { title, ok:false, severity:'red', checks:[{ id:'error', label:title+' threw', status:'red', detail:String(err) }] };
 }
