@@ -389,17 +389,49 @@ function _eventsEtag_(items){
   return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, b)).slice(0,16);
 }
 function getEventbooksSafe(etagOpt){ return getEventsSafe(etagOpt); }
+function getEventbooksSafe(etagOpt){ 
+  // Alias kept for back-compat; returns the same unified shape.
+  return getEventsSafe(etagOpt); 
+}
+
 function getEventsSafe(etagOpt){
-  ensureAll_();
-  const sh = getEventsSheet_();
-  const last = sh.getLastRow();
-  if (last < 2) return { ok:true, status:200, etag:'empty', items:[] };
-  const data = sh.getRange(2,1,last-1,15).getValues();
-  const items = data.filter(r => String(r[IDX.id]||'').trim()).map(rowToEvent_);
-  const etag = _eventsEtag_(items);
-  PropertiesService.getScriptProperties().setProperty(PROP.EVENTS_ETAG, etag);
-  if (etagOpt && etagOpt === etag) return { ok:true, status:304, etag, items:[] };
-  return { ok:true, status:200, etag, items };
+  try {
+    ensureAll_();
+    const sh = getEventsSheet_();
+
+    // Build items (full list)
+    const last = sh.getLastRow();
+    const items = (last >= 2)
+      ? sh.getRange(2, 1, last - 1, 15)
+          .getValues()
+          .filter(r => String(r[IDX.id] || '').trim())
+          .map(rowToEvent_)
+      : [];
+
+    // Stable ETag from content
+    const etag = _eventsEtag_(items);
+    PropertiesService.getScriptProperties().setProperty(PROP.EVENTS_ETAG, etag);
+
+    // SWR contract
+    const notModified = !!etagOpt && etagOpt === etag;
+    return {
+      ok: true,
+      status: notModified ? 304 : 200,
+      etag,
+      notModified,
+      items: notModified ? [] : items
+    };
+  } catch (e) {
+    // Hard failure: standardized error envelope
+    try { DIAG.log('error','getEventsSafe','exception',{ err:String(e) }); } catch(_) {}
+    return {
+      ok: false,
+      status: 500,
+      etag: '',
+      notModified: false,
+      items: []
+    };
+  }
 }
 
 /************************************************************
