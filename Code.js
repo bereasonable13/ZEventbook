@@ -1256,3 +1256,91 @@ function finalizeSection_(title, checks){
 function sectionErr_(title, err){
   return { title, ok:false, severity:'red', checks:[{ id:'error', label:title+' threw', status:'red', detail:String(err) }] };
 }
+
+/***** TEST-ONLY: Slug / ShortURL model *****/
+const _slugDB = (function(){
+  const key = 'TEST_SLUG_DB_V1';
+  const props = PropertiesService.getScriptProperties();
+  const load = () => JSON.parse(props.getProperty(key) || '{"events":{}, "bySlug":{}, "aliases":{}}');
+  const save = (db) => props.setProperty(key, JSON.stringify(db));
+  const reset = () => save({events:{}, bySlug:{}, aliases:{}});
+  return { load, save, reset };
+})();
+
+const _RESERVED = new Set(['admin','public','display','poster','test','status','r']);
+
+// Basic slugify per your convention
+function _slugify(name, dateISO){
+  const d = (dateISO||'').replace(/[^0-9]/g,'').slice(0,8);
+  let base = String(name||'event')
+    .toLowerCase()
+    .replace(/&/g,'and')
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'')
+    .slice(0,20);
+  if (!base) base = 'event';
+  const slug = d ? `${base}-${d}` : base;
+  if (_RESERVED.has(base) || _RESERVED.has(slug)) return { error:'RESERVED' };
+  return { slug };
+}
+
+function _shortUrl(slug){ return `https://zeventbook.app/${slug}`; }
+
+// Ensure uniqueness by suffixing -2, -3, …
+function _uniqueSlug(db, slug){
+  if (!db.bySlug[slug] && !db.aliases[slug]) return slug;
+  let i = 2;
+  while (db.bySlug[`${slug}-${i}`] || db.aliases[`${slug}-${i}`]) i++;
+  return `${slug}-${i}`;
+}
+
+/***** TEST endpoints used by Test.html *****/
+
+function _test_slugifyPreview({name, date}){
+  const {slug, error} = _slugify(name, date);
+  if (error) return { error };
+  return { slug };
+}
+
+function _test_createEvent({name, date}){
+  const db = _slugDB.load();
+  const s = _slugify(name, date);
+  if (s.error) return { ok:false, error:s.error };
+  const unique = _uniqueSlug(db, s.slug);
+  const eventId = 'evt_' + Utilities.getUuid();
+  const rec = { eventId, name, date, slug: unique, shortUrl: _shortUrl(unique), canonicalSlug: unique, aliases: [] };
+  db.events[eventId] = rec;
+  db.bySlug[unique] = eventId;
+  _slugDB.save(db);
+  return { ok:true, eventId, slug: unique, shortUrl:_shortUrl(unique), verifyRequired:true };
+}
+
+function _test_renameSlug({eventId, newSlug}){
+  const db = _slugDB.load();
+  const rec = db.events[eventId];
+  if (!rec) return { ok:false, status:404 };
+  // validate newSlug (reserved / collision)
+  if (_RESERVED.has(newSlug) || db.bySlug[newSlug]) return { ok:false, status:409, error:'TAKEN_OR_RESERVED' };
+  // old slug becomes alias
+  db.aliases[rec.canonicalSlug] = eventId;
+  delete db.bySlug[rec.canonicalSlug];
+  // set new canonical
+  rec.canonicalSlug = newSlug;
+  db.bySlug[newSlug] = eventId;
+  _slugDB.save(db);
+  return { ok:true, canonicalSlug:newSlug };
+}
+
+function _test_resolveShort({slug}){
+  const db = _slugDB.load();
+  const eventId = db.bySlug[slug] || db.aliases[slug] || null;
+  if (!eventId) return { ok:false, status:404 };
+  return { ok:true, eventId, canonicalSlug: db.events[eventId].canonicalSlug };
+}
+
+function _test_canonicalForEvent({eventId}){
+  const db = _slugDB.load();
+  const rec = db.events[eventId];
+  if (!rec) return { ok:false, status:404 };
+  return { ok:true, slug: rec.canonicalSlug };
+}
