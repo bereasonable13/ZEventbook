@@ -437,6 +437,92 @@
       try { await preflight(); } catch(_) {}
       diag('Test page loaded', 'info');
     });
+    
+    // ------- SLUG / SHORTURL CONTRACT TESTS -------
+async function runSlugContracts(){
+  const suite = { name:'slug-contracts', cases:[] };
+  let allOK = true;
+  const ok = (name, cond) => { suite.cases.push({name, ok:!!cond}); allOK = allOK && !!cond; };
+
+  try{
+    // A) Slugify normalization
+    const a = await API._slugifyPreview("Blue Island Beer Co. Fundraiser!", "2025-11-01");
+    ok('slugify strips punctuation', a?.slug === 'blue-island-beer-co-fundraiser-20251101');
+
+    // B) Reserved words rejected
+    const r1 = await API._slugifyPreview("Admin", "2025-10-04");
+    ok('reserved word rejected', r1?.error === 'RESERVED');
+
+    // C) Create event → unique slug + verify shortlink required
+    const e1 = await API._createEvent({ name:'Trivia Night', date:'2025-10-04' });
+    ok('createEvent returns object', e1 && typeof e1 === 'object');
+    ok('createEvent has slug', !!e1?.slug);
+    ok('verifyShortlink required', e1?.verifyRequired === true);
+
+    // D) Duplicate name+date → unique slug (suffix or collision handling)
+    const e2 = await API._createEvent({ name:'Trivia Night', date:'2025-10-04' });
+    ok('duplicate yields unique slug', e1?.slug !== e2?.slug);
+
+    // E) Rename keeps alias: both old and new resolve to same eventId
+    const ren = await API._renameSlug({ eventId:e1.eventId, newSlug:'trivia-oct4' });
+    ok('rename returns canonical slug', ren?.canonicalSlug === 'trivia-oct4');
+    const resOld = await API._resolveShort({ slug:e1.slug });
+    const resNew = await API._resolveShort({ slug:'trivia-oct4' });
+    ok('old slug resolves', resOld?.eventId === e1.eventId);
+    ok('new slug resolves', resNew?.eventId === e1.eventId);
+
+    // F) Canonical returns the newest slug
+    const canon = await API._canonicalForEvent({ eventId:e1.eventId });
+    ok('canonical matches renamed slug', canon?.slug === 'trivia-oct4');
+
+    // G) ShortURL domain present & consistent
+    ok('shortUrl well-formed', /^https?:\/\/[^/]+\/[a-z0-9-]+$/.test(e1?.shortUrl||''));
+
+    report.suites.push(suite);
+    p('[slug] ' + (allOK ? 'PASS' : 'FAIL'));
+    return allOK;
+  }catch(err){
+    suite.err = String(err);
+    report.suites.push(suite);
+    p('[slug] FAIL ' + err);
+    return false;
+  }
+}
+
+// Buttons
+const btnSlug = document.createElement('button');
+btnSlug.textContent = 'Run Slug Contracts';
+btnSlug.id = 'btnSlug';
+document.querySelector('section .row').appendChild(btnSlug);
+btnSlug.onclick = runSlugContracts;
+
+// Run ALL includes slug suite
+async function runAll(){
+  out.textContent = 'Running ALL...';
+  let green = true;
+  green = (await runSmoke()) && green;
+  green = (await runContracts()) && green;
+  green = (await runSlugContracts()) && green;   // <-- added
+  // keep Ref and R1E2E as you had them
+  setLED(green ? 'GREEN' : 'RED');
+  toast(green?'All suites PASS':'Suites FAILED', green?'ok':'err');
+}
+
+const API = {
+  ...API, // keep your existing methods
+  _slugifyPreview: (name, date) =>
+    new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(_=>res(null))._test_slugifyPreview({name, date})),
+  _createEvent: (payload) =>
+    new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(_=>res(null))._test_createEvent(payload)),
+  _renameSlug: (payload) =>
+    new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(_=>res(null))._test_renameSlug(payload)),
+  _resolveShort: ({slug}) =>
+    new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(_=>res(null))._test_resolveShort({slug})),
+  _canonicalForEvent: ({eventId}) =>
+    new Promise(res => google.script.run.withSuccessHandler(res).withFailureHandler(_=>res(null))._test_canonicalForEvent({eventId}))
+};
+
+    
   </script>
 </body>
 </html>
