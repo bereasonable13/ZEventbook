@@ -11,6 +11,7 @@ const CONTRACT_VERSION = '2.0.0';
  */
 function runContractTests() {
   const started = Date.now();
+  const contracts = getContractDefinitions();
   const results = {
     version: CONTRACT_VERSION,
     timestamp: new Date().toISOString(),
