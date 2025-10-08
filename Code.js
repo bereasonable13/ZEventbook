@@ -1710,3 +1710,207 @@ function haversineDistance_(lat1, lon1, lat2, lon2) {
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   return R * c;
 }
+
+/**
+ * Find events near a location
+ * @param {Object} opts - Search options
+ * @returns {Object} Events sorted by proximity
+ */
+function findEventsNearby(opts) {
+  try {
+    const lat = parseFloat(opts.latitude || opts.lat);
+    const lon = parseFloat(opts.longitude || opts.lon || opts.lng);
+    const radiusKm = parseFloat(opts.radius || 50); // Default 50km
+    const limit = parseInt(opts.limit || 20);
+    
+    if (!isFinite(lat) || !isFinite(lon)) {
+      return { ok: false, error: 'Invalid coordinates' };
+    }
+    
+    // Get all events with geo-tagging
+    const res = getEventsSafe(null);
+    if (!res.ok) return res;
+    
+    const geoEvents = res.items.filter(ev => 
+      ev.latitude && ev.longitude
+    );
+    
+    // Calculate distances
+    const withDistance = geoEvents.map(ev => ({
+      ...ev,
+      distanceKm: haversineDistance_(lat, lon, ev.latitude, ev.longitude)
+    }));
+    
+    // Filter by radius and sort
+    const nearby = withDistance
+      .filter(ev => ev.distanceKm <= radiusKm)
+      .sort((a, b) => a.distanceKm - b.distanceKm)
+      .slice(0, limit);
+    
+    return {
+      ok: true,
+      query: {
+        latitude: lat,
+        longitude: lon,
+        radiusKm
+      },
+      count: nearby.length,
+      items: nearby.map(ev => ({
+        id: ev.id,
+        name: ev.name,
+        slug: ev.slug,
+        startDateISO: ev.startDateISO,
+        venue: ev.venue,
+        city: ev.city,
+        state: ev.state,
+        distanceKm: Math.round(ev.distanceKm * 10) / 10,
+        distanceMiles: Math.round(ev.distanceKm * 0.621371 * 10) / 10,
+        geohash: ev.geohash,
+        publicUrl: buildPublicUrl_('Public', ev.id)
+      }))
+    };
+  } catch (e) {
+    DIAG.log('error', 'findEventsNearby', 'exception', { err: String(e) });
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * Get events in a bounding box
+ * Useful for map view
+ */
+function findEventsInBounds(opts) {
+  try {
+    const bounds = {
+      north: parseFloat(opts.north),
+      south: parseFloat(opts.south),
+      east: parseFloat(opts.east),
+      west: parseFloat(opts.west)
+    };
+    
+    if (Object.values(bounds).some(v => !isFinite(v))) {
+      return { ok: false, error: 'Invalid bounds' };
+    }
+    
+    const res = getEventsSafe(null);
+    if (!res.ok) return res;
+    
+    const inBounds = res.items.filter(ev => 
+      ev.latitude && ev.longitude &&
+      ev.latitude >= bounds.south &&
+      ev.latitude <= bounds.north &&
+      ev.longitude >= bounds.west &&
+      ev.longitude <= bounds.east
+    );
+    
+    return {
+      ok: true,
+      bounds,
+      count: inBounds.length,
+      items: inBounds.map(ev => ({
+        id: ev.id,
+        name: ev.name,
+        latitude: ev.latitude,
+        longitude: ev.longitude,
+        venue: ev.venue,
+        city: ev.city,
+        publicUrl: buildPublicUrl_('Public', ev.id)
+      }))
+    };
+  } catch (e) {
+    DIAG.log('error', 'findEventsInBounds', 'exception', { err: String(e) });
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * Mobile-first bundle with geo-awareness
+ * Adapts response size based on connection type
+ */
+function getPublicBundleMobile(eventIdOrSlug, opts = {}){
+  const ev = ensureWorkbook_(eventIdOrSlug);
+  if (!ev.ok) return ev;
+  
+  const ss = SpreadsheetApp.openById(ev.ssId);
+  const meta = readKv_(ss, TABS.META);
+  const cfg  = readKv_(ss, TABS.POSTER);
+  
+  // Determine response size based on connection hint
+  const connType = String(opts.connection || 'unknown').toLowerCase();
+  const limits = {
+    'slow-2g': { standings: 5, schedule: 5 },
+    '2g': { standings: 10, schedule: 10 },
+    '3g': { standings: 20, schedule: 20 },
+    '4g': { standings: 50, schedule: 50 },
+    'wifi': { standings: 100, schedule: 100 },
+    'unknown': { standings: 20, schedule: 20 }
+  };
+  
+  const limit = limits[connType] || limits.unknown;
+  const offset = parseInt(opts.offset || 0);
+  
+  const nameMode = String(cfg.public_name_mode || 'initials').toLowerCase();
+  
+  const standingsFull = applyNameMode_(readTable_(ss, TABS.STANDINGS), nameMode);
+  const scheduleFull  = applyNameMode_(readTable_(ss, TABS.SCHEDULE),  nameMode, ['team','team_a','team_b']);
+  
+  const standings = standingsFull.slice(offset, offset + limit.standings);
+  const schedule = scheduleFull.slice(offset, offset + limit.schedule);
+  
+  // Geo-awareness: include if client provided location
+  let proximity = null;
+  if (opts.userLat && opts.userLon && meta.latitude && meta.longitude) {
+    const distKm = haversineDistance_(
+      parseFloat(opts.userLat), 
+      parseFloat(opts.userLon),
+      parseFloat(meta.latitude),
+      parseFloat(meta.longitude)
+    );
+    proximity = {
+      distanceKm: Math.round(distKm * 10) / 10,
+      distanceMiles: Math.round(distKm * 0.621371 * 10) / 10
+    };
+  }
+  
+  const bundle = {
+    ok:true,
+    eventTag: meta.eventTag || ev.tag,
+    title: meta.title || ev.name || ev.tag,
+    datePretty: prettyDate_(meta.startDateISO || ev.dateISO),
+    place: cfg.place || '',
+    public_name_mode: nameMode,
+    standings,
+    schedule,
+    posterPageUrl: buildPublicUrl_('Poster', ev.id),
+    
+    // Geo data (if available)
+    geo: meta.latitude && meta.longitude ? {
+      venue: meta.venue,
+      city: meta.city,
+      state: meta.state,
+      latitude: parseFloat(meta.latitude),
+      longitude: parseFloat(meta.longitude),
+      geohash: meta.geohash,
+      plusCode: meta.plusCode,
+      proximity // null if user didn't provide location
+    } : null,
+    
+    // Pagination metadata
+    pagination: {
+      limit: limit.standings,
+      offset,
+      totalStandings: standingsFull.length,
+      totalSchedule: scheduleFull.length,
+      hasMore: Math.max(standingsFull.length, scheduleFull.length) > (offset + limit.standings)
+    },
+    
+    // Performance hints
+    _meta: {
+      connection: connType,
+      sizeBytes: JSON.stringify({ standings, schedule }).length,
+      compression: 'Consider gzip if available'
+    }
+  };
+  
+  return bundle;
+}
