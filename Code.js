@@ -17,6 +17,7 @@
 * [S15] Manage Actions (Default / Archive)
 * [S16] Template Helpers (tplEnsure…)
 * [S17] Audit (Status.html)
+* [S18] Geo-Tagging Utilities
 ************************************************************/
 
 /************************************************************
@@ -1343,4 +1344,369 @@ function _test_canonicalForEvent({eventId}){
   const rec = db.events[eventId];
   if (!rec) return { ok:false, status:404 };
   return { ok:true, slug: rec.canonicalSlug };
+}
+
+// Replace _createEventbookImpl in Code.gs
+
+function _createEventbookImpl(payload){
+  ensureAll_();
+  const started = Date.now();
+  const p = payload || {};
+  
+  // Basic validation
+  const name = String(p.name || '').trim();
+  const dateISO = String(p.startDateISO || p.startDate || '').trim();
+  const seedMode = String(p.seedMode || 'random');
+  const elimType = String(p.elimType || 'none');
+
+  if (!name || !dateISO) {
+    DIAG.log('error','createEventbook','missing name/date',{ payload });
+    return { ok:false, phase:'validate', error:'Name and Date required' };
+  }
+
+  // NEW: Geo-tagging validation and enrichment
+  const geo = validateAndEnrichGeo_(p.geo || {});
+  if (geo.error && p.geo) {
+    // Geo provided but invalid - log warning but don't fail
+    DIAG.log('warn','createEventbook','invalid_geo',{ geo: p.geo, error: geo.error });
+  }
+
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || `event-${Date.now()}`;
+
+  // Idempotency check
+  const ctl = getEventsSheet_();
+  const lr = ctl.getLastRow();
+  if (lr >= 2) {
+    const rows = ctl.getRange(2,1,lr-1,20).getValues(); // Extended to 20 columns for geo
+    const hit  = rows.find(r => (r[IDX.slug]||'')===slug && (r[IDX.startDateISO]||'')===dateISO);
+    if (hit) {
+      const ev = rowToEvent_(hit);
+      DIAG.log('info','createEventbook','idempotent.hit',{ id:ev.id, slug:ev.slug, dateISO:ev.startDateISO });
+      return { 
+        ok:true, 
+        id:ev.id, 
+        slug:ev.slug, 
+        tag:ev.eventTag, 
+        ssId:ev.eventSpreadsheetId||'', 
+        ssUrl:ev.eventSpreadsheetUrl||'', 
+        idempotent:true, 
+        phase:'done', 
+        ms: Date.now()-started 
+      };
+    }
+  }
+
+  const id  = Utilities.getUuid();
+  const tag = computeEventTag_(slug, dateISO, id);
+
+  try {
+    const folderId   = cfgEventsFolderId_();
+    const templateId = cfgTemplateId_();
+    const title      = eventWorkbookTitle_(name, slug, dateISO, id);
+
+    // Workbook creation (existing logic)
+    let ss, ssId, ssUrl;
+    if (templateId) {
+      const file = DriveApp.getFileById(templateId);
+      const folder = DriveApp.getFolderById(folderId);
+      const copy = file.makeCopy(title, folder);
+      ssId = copy.getId();
+      ss   = SpreadsheetApp.openById(ssId);
+      ssUrl = ss.getUrl();
+      Object.values(TABS).forEach(n => { if (!ss.getSheetByName(n)) ss.insertSheet(n); });
+      header_(ss, TABS.SIGNUPS, ['timestamp','name','email','phone','team','notes']);
+      header_(ss, TABS.SCHEDULE, ['round','time','activity','notes','table']);
+      header_(ss, TABS.STANDINGS,['team','points','tiebreak','notes']);
+      tplEnsurePosterConfigKv_(ss);
+    } else {
+      const folder = DriveApp.getFolderById(folderId);
+      const base = SpreadsheetApp.create(title);
+      const file = DriveApp.getFileById(base.getId());
+      folder.addFile(file); 
+      try { DriveApp.getRootFolder().removeFile(file); } catch(_){}
+      ss = base; 
+      ssId = ss.getId(); 
+      ssUrl = ss.getUrl();
+      
+      const home = ss.getSheets()[0];
+      home.setName('Home');
+      home.getRange(1,1,1,4).setValues([[`NextUp · ${tag}`,'Name','Start Date','Event ID']]).setFontWeight('bold');
+      home.getRange(2,2,1,3).setValues([[name, dateISO, id]]);
+      
+      const signupsHdr = ctlTemplateHeaders_('SignupsTemplate', ['timestamp','name','email','phone','team','notes']);
+      const schedHdr   = ctlTemplateHeaders_('ScheduleTemplate', ['round','time','activity','notes','table']);
+      const standHdr   = ctlTemplateHeaders_('StandingsTemplate',['team','points','tiebreak','notes']);
+      
+      header_(ss, TABS.SIGNUPS,  signupsHdr);
+      header_(ss, TABS.SCHEDULE, schedHdr);
+      header_(ss, TABS.STANDINGS,standHdr);
+      
+      const posterKv = ctlPosterDefaults_();
+      const poster = ensureKvSheet_(ss, TABS.POSTER);
+      if (Object.keys(posterKv).length) upsertKv_(poster, posterKv); 
+      else tplEnsurePosterConfigKv_(ss);
+    }
+
+    const meta = ensureKvSheet_(ss, TABS.META);
+    
+    // ========== SHORTLINK PRE-GENERATION ==========
+    const adminUrl    = buildOrgUrl_('Admin', id);
+    const publicUrl   = buildPublicUrl_('Public', id);
+    const displayUrl  = buildOrgUrl_('Display', id);
+    const posterPageUrl = buildPublicUrl_('Poster', id);
+    
+    const shortPublic = shortFor_(id, 'PUBLIC', publicUrl);
+    const shortDisplay = shortFor_(id, 'DISPLAY', displayUrl);
+    const shortPosterPage = shortFor_(id, 'POSTER_PAGE', posterPageUrl);
+    
+    DIAG.log('info','createEventbook','shortlinks_generated',{ 
+      id, shortPublic, shortDisplay, shortPosterPage 
+    });
+    
+    // ========== GEO-TAGGING METADATA ==========
+    const metaKv = {
+      eventId: id,
+      eventTag: tag,
+      slug,
+      startDateISO: dateISO,
+      adminUrl,
+      publicUrl,
+      displayUrl,
+      posterPageUrl,
+      seedMode, 
+      elimType,
+      shortPublic,
+      shortDisplay,
+      shortPosterPage
+    };
+    
+    // Add geo fields if valid
+    if (geo.valid) {
+      Object.assign(metaKv, {
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        geohash: geo.geohash,
+        venue: geo.venue,
+        city: geo.city,
+        state: geo.state,
+        country: geo.country,
+        timezone: geo.timezone,
+        plusCode: geo.plusCode
+      });
+    }
+    
+    upsertKv_(meta, metaKv);
+
+    // Mirror sheet creation
+    const mirrorHeaders = [
+      'id','name','slug','startDateISO','eventSpreadsheetId','eventSpreadsheetUrl',
+      'formId','eventTag','isDefault','seedMode','elimType',
+      'latitude','longitude','geohash','venue','city','state','country','timezone','plusCode'
+    ];
+    const mirror = ss.getSheetByName('Events') || ss.insertSheet('Events');
+    header_(ss,'Events', mirrorHeaders);
+    
+    const mirrorRow = [
+      id, name, slug, dateISO, ssId, ssUrl, '', tag, false, seedMode, elimType,
+      geo.valid ? geo.latitude : '',
+      geo.valid ? geo.longitude : '',
+      geo.valid ? geo.geohash : '',
+      geo.valid ? geo.venue : '',
+      geo.valid ? geo.city : '',
+      geo.valid ? geo.state : '',
+      geo.valid ? geo.country : '',
+      geo.valid ? geo.timezone : '',
+      geo.valid ? geo.plusCode : ''
+    ];
+    mirror.getRange(2,1,1,mirrorHeaders.length).setValues([mirrorRow]);
+
+    // Control sheet update
+    ctl.appendRow(mirrorRow);
+    bustEventsCache_();
+
+    DIAG.log('info','createEventbook','done',{ 
+      id, ssId, ssUrl, tag, 
+      shortlinksReady: true,
+      geoTagged: geo.valid,
+      geohash: geo.geohash || null
+    });
+    
+    return { 
+      ok:true, 
+      id, 
+      slug, 
+      tag, 
+      ssId, 
+      ssUrl, 
+      idempotent:false, 
+      phase:'done', 
+      ms: Date.now()-started,
+      shortlinksReady: true,
+      geo: geo.valid ? {
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        geohash: geo.geohash,
+        venue: geo.venue,
+        city: geo.city
+      } : null
+    };
+  } catch (e) {
+    DIAG.log('error','createEventbook','exception',{ err:String(e), stack:e && e.stack });
+    return { ok:false, phase:'error', error:String(e) };
+  }
+}
+
+// S18 ========== GEO-TAGGING UTILITIES ==========
+
+/**
+ * Validates and enriches geo-tagging data
+ * @param {Object} geo - Raw geo input
+ * @returns {Object} Validated geo object with enrichment
+ */
+function validateAndEnrichGeo_(geo) {
+  if (!geo || typeof geo !== 'object') {
+    return { valid: false, error: 'No geo data provided' };
+  }
+  
+  const lat = parseFloat(geo.latitude || geo.lat);
+  const lon = parseFloat(geo.longitude || geo.lon || geo.lng);
+  
+  // Validate coordinates
+  if (!isFinite(lat) || !isFinite(lon)) {
+    return { valid: false, error: 'Invalid coordinates' };
+  }
+  
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) {
+    return { valid: false, error: 'Coordinates out of range' };
+  }
+  
+  // Geohash encoding (precision 7 ≈ 153m)
+  const geohash = encodeGeohash_(lat, lon, 7);
+  
+  // Plus Code encoding (8 chars + locality = 14m precision)
+  const plusCode = encodePlusCode_(lat, lon);
+  
+  // Timezone inference (requires external API or lookup table)
+  const timezone = inferTimezone_(lat, lon, geo.timezone);
+  
+  return {
+    valid: true,
+    latitude: lat,
+    longitude: lon,
+    geohash,
+    venue: String(geo.venue || '').trim().slice(0, 200),
+    city: String(geo.city || '').trim().slice(0, 100),
+    state: String(geo.state || '').trim().slice(0, 50),
+    country: String(geo.country || 'US').trim().toUpperCase().slice(0, 2),
+    timezone,
+    plusCode
+  };
+}
+
+/**
+ * Geohash encoding (base32)
+ * Precision 7 ≈ 153m × 153m cell
+ */
+function encodeGeohash_(lat, lon, precision) {
+  const BASE32 = '0123456789bcdefghjkmnpqrstuvwxyz';
+  let idx = 0;
+  let bit = 0;
+  let evenBit = true;
+  let geohash = '';
+  
+  let latMin = -90, latMax = 90;
+  let lonMin = -180, lonMax = 180;
+  
+  while (geohash.length < precision) {
+    if (evenBit) {
+      const lonMid = (lonMin + lonMax) / 2;
+      if (lon > lonMid) {
+        idx = (idx << 1) + 1;
+        lonMin = lonMid;
+      } else {
+        idx = idx << 1;
+        lonMax = lonMid;
+      }
+    } else {
+      const latMid = (latMin + latMax) / 2;
+      if (lat > latMid) {
+        idx = (idx << 1) + 1;
+        latMin = latMid;
+      } else {
+        idx = idx << 1;
+        latMax = latMid;
+      }
+    }
+    evenBit = !evenBit;
+    
+    if (++bit === 5) {
+      geohash += BASE32[idx];
+      bit = 0;
+      idx = 0;
+    }
+  }
+  
+  return geohash;
+}
+
+/**
+ * Plus Code encoding (Open Location Code)
+ * Returns 8-character code (11m × 14m cell)
+ */
+function encodePlusCode_(lat, lon) {
+  const ALPHABET = '23456789CFGHJMPQRVWX';
+  const LAT_MAX = 90;
+  const LON_MAX = 180;
+  
+  // Normalize
+  lat = Math.max(-LAT_MAX, Math.min(LAT_MAX, lat));
+  lon = ((lon + LON_MAX) % 360) - LON_MAX;
+  
+  // Encode to 10 digits (8 + 2 after +)
+  let latVal = (lat + LAT_MAX) * 8000;
+  let lonVal = (lon + LON_MAX) * 8000;
+  
+  let code = '';
+  for (let i = 0; i < 5; i++) {
+    const latDigit = Math.floor(latVal / Math.pow(20, 4 - i)) % 20;
+    const lonDigit = Math.floor(lonVal / Math.pow(20, 4 - i)) % 20;
+    code += ALPHABET[lonDigit] + ALPHABET[latDigit];
+  }
+  
+  return code.slice(0, 8) + '+' + code.slice(8);
+}
+
+/**
+ * Infer timezone from coordinates
+ * Uses simplified lookup for US timezones
+ * For production: integrate timezone-boundary-builder or GeoNames API
+ */
+function inferTimezone_(lat, lon, provided) {
+  if (provided) return provided;
+  
+  // Simplified US timezone inference
+  if (lat >= 24 && lat <= 50 && lon >= -125 && lon <= -66) {
+    if (lon >= -125 && lon < -120) return 'America/Los_Angeles';
+    if (lon >= -120 && lon < -104) return 'America/Denver';
+    if (lon >= -104 && lon < -90) return 'America/Chicago';
+    if (lon >= -90 && lon <= -66) return 'America/New_York';
+  }
+  
+  // Default fallback
+  return 'America/Chicago';
+}
+
+/**
+ * Calculate haversine distance between two points (km)
+ * Used for proximity search
+ */
+function haversineDistance_(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
 }
