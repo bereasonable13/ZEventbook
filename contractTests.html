@@ -1,0 +1,411 @@
+/************************************************************
+* ContractTests.gs — Consumer-Driven Contract Testing
+* 25-Year Mobile-First Architect Edition
+************************************************************/
+
+const CONTRACT_VERSION = '2.0.0';
+
+/**
+ * Run all contract tests
+ * Called from Test.html or CI/CD pipeline
+ */
+function runContractTests() {
+  const started = Date.now();
+  const results = {
+    version: CONTRACT_VERSION,
+    timestamp: new Date().toISOString(),
+    passed: 0,
+    failed: 0,
+    skipped: 0,
+    tests: []
+  };
+  
+  // Load contract definitions (embedded for now, could be external)
+  const contracts = getContractDefinitions_();
+  
+  for (const [name, contract] of Object.entries(contracts)) {
+    const suiteResults = runContractSuite_(name, contract);
+    results.tests.push(suiteResults);
+    results.passed += suiteResults.passed;
+    results.failed += suiteResults.failed;
+    results.skipped += suiteResults.skipped;
+  }
+  
+  results.durationMs = Date.now() - started;
+  results.success = results.failed === 0;
+  
+  // Log to diagnostics
+  DIAG.log(
+    results.success ? 'info' : 'error',
+    'contractTests',
+    results.success ? 'all_passed' : 'failures_detected',
+    { passed: results.passed, failed: results.failed }
+  );
+  
+  return results;
+}
+
+/**
+ * Run tests for a single contract
+ */
+function runContractSuite_(name, contract) {
+  const suite = {
+    contract: name,
+    consumer: contract.consumer,
+    provider: contract.provider,
+    passed: 0,
+    failed: 0,
+    skipped: 0,
+    scenarios: []
+  };
+  
+  for (const scenario of contract.scenarios || []) {
+    const result = runScenario_(name, contract, scenario);
+    suite.scenarios.push(result);
+    
+    if (result.skipped) suite.skipped++;
+    else if (result.passed) suite.passed++;
+    else suite.failed++;
+  }
+  
+  return suite;
+}
+
+/**
+ * Run a single test scenario
+ */
+function runScenario_(contractName, contract, scenario) {
+  const started = Date.now();
+  const result = {
+    name: scenario.name,
+    passed: false,
+    skipped: false,
+    errors: [],
+    warnings: [],
+    durationMs: 0
+  };
+  
+  try {
+    // Execute the RPC call
+    const response = executeContract_(contractName, scenario.request);
+    
+    // Validate response shape
+    const shapeErrors = validateResponseShape_(response, contract.response);
+    result.errors.push(...shapeErrors);
+    
+    // Validate scenario expectations
+    const expectErrors = validateExpectations_(response, scenario.expect);
+    result.errors.push(...expectErrors);
+    
+    // Validate performance
+    result.durationMs = Date.now() - started;
+    if (contract.performance && result.durationMs > contract.performance.p99_ms) {
+      result.warnings.push(`Slow response: ${result.durationMs}ms > p99 ${contract.performance.p99_ms}ms`);
+    }
+    
+    result.passed = result.errors.length === 0;
+    
+  } catch (e) {
+    result.errors.push(`Exception: ${e.message || e}`);
+    result.passed = false;
+  }
+  
+  result.durationMs = Date.now() - started;
+  return result;
+}
+
+/**
+ * Execute contract call dynamically
+ */
+function executeContract_(contractName, request) {
+  switch(contractName) {
+    case 'getEventsSafe':
+      return getEventsSafe(request.etag || null);
+      
+    case 'createEventbook':
+      return createEventbook(request);
+      
+    case 'findEventsNearby':
+      return findEventsNearby(request);
+      
+    case 'getPublicBundleMobile':
+      return getPublicBundleMobile(request.eventIdOrSlug, request);
+      
+    default:
+      throw new Error(`Unknown contract: ${contractName}`);
+  }
+}
+
+/**
+ * Validate response against JSON Schema
+ */
+function validateResponseShape_(response, schema) {
+  const errors = [];
+  
+  if (!response || typeof response !== 'object') {
+    errors.push('Response is not an object');
+    return errors;
+  }
+  
+  // Check required fields
+  for (const field of schema.required || []) {
+    if (!(field in response)) {
+      errors.push(`Missing required field: ${field}`);
+    }
+  }
+  
+  // Check field types
+  for (const [field, spec] of Object.entries(schema.properties || {})) {
+    if (field in response) {
+      const value = response[field];
+      const expectedType = Array.isArray(spec.type) ? spec.type : [spec.type];
+      const actualType = value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value;
+      
+      if (!expectedType.includes(actualType)) {
+        errors.push(`Field "${field}" has type ${actualType}, expected ${expectedType.join('|')}`);
+      }
+      
+      // Validate enums
+      if (spec.enum && !spec.enum.includes(value)) {
+        errors.push(`Field "${field}" value "${value}" not in enum [${spec.enum.join(', ')}]`);
+      }
+      
+      // Validate patterns (strings)
+      if (spec.pattern && typeof value === 'string') {
+        const regex = new RegExp(spec.pattern);
+        if (!regex.test(value)) {
+          errors.push(`Field "${field}" value "${value}" does not match pattern ${spec.pattern}`);
+        }
+      }
+      
+      // Validate ranges (numbers)
+      if (typeof value === 'number') {
+        if (spec.minimum !== undefined && value < spec.minimum) {
+          errors.push(`Field "${field}" value ${value} < minimum ${spec.minimum}`);
+        }
+        if (spec.maximum !== undefined && value > spec.maximum) {
+          errors.push(`Field "${field}" value ${value} > maximum ${spec.maximum}`);
+        }
+      }
+      
+      // Validate string lengths
+      if (typeof value === 'string') {
+        if (spec.minLength && value.length < spec.minLength) {
+          errors.push(`Field "${field}" length ${value.length} < minLength ${spec.minLength}`);
+        }
+        if (spec.maxLength && value.length > spec.maxLength) {
+          errors.push(`Field "${field}" length ${value.length} > maxLength ${spec.maxLength}`);
+        }
+      }
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Validate scenario-specific expectations
+ */
+function validateExpectations_(response, expect) {
+  const errors = [];
+  
+  if (!expect) return errors;
+  
+  for (const [key, expectedValue] of Object.entries(expect)) {
+    if (key.includes('.')) {
+      // Nested property (e.g., "pagination.limit")
+      const path = key.split('.');
+      let actual = response;
+      for (const segment of path) {
+        actual = actual?.[segment];
+      }
+      
+      if (actual !== expectedValue) {
+        errors.push(`Expected ${key}=${expectedValue}, got ${actual}`);
+      }
+      
+    } else if (key === 'ok') {
+      if (response.ok !== expectedValue) {
+        errors.push(`Expected ok=${expectedValue}, got ${response.ok}`);
+      }
+      
+    } else if (key === 'status') {
+      if (response.status !== expectedValue) {
+        errors.push(`Expected status=${expectedValue}, got ${response.status}`);
+      }
+      
+    } else if (key === 'notModified') {
+      if (response.notModified !== expectedValue) {
+        errors.push(`Expected notModified=${expectedValue}, got ${response.notModified}`);
+      }
+      
+    } else if (key === 'itemsNotEmpty') {
+      if (expectedValue && (!response.items || response.items.length === 0)) {
+        errors.push('Expected items to be non-empty');
+      }
+      
+    } else if (key === 'itemsEmpty') {
+      if (expectedValue && response.items && response.items.length > 0) {
+        errors.push('Expected items to be empty');
+      }
+      
+    } else if (key === 'items_sorted_by_distance') {
+      if (expectedValue && response.items) {
+        for (let i = 1; i < response.items.length; i++) {
+          if (response.items[i].distanceKm < response.items[i-1].distanceKm) {
+            errors.push(`Items not sorted by distance: ${response.items[i-1].distanceKm} > ${response.items[i].distanceKm}`);
+            break;
+          }
+        }
+      }
+      
+    } else if (key.startsWith('_meta.sizeBytes')) {
+      // Performance expectation: "< 5000"
+      const match = String(expectedValue).match(/^([<>]=?)\s*(\d+)$/);
+      if (match && response._meta?.sizeBytes) {
+        const [, op, limit] = match;
+        const actual = response._meta.sizeBytes;
+        const limitNum = parseInt(limit);
+        
+        if (op === '<' && actual >= limitNum) {
+          errors.push(`Expected _meta.sizeBytes < ${limitNum}, got ${actual}`);
+        } else if (op === '>' && actual <= limitNum) {
+          errors.push(`Expected _meta.sizeBytes > ${limitNum}, got ${actual}`);
+        }
+      }
+    }
+  }
+  
+  return errors;
+}
+
+/**
+ * Get contract definitions (embedded for simplicity)
+ * In production, load from external JSON or database
+ */
+function getContractDefinitions_() {
+  return {
+    getEventsSafe: {
+      consumer: ['Admin.html', 'Test.html'],
+      provider: 'Code.gs::getEventsSafe',
+      response: {
+        required: ['ok', 'status', 'etag', 'notModified', 'items'],
+        properties: {
+          ok: { type: 'boolean' },
+          status: { type: 'integer', enum: [200, 304, 500] },
+          etag: { type: 'string', minLength: 8 },
+          notModified: { type: 'boolean' },
+          items: { type: 'array' }
+        }
+      },
+      scenarios: [
+        {
+          name: 'first_call_no_etag',
+          request: { etag: null },
+          expect: {
+            ok: true,
+            status: 200,
+            notModified: false,
+            itemsNotEmpty: false // May be empty on fresh install
+          }
+        }
+      ],
+      performance: { p99_ms: 1500 }
+    },
+    
+    findEventsNearby: {
+      consumer: ['Mobile PWA'],
+      provider: 'Code.gs::findEventsNearby',
+      response: {
+        required: ['ok', 'query', 'count', 'items'],
+        properties: {
+          ok: { type: 'boolean' },
+          count: { type: 'number', minimum: 0 },
+          items: { type: 'array' }
+        }
+      },
+      scenarios: [
+        {
+          name: 'find_nearby_chicago',
+          request: {
+            latitude: 41.8781,
+            longitude: -87.6298,
+            radius: 50,
+            limit: 20
+          },
+          expect: {
+            ok: true,
+            items_sorted_by_distance: true
+          }
+        }
+      ],
+      performance: { p99_ms: 2000 }
+    }
+  };
+}
+
+/**
+ * Performance regression detector
+ * Compares current run against historical baseline
+ */
+function detectPerformanceRegressions(results) {
+  const regressions = [];
+  const baseline = loadPerformanceBaseline_();
+  
+  for (const suite of results.tests) {
+    for (const scenario of suite.scenarios) {
+      const key = `${suite.contract}::${scenario.name}`;
+      const historicalP95 = baseline[key]?.p95_ms;
+      
+      if (historicalP95 && scenario.durationMs > historicalP95 * 1.5) {
+        regressions.push({
+          test: key,
+          current_ms: scenario.durationMs,
+          baseline_p95_ms: historicalP95,
+          regression_pct: Math.round((scenario.durationMs / historicalP95 - 1) * 100)
+        });
+      }
+    }
+  }
+  
+  return {
+    detected: regressions.length > 0,
+    count: regressions.length,
+    regressions
+  };
+}
+
+/**
+ * Load performance baseline from properties
+ * In production: use time-series database
+ */
+function loadPerformanceBaseline_() {
+  try {
+    const json = PropertiesService.getScriptProperties().getProperty('CONTRACT_PERF_BASELINE');
+    return json ? JSON.parse(json) : {};
+  } catch (e) {
+    return {};
+  }
+}
+
+/**
+ * Save performance baseline
+ */
+function savePerformanceBaseline(results) {
+  const baseline = {};
+  
+  for (const suite of results.tests) {
+    for (const scenario of suite.scenarios) {
+      const key = `${suite.contract}::${scenario.name}`;
+      baseline[key] = {
+        p95_ms: scenario.durationMs,
+        updated: new Date().toISOString()
+      };
+    }
+  }
+  
+  PropertiesService.getScriptProperties().setProperty(
+    'CONTRACT_PERF_BASELINE',
+    JSON.stringify(baseline)
+  );
+}
