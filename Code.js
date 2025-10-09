@@ -493,13 +493,30 @@ function createEvent(payload){   return _createEventbookImpl(payload); } // back
 function _createEventbookImpl(payload){
   ensureAll_();
   const started = Date.now();
-  const p = payload || {};
-  const name = String(p.name || '').trim();
-  const dateISO = String(p.startDateISO || p.startDate || '').trim();
-  const seedMode = String(p.seedMode || 'random');
-  const elimType = String(p.elimType || 'none');
-
-  if (!name || !dateISO) {
+  
+  // VALIDATE ALL INPUTS
+  const vName = validateInput_('eventName', payload.name);
+  if (!vName.valid) {
+    DIAG.log('error','createEventbook','invalid_name',{error:vName.error});
+    return {ok:false, phase:'validate', error:vName.error};
+  }
+  
+  const vDate = validateInput_('dateISO', payload.startDateISO || payload.startDate);
+  if (!vDate.valid) {
+    DIAG.log('error','createEventbook','invalid_date',{error:vDate.error});
+    return {ok:false, phase:'validate', error:vDate.error};
+  }
+  
+  const vSeed = validateInput_('seedMode', payload.seedMode || 'random');
+  if (!vSeed.valid) return {ok:false, phase:'validate', error:vSeed.error};
+  
+  const vElim = validateInput_('elimType', payload.elimType || 'none');
+  if (!vElim.valid) return {ok:false, phase:'validate', error:vElim.error};
+  
+  const name = vName.value;
+  const dateISO = vDate.value;
+  const seedMode = vSeed.value;
+  const elimType = vElim.value;
     DIAG.log('error','createEventbook','missing name/date',{ payload });
     return { ok:false, phase:'validate', error:'Name and Date required' };
   }
