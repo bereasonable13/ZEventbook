@@ -1,20 +1,22 @@
 <!--
 /************************************************************
 * NextUp · Display.html — Suite Index
-* [H01] Head / Meta (title, styles, SDK)
-* [H02] Inline Styles (TV layout)
-* [H03] Layout / DOM (header, stage, diag)
+* [H01] Head / Meta (title, viewport, styles)
+* [H02] Inline Styles (TV-optimized layout)
+* [H03] Layout / DOM (header, stage, diag, indicators)
 * [H04] State / Params / Refs
 * [H05] Diagnostics helpers
 * [H06] UI helpers (badges, qr/url render)
 * [H07] Data loaders (bundle, links/QR)
-* [H08] Polling control (backoff until verified)
-* [H09] Boot (DOMContentLoaded)
-* [H10] Diagnostics controls & cleanup
+* [H08] Auto-refresh & Network monitoring
+* [H09] Screensaver prevention (Wake Lock)
+* [H10] Boot (DOMContentLoaded)
+* [H11] Diagnostics controls & cleanup
 ************************************************************/
 -->
 
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <!-- [H01] Head / Meta -->
@@ -24,36 +26,83 @@
   <?!= include('NuSdk'); ?>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 
-  <!-- [H02] Inline Styles -->
+  <!-- [H02] Inline Styles (TV-optimized) -->
+
   <style>
-    body { /* TV mode sizing */ }
-    .tv { max-width: 1280px; margin: 0 auto; padding: 16px; }
+    body { cursor: none; } /* Hide cursor on TV displays */
+    .tv { max-width: 1920px; margin: 0 auto; padding: 24px; }
     .stage {
       display: grid;
-      grid-template-columns: 300px 1fr;
-      gap: 16px;
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
       align-items: start;
     }
-    .qrbox { border:1px solid var(--line); border-radius:12px; background:#fff; padding:16px; }
-    .qrbox img { display:block; width:100%; height:auto; }
-    .panel { border:1px solid var(--line); border-radius:12px; background:#fff; padding:16px; }
-    .msg { border:1px dashed var(--line); border-radius:8px; padding:12px; background:#fff; }
-    .msg h3 { margin-top:0; }
-    .slug { display:flex; flex-wrap:wrap; gap:.5rem; color:#333; }
-    .slug .pill { border:1px solid var(--line); border-radius:999px; padding:2px 10px; font-weight:700; }
+    .qrbox { 
+      border: 2px solid var(--line); 
+      border-radius: 16px; 
+      background: #fff; 
+      padding: 24px;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .qrbox img { 
+      display: block; 
+      width: 100%; 
+      max-width: 350px;
+      height: auto;
+      margin: 0 auto;
+      image-rendering: crisp-edges;
+    }
+    .panel { border: 2px solid var(--line); border-radius: 16px; background: var(--card); padding: 24px; }
+    .msg { border: 2px dashed var(--line); border-radius: 12px; padding: 20px; background: var(--bg); font-size: 1.1rem; line-height: 1.6; }
+    .msg h3 { margin-top: 0; font-size: 1.3rem; }
+    
+    header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .slug { display: flex; flex-wrap: wrap; gap: 0.75rem; color: var(--fg); }
+    .slug .pill { border: 2px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 1.1rem; background: var(--card); }
 
     .muted { color: var(--muted); }
-    .row { display:flex; align-items:center; gap:8px; }
-    .gap { gap:8px; }
-
-    @media (max-width: 860px){
-      .stage { grid-template-columns: 1fr; }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .gap { gap: 12px; }
+    
+    /* High contrast mode for projectors */
+    @media (prefers-contrast: high), screen and (min-width: 1400px) {
+      .qrbox, .panel { border-width: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+      h1, h2, h3 { font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
     }
-    @media print { .diag, .actions { display:none !important; } }
+    
+    /* Network status indicators */
+    .refresh-indicator {
+      position: fixed; top: 20px; right: 20px;
+      background: var(--card); border: 2px solid var(--line); border-radius: 8px;
+      padding: 8px 16px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 1000;
+    }
+    .refresh-indicator.active { opacity: 1; }
+    
+    .offline-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: var(--warn-bg); color: var(--warn);
+      padding: 12px; text-align: center; font-weight: 700;
+      display: none; z-index: 2000;
+    }
+    .offline-banner.show { display: block; }
+
+    @media (max-width: 1200px) { .stage { grid-template-columns: 1fr; } }
+    @media print { .diag, .actions, .refresh-indicator, .offline-banner { display: none !important; } }
   </style>
+
 </head>
 <body data-tv="1">
+  <!-- [H03] Layout / DOM: Network indicators -->
+  <div class="offline-banner" id="offlineBanner">
+    Connection lost. Displaying cached data. Reconnecting...
+  </div>
+  <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
+
   <main class="tv container">
+    <!-- [H03] Layout / DOM: Header -->
     <header>
       <h1 id="title" data-testid="display-title">(event)</h1>
       <div class="meta">
@@ -65,53 +114,58 @@
       </div>
     </header>
 
-    <!-- [H03] Layout / DOM: stage -->
-    <section class="stage" aria-label="Display layout">
-      <!-- Left: Public access (QR if verified, else URL text) -->
-      <div class="qrbox" data-testid="display-public-card">
-        <h2 class="row gap">
-          Public Access
-          <span id="qrState" class="badge" data-testid="display-public-badge">Loading…</span>
-        </h2>
-        <div id="qr" data-testid="display-public-qr">
-          <div class="spinner" aria-label="Loading Public QR"></div>
-        </div>
-        <small id="url" class="muted" data-testid="display-public-url"></small>
-      </div>
+```
+<!-- [H03] Layout / DOM: Stage -->
+<section class="stage" aria-label="Display layout">
+  <div class="qrbox" data-testid="display-public-card">
+    <h2 class="row gap">
+      Public Access
+      <span id="qrState" class="badge" data-testid="display-public-badge">Loading…</span>
+    </h2>
+    <div id="qr" data-testid="display-public-qr">
+      <div class="spinner" aria-label="Loading Public QR"></div>
+    </div>
+    <small id="url" class="muted" data-testid="display-public-url"></small>
+  </div>
 
-      <!-- Right: Info / Messaging (shows signup form link if available) -->
-      <div class="panel" data-testid="display-info-card">
-        <h2>Info</h2>
-        <section class="msg" aria-label="Messaging">
-          <h3 class="row gap">
-            Messaging
-            <span class="muted" id="msgHint" data-testid="display-msg-hint">Short info for attendees</span>
-          </h3>
-          <div id="msgBody" class="muted" data-testid="display-msg-body">
-            Welcome! Scan the QR (when available) or use the link below.
-          </div>
-          <div id="signupBlock" class="row" style="margin-top:10px;" data-testid="display-signup-block">
-            <!-- Filled when we can resolve a Form URL from quicklinks -->
-          </div>
-        </section>
+  <div class="panel" data-testid="display-info-card">
+    <h2>Event Information</h2>
+    <section class="msg" aria-label="Messaging">
+      <h3 class="row gap">
+        Welcome
+        <span class="muted" id="msgHint" data-testid="display-msg-hint"></span>
+      </h3>
+      <div id="msgBody" class="muted" data-testid="display-msg-body">
+        Scan the QR code to view live standings and schedule on your device.
+      </div>
+      <div id="signupBlock" class="row" style="margin-top:16px;" data-testid="display-signup-block"></div>
+      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);">
+        <small class="muted">
+          Last updated: <span id="lastUpdate">--:--</span>
+          <span id="nextUpdate" style="margin-left: 16px;"></span>
+        </small>
       </div>
     </section>
+  </div>
+</section>
 
-    <!-- [H03] Layout / DOM: diagnostics -->
-    <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
-      <div class="diag-head">
-        <h2 id="diag-head">Diagnostics</h2>
-        <div class="diag-actions">
-          <label class="diag-checkbox row">
-            <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
-            Live logs
-          </label>
-          <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
-          <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
-        </div>
-      </div>
-      <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
-    </section>
+<!-- [H03] Layout / DOM: Diagnostics -->
+<section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
+  <div class="diag-head">
+    <h2 id="diag-head">Diagnostics</h2>
+    <div class="diag-actions">
+      <label class="diag-checkbox row">
+        <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
+        Live logs
+      </label>
+      <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
+      <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
+    </div>
+  </div>
+  <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
+</section>
+```
+
   </main>
 
   <script>
@@ -133,13 +187,16 @@
 
   const params = new URLSearchParams(location.search);
   const eventKey = params.get('event') || '';
+  const refreshInterval = parseInt(params.get('refresh') || '120') * 1000;
 
   const STATE = {
     qrVerified: false,
     lastUrl: '',
-    pollTimer: null,
-    pollMs: 4000,
-    pollMaxMs: 20000
+    isOnline: true,
+    lastRefresh: null,
+    refreshTimer: null,
+    wakeLock: null,
+    cachedData: null
   };
 
   const els = {
@@ -147,14 +204,15 @@
     namePill: document.getElementById('namePill'),
     datePill: document.getElementById('datePill'),
     badge: document.getElementById('statusBadge'),
-
     qrState: document.getElementById('qrState'),
     qr: document.getElementById('qr'),
     url: document.getElementById('url'),
-
     msgBody: document.getElementById('msgBody'),
     signupBlock: document.getElementById('signupBlock'),
-
+    lastUpdate: document.getElementById('lastUpdate'),
+    nextUpdate: document.getElementById('nextUpdate'),
+    refreshIndicator: document.getElementById('refreshIndicator'),
+    offlineBanner: document.getElementById('offlineBanner'),
     diag: document.getElementById('diag'),
     diagBody: document.getElementById('diagBody'),
     btnClearLogs: document.getElementById('btnClearLogs'),
@@ -171,6 +229,9 @@
     row.className = 'lvl-' + (level || 'info');
     row.textContent = new Date().toLocaleTimeString() + ' — ' + String(msg);
     els.diagBody.appendChild(row);
+    while (els.diagBody.children.length > 100) {
+      els.diagBody.removeChild(els.diagBody.firstChild);
+    }
     els.diagBody.scrollTop = els.diagBody.scrollHeight;
   }
   function setDiagExpanded(expanded){
@@ -179,10 +240,9 @@
   }
 
   /* =====================================================
-   * [H06] UI helpers (badges, QR/URL render)
+   * [H06] UI helpers (badges, qr/url render)
    * ===================================================== */
   function setQRState(state){
-    // loading | url | qr | absent
     const map = {
       loading:{ cls:'badge', text:'Loading…' },
       url:    { cls:'badge', text:'URL Ready' },
@@ -198,39 +258,51 @@
     els.qr.innerHTML = `<img alt="${esc(alt||'Public QR')}" src="${esc(imgUrl)}" data-testid="qr-img" />`;
   }
   function renderURL(url){
-    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback">${esc(url)}</div>`;
+    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback" style="word-break:break-all;font-size:1.1rem;">${esc(url)}</div>`;
   }
   function renderGuidance(txt){
-    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance">${esc(txt)}</div>`;
+    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance" style="font-size:1.1rem;">${esc(txt)}</div>`;
   }
 
   /* =====================================================
-   * [H07] Data loaders
+   * [H07] Data loaders (bundle, links/QR)
    * ===================================================== */
   async function loadBundleAndHeader(){
-    // Code.gs getPublicBundle returns: { ok, eventTag, title, datePretty, place, ... }
     const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
     if (!r?.ok) throw new Error(r?.error || 'bundle failed');
 
+    STATE.cachedData = r;
     const title = r.title || '(event)';
     const datePretty = r.datePretty || '';
 
     els.title.textContent = title;
     els.namePill.textContent = title;
     els.datePill.textContent = datePretty;
-    els.badge.innerHTML = ''; // simple — not tracking status phases here
+    els.badge.innerHTML = '';
 
-    // Try to surface a signup form link if available via QuickLinks
     try {
       const ql = await rpc('getEventQuickLinks', eventKey);
       const sb = els.signupBlock;
       sb.replaceChildren();
       if (ql && ql.formUrlView) {
-        const lbl = document.createElement('div'); lbl.className='muted'; lbl.textContent='Signup form:';
-        const a = document.createElement('a'); a.href=ql.formUrlView; a.target='_blank'; a.rel='noopener'; a.textContent=ql.formUrlView;
-        sb.appendChild(lbl); sb.appendChild(a);
+        const lbl = document.createElement('div'); 
+        lbl.className='muted'; 
+        lbl.textContent='Sign up online:';
+        lbl.style.fontSize='1.1rem';
+        const a = document.createElement('a'); 
+        a.href=ql.formUrlView; 
+        a.target='_blank'; 
+        a.rel='noopener';
+        a.textContent='Registration Form →';
+        a.style.fontSize='1.2rem';
+        a.style.fontWeight='600';
+        sb.appendChild(lbl); 
+        sb.appendChild(a);
       } else {
-        const hint = document.createElement('div'); hint.className='muted'; hint.textContent='No signup form yet. Enable it in Admin.';
+        const hint = document.createElement('div'); 
+        hint.className='muted'; 
+        hint.textContent='Scan QR code for event details';
+        hint.style.fontSize='1.1rem';
         sb.appendChild(hint);
       }
     } catch (e) {
@@ -238,22 +310,20 @@
     }
   }
 
-  // Strict invariant: only show QR if server verifies a shortlink exists
   async function loadPublicQROnce(){
     setQRState('loading');
 
-    // Preferred endpoint in v4.1.1
     if (google?.script?.run?.getShareQrVerified) {
       const r = await retry(()=> rpc('getShareQrVerified', eventKey), 3, [300,600,1200]);
       if (r?.ok) {
         if (r.qrUrlVerified) {
           renderQrFromUrl(r.qrUrlVerified, 'Public QR');
           els.url.textContent = r.url || '';
+          els.url.style.fontSize = '1rem';
           setQRState('qr');
           STATE.qrVerified = true;
           return true;
         } else if (r.url) {
-          // URL-only fallback, not yet verified → do NOT display a QR
           if (STATE.lastUrl !== r.url) {
             renderURL(r.url);
             els.url.textContent = r.url || '';
@@ -271,7 +341,6 @@
       return false;
     }
 
-    // Legacy fallback (if verified endpoint not present): never show QR, only URL
     try {
       const ql = await rpc('getEventQuickLinks', eventKey);
       const url = ql?.publicUrl || '';
@@ -291,33 +360,95 @@
   }
 
   /* =====================================================
-   * [H08] Polling control (backoff until verified)
+   * [H08] Auto-refresh & Network monitoring
    * ===================================================== */
-  function startPolling(){
-    stopPolling();
-    STATE.pollTimer = setTimeout(async () => {
-      try {
-        const ok = await loadPublicQROnce();
-        if (!ok) {
-          STATE.pollMs = Math.min(STATE.pollMs + 2000, STATE.pollMaxMs);
-          startPolling();
-        }
-      } catch (e) {
-        log('poll error: '+(e.message||e), 'error');
-        STATE.pollMs = Math.min(STATE.pollMs + 2000, STATE.pollMaxMs);
-        startPolling();
+  function updateOnlineStatus() {
+    const online = navigator.onLine;
+    if (STATE.isOnline !== online) {
+      STATE.isOnline = online;
+      els.offlineBanner.classList.toggle('show', !online);
+      log(`Network status: ${online ? 'online' : 'offline'}`, online ? 'info' : 'warn');
+      if (online) {
+        log('Reconnected - refreshing data', 'info');
+        refreshData();
       }
-    }, STATE.pollMs);
+    }
   }
-  function stopPolling(){
-    if (STATE.pollTimer) { clearTimeout(STATE.pollTimer); STATE.pollTimer = null; }
+  
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
+
+  async function refreshData() {
+    if (!STATE.isOnline) {
+      log('Skipping refresh - offline', 'warn');
+      return;
+    }
+    try {
+      els.refreshIndicator.classList.add('active');
+      await loadBundleAndHeader();
+      if (!STATE.qrVerified) {
+        await loadPublicQROnce();
+      }
+      STATE.lastRefresh = new Date();
+      updateTimestamps();
+      log('Data refreshed successfully', 'info');
+    } catch (e) {
+      log(`Refresh failed: ${e.message}`, 'error');
+    } finally {
+      els.refreshIndicator.classList.remove('active');
+    }
   }
+  
+  function startAutoRefresh() {
+    if (STATE.refreshTimer) {
+      clearInterval(STATE.refreshTimer);
+    }
+    STATE.refreshTimer = setInterval(refreshData, refreshInterval);
+    log(`Auto-refresh enabled: ${refreshInterval / 1000}s interval`, 'info');
+  }
+  
+  function updateTimestamps() {
+    if (STATE.lastRefresh) {
+      els.lastUpdate.textContent = STATE.lastRefresh.toLocaleTimeString();
+      const nextRefresh = new Date(STATE.lastRefresh.getTime() + refreshInterval);
+      els.nextUpdate.textContent = `Next: ${nextRefresh.toLocaleTimeString()}`;
+    }
+  }
+  
+  setInterval(updateTimestamps, 1000);
 
   /* =====================================================
-   * [H09] Boot
+   * [H09] Screensaver prevention (Wake Lock)
+   * ===================================================== */
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+      log('Wake Lock API not supported', 'warn');
+      return;
+    }
+    try {
+      STATE.wakeLock = await navigator.wakeLock.request('screen');
+      log('Screen wake lock activated', 'info');
+      STATE.wakeLock.addEventListener('release', () => {
+        log('Screen wake lock released', 'warn');
+      });
+    } catch (e) {
+      log(`Wake lock error: ${e.message}`, 'error');
+    }
+  }
+  
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && STATE.wakeLock === null) {
+      await requestWakeLock();
+    }
+  });
+
+  /* =====================================================
+   * [H10] Boot (DOMContentLoaded)
    * ===================================================== */
   document.addEventListener('DOMContentLoaded', async ()=>{
     setDiagExpanded(false);
+    await requestWakeLock();
+    updateOnlineStatus();
 
     if (!eventKey){
       els.title.textContent = '(no event)';
@@ -330,30 +461,38 @@
 
     try {
       await loadBundleAndHeader();
+      STATE.lastRefresh = new Date();
+      updateTimestamps();
     } catch(e){
       log('loadBundle: ' + (e.message || e), 'error');
-      toast.error('Failed to load event');
+      if (!STATE.isOnline && STATE.cachedData) {
+        log('Using cached data (offline mode)', 'warn');
+      }
     }
 
     try {
-      const verified = await loadPublicQROnce();
-      if (!verified) startPolling(); else stopPolling();
+      await loadPublicQROnce();
     } catch(e){
       log('loadPublicQROnce: ' + (e.message || e), 'error');
       renderGuidance('Error loading Public link.');
       setQRState('absent');
-      startPolling();
     }
-
-    if (toast?.info) toast.info('Display ready');
+    
+    startAutoRefresh();
+    log(`Display ready - refresh interval: ${refreshInterval/1000}s`, 'info');
   });
 
   /* =====================================================
-   * [H10] Diagnostics controls & cleanup
+   * [H11] Diagnostics controls & cleanup
    * ===================================================== */
   document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
   document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
-  window.addEventListener('beforeunload', stopPolling);
+  
+  window.addEventListener('beforeunload', () => {
+    if (STATE.refreshTimer) clearInterval(STATE.refreshTimer);
+    if (STATE.wakeLock) STATE.wakeLock.release();
+  });
   </script>
+
 </body>
 </html>
