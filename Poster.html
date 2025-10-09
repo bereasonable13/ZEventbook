@@ -1,114 +1,176 @@
 <!--
 /************************************************************
-* NextUp · Poster.html — Suite Index
-* [H01] Head / Meta (title, styles, SDK)
-* [H02] Inline Styles (poster layout)
-* [H03] Layout / DOM (header, pfbar, qr grid, diagnostics)
-* [H04] Params / State / Refs
-* [H05] Diagnostics helpers (live log, expand/collapse)
-* [H06] UI helpers (badges, QR/URL render, guidance)
-* [H07] Data loaders
-*       - loadPosterMeta()  ← getPosterBundle
-*       - loadPublicOnce()  ← getShareQrVerified (verified-only)
-*       - loadSignupOnce()  ← getEventQuickLinks (shortlink-gated)
-* [H08] Polling control (exponential-ish backoff until verified)
-* [H09] Boot (DOMContentLoaded)
-* [H10] Cleanup (beforeunload) + diag controls
+* NextUp · Display.html — Suite Index
+* [H01] Head / Meta (title, viewport, styles)
+* [H02] Inline Styles (TV-optimized layout)
+* [H03] Layout / DOM (header, stage, diag, indicators)
+* [H04] State / Params / Refs
+* [H05] Diagnostics helpers
+* [H06] UI helpers (badges, qr/url render)
+* [H07] Data loaders (bundle, links/QR)
+* [H08] Auto-refresh & Network monitoring
+* [H09] Screensaver prevention (Wake Lock)
+* [H10] Boot (DOMContentLoaded)
+* [H11] Diagnostics controls & cleanup
 ************************************************************/
 -->
 
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
   <!-- [H01] Head / Meta -->
-  <meta charset="utf-8" />
-  <title><?= appTitle ?> · Poster</title>
+  <meta charset="utf-8"/>
+  <title><?= appTitle ?> · Display</title>
   <?!= include('Styles'); ?>
   <?!= include('NuSdk'); ?>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 
-  <!-- [H02] Inline Styles -->
+  <!-- [H02] Inline Styles (TV-optimized) -->
+
   <style>
-    .poster { max-width: 840px; margin: 0 auto; padding: 16px; }
-    .qrgrid { display:grid; grid-template-columns: 1fr 1fr; gap:16px; align-items:start; }
-    .qrbox { border:1px solid var(--line); border-radius:8px; padding:12px; background:#fff; }
-    .qrbox img { display:block; width:240px; max-width:100%; height:auto; margin:auto; }
-    .row { display:flex; align-items:center; gap:8px; }
-    .gap { gap:8px; }
+    body { cursor: none; } /* Hide cursor on TV displays */
+    .tv { max-width: 1920px; margin: 0 auto; padding: 24px; }
+    .stage {
+      display: grid;
+      grid-template-columns: 400px 1fr;
+      gap: 24px;
+      align-items: start;
+    }
+    .qrbox { 
+      border: 2px solid var(--line); 
+      border-radius: 16px; 
+      background: #fff; 
+      padding: 24px;
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .qrbox img { 
+      display: block; 
+      width: 100%; 
+      max-width: 350px;
+      height: auto;
+      margin: 0 auto;
+      image-rendering: crisp-edges;
+    }
+    .panel { border: 2px solid var(--line); border-radius: 16px; background: var(--card); padding: 24px; }
+    .msg { border: 2px dashed var(--line); border-radius: 12px; padding: 20px; background: var(--bg); font-size: 1.1rem; line-height: 1.6; }
+    .msg h3 { margin-top: 0; font-size: 1.3rem; }
+    
+    header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
+    .slug { display: flex; flex-wrap: wrap; gap: 0.75rem; color: var(--fg); }
+    .slug .pill { border: 2px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 1.1rem; background: var(--card); }
+
     .muted { color: var(--muted); }
-    .qr-fallback { padding:10px; border:1px dashed var(--line); border-radius:6px; word-break:break-all; }
-    @media (max-width: 760px){ .qrgrid { grid-template-columns: 1fr; } }
-    @media print { .pfbar, .diag, .actions { display:none !important; } }
+    .row { display: flex; align-items: center; gap: 12px; }
+    .gap { gap: 12px; }
+    
+    /* High contrast mode for projectors */
+    @media (prefers-contrast: high), screen and (min-width: 1400px) {
+      .qrbox, .panel { border-width: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+      h1, h2, h3 { font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    }
+    
+    /* Network status indicators */
+    .refresh-indicator {
+      position: fixed; top: 20px; right: 20px;
+      background: var(--card); border: 2px solid var(--line); border-radius: 8px;
+      padding: 8px 16px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 1000;
+    }
+    .refresh-indicator.active { opacity: 1; }
+    
+    .offline-banner {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: var(--warn-bg); color: var(--warn);
+      padding: 12px; text-align: center; font-weight: 700;
+      display: none; z-index: 2000;
+    }
+    .offline-banner.show { display: block; }
+
+    @media (max-width: 1200px) { .stage { grid-template-columns: 1fr; } }
+    @media print { .diag, .actions, .refresh-indicator, .offline-banner { display: none !important; } }
   </style>
+
 </head>
-<body>
-  <main class="poster">
-    <!-- [H03] Layout / DOM: header -->
+<body data-tv="1">
+  <!-- [H03] Layout / DOM: Network indicators -->
+  <div class="offline-banner" id="offlineBanner">
+    Connection lost. Displaying cached data. Reconnecting...
+  </div>
+  <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
+
+  <main class="tv container">
+    <!-- [H03] Layout / DOM: Header -->
     <header>
-      <h1 id="posterTitle" data-testid="poster-title">(event)</h1>
+      <h1 id="title" data-testid="display-title">(event)</h1>
       <div class="meta">
-        <small id="eventDate" data-testid="poster-date"></small>
-        <span id="statusBadge" style="margin-left:8px;" data-testid="poster-status"></span>
-        <small id="posterModeBadge" style="margin-left:8px;" class="muted" data-testid="poster-mode"></small>
+        <div class="slug">
+          <span class="pill" id="namePill" data-testid="display-name">(name)</span>
+          <span class="pill" id="datePill" data-testid="display-date">(date)</span>
+        </div>
+        <span id="statusBadge" style="margin-left:8px;" data-testid="display-status"></span>
       </div>
     </header>
 
-    <!-- [H03] Layout / DOM: optional compact preflight/status mount -->
-    <div id="pfMount"></div>
+```
+<!-- [H03] Layout / DOM: Stage -->
+<section class="stage" aria-label="Display layout">
+  <div class="qrbox" data-testid="display-public-card">
+    <h2 class="row gap">
+      Public Access
+      <span id="qrState" class="badge" data-testid="display-public-badge">Loading…</span>
+    </h2>
+    <div id="qr" data-testid="display-public-qr">
+      <div class="spinner" aria-label="Loading Public QR"></div>
+    </div>
+    <small id="url" class="muted" data-testid="display-public-url"></small>
+  </div>
 
-    <!-- [H03] Layout / DOM: QR grid -->
-    <section class="qrgrid" aria-label="Poster QRs/Links">
-      <!-- Public -->
-      <div class="qrbox" data-testid="qrbox-public">
-        <h3 class="row gap">
-          Public Page
-          <span class="badge" id="publicBadge" data-testid="public-badge">Loading…</span>
-        </h3>
-        <div id="qrPublic" data-testid="public-qr">
-          <div class="spinner" aria-label="Loading Public QR"></div>
-        </div>
-        <small id="publicUrlLabel" class="muted" data-testid="public-url"></small>
+  <div class="panel" data-testid="display-info-card">
+    <h2>Event Information</h2>
+    <section class="msg" aria-label="Messaging">
+      <h3 class="row gap">
+        Welcome
+        <span class="muted" id="msgHint" data-testid="display-msg-hint"></span>
+      </h3>
+      <div id="msgBody" class="muted" data-testid="display-msg-body">
+        Scan the QR code to view live standings and schedule on your device.
       </div>
-
-      <!-- Signup -->
-      <div class="qrbox" data-testid="qrbox-signup">
-        <h3 class="row gap">
-          Signups (Form)
-          <span class="badge" id="signupBadge" data-testid="signup-badge">Loading…</span>
-        </h3>
-        <div id="qrSignup" data-testid="signup-qr">
-          <div class="spinner" aria-label="Loading Signup QR"></div>
-        </div>
-        <small id="signupUrlLabel" class="muted" data-testid="signup-url"></small>
+      <div id="signupBlock" class="row" style="margin-top:16px;" data-testid="display-signup-block"></div>
+      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);">
+        <small class="muted">
+          Last updated: <span id="lastUpdate">--:--</span>
+          <span id="nextUpdate" style="margin-left: 16px;"></span>
+        </small>
       </div>
     </section>
+  </div>
+</section>
 
-    <section aria-label="Poster Tips">
-      <p class="muted" data-testid="poster-tip">
-        We only show a QR code once its link is <strong>verified</strong>. Until then you’ll see the URL as a fallback so you can still share it.
-      </p>
-    </section>
+<!-- [H03] Layout / DOM: Diagnostics -->
+<section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
+  <div class="diag-head">
+    <h2 id="diag-head">Diagnostics</h2>
+    <div class="diag-actions">
+      <label class="diag-checkbox row">
+        <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
+        Live logs
+      </label>
+      <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
+      <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
+    </div>
+  </div>
+  <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
+</section>
+```
 
-    <!-- [H03] Layout / DOM: diagnostics -->
-    <section class="diag collapsed" id="diag" aria-labelledby="diag-head" data-testid="diagnostics">
-      <div class="diag-head">
-        <h2 id="diag-head">Diagnostics</h2>
-        <div class="diag-actions">
-          <label class="diag-checkbox row">
-            <input type="checkbox" id="chkLiveLogs" checked data-testid="diag-live-logs" />
-            Live logs
-          </label>
-          <button class="btn" id="btnClearLogs" data-testid="diag-clear">Clear</button>
-          <button class="btn" id="btnToggleDiag" data-testid="diag-toggle">Expand</button>
-        </div>
-      </div>
-      <div class="diag-body" id="diagBody" role="log" aria-live="polite"></div>
-    </section>
   </main>
 
   <script>
   /* =====================================================
-   * [H04] Params / State / Refs
+   * [H04] State / Params / Refs
    * ===================================================== */
   const SDK = (typeof NUSDK !== 'undefined') ? NUSDK : {
     rpc: (fn, ...args) => new Promise((res, rej)=>{
@@ -125,30 +187,38 @@
 
   const params = new URLSearchParams(location.search);
   const eventKey = params.get('event') || '';
-  const mode = (params.get('mode') || 'image').toLowerCase(); // 'image' | 'text'
+  const refreshInterval = parseInt(params.get('refresh') || '120') * 1000;
+
+  const STATE = {
+    qrVerified: false,
+    lastUrl: '',
+    isOnline: true,
+    lastRefresh: null,
+    refreshTimer: null,
+    wakeLock: null,
+    cachedData: null
+  };
 
   const els = {
-    title: document.getElementById('posterTitle'),
-    date: document.getElementById('eventDate'),
+    title: document.getElementById('title'),
+    namePill: document.getElementById('namePill'),
+    datePill: document.getElementById('datePill'),
     badge: document.getElementById('statusBadge'),
-    modeBadge: document.getElementById('posterModeBadge'),
-
-    qrPublic: document.getElementById('qrPublic'),
-    publicUrlLabel: document.getElementById('publicUrlLabel'),
-    publicBadge: document.getElementById('publicBadge'),
-
-    qrSignup: document.getElementById('qrSignup'),
-    signupUrlLabel: document.getElementById('signupUrlLabel'),
-    signupBadge: document.getElementById('signupBadge'),
-
+    qrState: document.getElementById('qrState'),
+    qr: document.getElementById('qr'),
+    url: document.getElementById('url'),
+    msgBody: document.getElementById('msgBody'),
+    signupBlock: document.getElementById('signupBlock'),
+    lastUpdate: document.getElementById('lastUpdate'),
+    nextUpdate: document.getElementById('nextUpdate'),
+    refreshIndicator: document.getElementById('refreshIndicator'),
+    offlineBanner: document.getElementById('offlineBanner'),
     diag: document.getElementById('diag'),
     diagBody: document.getElementById('diagBody'),
     btnClearLogs: document.getElementById('btnClearLogs'),
     btnToggleDiag: document.getElementById('btnToggleDiag'),
     chkLive: document.getElementById('chkLiveLogs')
   };
-
-  const POLL = { publicMs: 4000, signupMs: 4000, maxMs: 20000, tPub: null, tSign: null };
 
   /* =====================================================
    * [H05] Diagnostics helpers
@@ -159,6 +229,9 @@
     row.className = 'lvl-' + (level || 'info');
     row.textContent = new Date().toLocaleTimeString() + ' — ' + String(msg);
     els.diagBody.appendChild(row);
+    while (els.diagBody.children.length > 100) {
+      els.diagBody.removeChild(els.diagBody.firstChild);
+    }
     els.diagBody.scrollTop = els.diagBody.scrollHeight;
   }
   function setDiagExpanded(expanded){
@@ -167,188 +240,259 @@
   }
 
   /* =====================================================
-   * [H06] UI helpers
+   * [H06] UI helpers (badges, qr/url render)
    * ===================================================== */
-  function setBadge(el, state){
-    // state: loading | absent | url | qr
+  function setQRState(state){
     const map = {
-      loading: { cls:'badge', text:'Loading…' },
-      absent:  { cls:'badge badge-warn', text:'Configure' },
-      url:     { cls:'badge', text:'URL Ready' },
-      qr:      { cls:'badge', text:'Verified QR' }
+      loading:{ cls:'badge', text:'Loading…' },
+      url:    { cls:'badge', text:'URL Ready' },
+      qr:     { cls:'badge', text:'Verified QR' },
+      absent: { cls:'badge badge-warn', text:'Configure' }
     };
-    const b = map[state] || map.loading;
-    el.className = b.cls;
-    el.textContent = b.text;
+    const v = map[state] || map.loading;
+    els.qrState.className = v.cls;
+    els.qrState.textContent = v.text;
   }
-  function renderQRUrl(container, imgUrl, alt){
+  function renderQrFromUrl(imgUrl, alt){
     if (!imgUrl) return;
-    container.innerHTML = `<img alt="${esc(alt||'QR')}" src="${esc(imgUrl)}" data-testid="qr-img" />`;
+    els.qr.innerHTML = `<img alt="${esc(alt||'Public QR')}" src="${esc(imgUrl)}" data-testid="qr-img" />`;
   }
-  function renderURLFallback(container, url){
-    container.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback">${esc(url)}</div>`;
+  function renderURL(url){
+    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback" style="word-break:break-all;font-size:1.1rem;">${esc(url)}</div>`;
   }
-  function renderGuidance(container, text){
-    container.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance">${esc(text)}</div>`;
+  function renderGuidance(txt){
+    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance" style="font-size:1.1rem;">${esc(txt)}</div>`;
   }
 
   /* =====================================================
-   * [H07] Data loaders
+   * [H07] Data loaders (bundle, links/QR)
    * ===================================================== */
-  async function loadPosterMeta(){
-    // Code.gs v4.1.1 getPosterBundle: { ok, eventTag, title, datePretty, posterImageUrl, adminUrl, publicUrl, qr:{form, public} }
-    const r = await retry(()=> rpc('getPosterBundle', eventKey), 3, [300,700,1200]);
+  async function loadBundleAndHeader(){
+    const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
     if (!r?.ok) throw new Error(r?.error || 'bundle failed');
-    els.title.textContent = r.title || '(event)';
-    els.date.textContent  = r.datePretty || '';
-    els.modeBadge.textContent = mode === 'text' ? 'Poster: Text mode' : 'Poster: Image mode';
-    els.badge.innerHTML = ''; // not showing internal phases here
+
+    STATE.cachedData = r;
+    const title = r.title || '(event)';
+    const datePretty = r.datePretty || '';
+
+    els.title.textContent = title;
+    els.namePill.textContent = title;
+    els.datePill.textContent = datePretty;
+    els.badge.innerHTML = '';
+
+    try {
+      const ql = await rpc('getEventQuickLinks', eventKey);
+      const sb = els.signupBlock;
+      sb.replaceChildren();
+      if (ql && ql.formUrlView) {
+        const lbl = document.createElement('div'); 
+        lbl.className='muted'; 
+        lbl.textContent='Sign up online:';
+        lbl.style.fontSize='1.1rem';
+        const a = document.createElement('a'); 
+        a.href=ql.formUrlView; 
+        a.target='_blank'; 
+        a.rel='noopener';
+        a.textContent='Registration Form →';
+        a.style.fontSize='1.2rem';
+        a.style.fontWeight='600';
+        sb.appendChild(lbl); 
+        sb.appendChild(a);
+      } else {
+        const hint = document.createElement('div'); 
+        hint.className='muted'; 
+        hint.textContent='Scan QR code for event details';
+        hint.style.fontSize='1.1rem';
+        sb.appendChild(hint);
+      }
+    } catch (e) {
+      log('quicklinks: ' + (e.message||e), 'warn');
+    }
   }
 
-  // Public: verified-only via getShareQrVerified
-  async function loadPublicOnce(){
-    setBadge(els.publicBadge, 'loading');
-    if (!google?.script?.run?.getShareQrVerified){
-      // Legacy fallback: never show QR; display URL only if quicklinks available
-      try {
-        const ql = await rpc('getEventQuickLinks', eventKey);
-        const url = ql?.publicUrl || '';
-        if (url){
-          renderURLFallback(els.qrPublic, url);
-          els.publicUrlLabel.textContent = url;
-          setBadge(els.publicBadge, 'url');
+  async function loadPublicQROnce(){
+    setQRState('loading');
+
+    if (google?.script?.run?.getShareQrVerified) {
+      const r = await retry(()=> rpc('getShareQrVerified', eventKey), 3, [300,600,1200]);
+      if (r?.ok) {
+        if (r.qrUrlVerified) {
+          renderQrFromUrl(r.qrUrlVerified, 'Public QR');
+          els.url.textContent = r.url || '';
+          els.url.style.fontSize = '1rem';
+          setQRState('qr');
+          STATE.qrVerified = true;
+          return true;
+        } else if (r.url) {
+          if (STATE.lastUrl !== r.url) {
+            renderURL(r.url);
+            els.url.textContent = r.url || '';
+            STATE.lastUrl = r.url;
+          }
+          setQRState('url');
+          STATE.qrVerified = false;
           return false;
         }
-      } catch(e){ /* ignore */ }
-      renderGuidance(els.qrPublic, 'Public link not ready. Configure in Admin.');
-      els.publicUrlLabel.textContent = '';
-      setBadge(els.publicBadge, 'absent');
+      }
+      renderGuidance('Public link not ready. Check Admin.');
+      els.url.textContent = '';
+      setQRState('absent');
+      STATE.qrVerified = false;
       return false;
     }
-    // Preferred path (strict)
-    const r = await retry(()=> rpc('getShareQrVerified', eventKey), 3, [300,600,1200]);
-    if (r?.ok) {
-      if (r.qrUrlVerified) {
-        renderQRUrl(els.qrPublic, r.qrUrlVerified, 'Public QR');
-        els.publicUrlLabel.textContent = r.url || '';
-        setBadge(els.publicBadge, 'qr');
-        return true;
-      } else if (r.url) {
-        renderURLFallback(els.qrPublic, r.url);
-        els.publicUrlLabel.textContent = r.url || '';
-        setBadge(els.publicBadge, 'url');
+
+    try {
+      const ql = await rpc('getEventQuickLinks', eventKey);
+      const url = ql?.publicUrl || '';
+      if (url) {
+        renderURL(url);
+        els.url.textContent = url;
+        setQRState('url');
+        STATE.qrVerified = false;
         return false;
       }
-    }
-    renderGuidance(els.qrPublic, 'Public link not ready. Configure in Admin.');
-    els.publicUrlLabel.textContent = '';
-    setBadge(els.publicBadge, 'absent');
+    } catch(e){ /* ignore */ }
+
+    renderGuidance('Public link not ready. Check Admin.');
+    setQRState('absent');
+    STATE.qrVerified = false;
     return false;
   }
 
-  // Signup: show QR only when shortlink exists (verified), else fallback to URL text
-  async function loadSignupOnce(){
-    setBadge(els.signupBadge, 'loading');
-    try {
-      const ql = await rpc('getEventQuickLinks', eventKey);
-      const url = ql?.formUrlView || '';
-      const qrUrl = (ql?.short && ql.short.form && ql.qr && ql.qr.form) ? ql.qr.form : '';
-      if (qrUrl) {
-        renderQRUrl(els.qrSignup, qrUrl, 'Signup QR');
-        els.signupUrlLabel.textContent = url || '';
-        setBadge(els.signupBadge, 'qr');
-        return true;
+  /* =====================================================
+   * [H08] Auto-refresh & Network monitoring
+   * ===================================================== */
+  function updateOnlineStatus() {
+    const online = navigator.onLine;
+    if (STATE.isOnline !== online) {
+      STATE.isOnline = online;
+      els.offlineBanner.classList.toggle('show', !online);
+      log(`Network status: ${online ? 'online' : 'offline'}`, online ? 'info' : 'warn');
+      if (online) {
+        log('Reconnected - refreshing data', 'info');
+        refreshData();
       }
-      if (url) {
-        renderURLFallback(els.qrSignup, url);
-        els.signupUrlLabel.textContent = url;
-        setBadge(els.signupBadge, 'url');
-        return false;
-      }
-      renderGuidance(els.qrSignup, 'Enable a Google Form in Admin, then repair shortlinks.');
-      els.signupUrlLabel.textContent = '';
-      setBadge(els.signupBadge, 'absent');
-      return false;
-    } catch (e) {
-      renderGuidance(els.qrSignup, 'Unable to resolve signup link right now.');
-      els.signupUrlLabel.textContent = '';
-      setBadge(els.signupBadge, 'absent');
-      return false;
     }
   }
+  
+  window.addEventListener('online', updateOnlineStatus);
+  window.addEventListener('offline', updateOnlineStatus);
 
-  /* =====================================================
-   * [H08] Polling control (exponential-ish backoff until verified)
-   * ===================================================== */
-  function schedulePublicPoll(){
-    clearTimeout(POLL.tPub);
-    POLL.publicMs = Math.min(POLL.publicMs + 2000, POLL.maxMs);
-    POLL.tPub = setTimeout(async () => {
-      try {
-        const ok = await loadPublicOnce();
-        if (!ok) schedulePublicPoll();
-      } catch (e) {
-        log('public poll error: ' + (e.message||e), 'error');
-        schedulePublicPoll();
-      }
-    }, POLL.publicMs);
-  }
-  function scheduleSignupPoll(){
-    clearTimeout(POLL.tSign);
-    POLL.signupMs = Math.min(POLL.signupMs + 2000, POLL.maxMs);
-    POLL.tSign = setTimeout(async () => {
-      try {
-        const ok = await loadSignupOnce();
-        if (!ok) scheduleSignupPoll();
-      } catch (e) {
-        log('signup poll error: ' + (e.message||e), 'error');
-        scheduleSignupPoll();
-      }
-    }, POLL.signupMs);
-  }
-  function stopPolling(){
-    clearTimeout(POLL.tPub); clearTimeout(POLL.tSign);
-    POLL.tPub = POLL.tSign = null;
-  }
-
-  /* =====================================================
-   * [H09] Boot
-   * ===================================================== */
-  document.addEventListener('DOMContentLoaded', async ()=>{
-    setDiagExpanded(false);
-
-    if (!eventKey) {
-      els.title.textContent = '(no event)';
-      els.date.textContent = '';
-      els.modeBadge.textContent = '';
-      renderGuidance(els.qrPublic, 'Add ?event=<id-or-slug> to the URL.');
-      renderGuidance(els.qrSignup, 'Add ?event=<id-or-slug> to the URL.');
-      setBadge(els.publicBadge, 'absent');
-      setBadge(els.signupBadge, 'absent');
+  async function refreshData() {
+    if (!STATE.isOnline) {
+      log('Skipping refresh - offline', 'warn');
       return;
     }
-
-    try { await loadPosterMeta(); } catch(e){ log('loadPosterMeta: '+(e.message||e), 'error'); toast?.error?.('Failed to load event'); }
-
     try {
-      const pubOk = await loadPublicOnce();
-      if (!pubOk) schedulePublicPoll();
-    } catch(e){ log('public first-load: '+(e.message||e), 'error'); schedulePublicPoll(); }
+      els.refreshIndicator.classList.add('active');
+      await loadBundleAndHeader();
+      if (!STATE.qrVerified) {
+        await loadPublicQROnce();
+      }
+      STATE.lastRefresh = new Date();
+      updateTimestamps();
+      log('Data refreshed successfully', 'info');
+    } catch (e) {
+      log(`Refresh failed: ${e.message}`, 'error');
+    } finally {
+      els.refreshIndicator.classList.remove('active');
+    }
+  }
+  
+  function startAutoRefresh() {
+    if (STATE.refreshTimer) {
+      clearInterval(STATE.refreshTimer);
+    }
+    STATE.refreshTimer = setInterval(refreshData, refreshInterval);
+    log(`Auto-refresh enabled: ${refreshInterval / 1000}s interval`, 'info');
+  }
+  
+  function updateTimestamps() {
+    if (STATE.lastRefresh) {
+      els.lastUpdate.textContent = STATE.lastRefresh.toLocaleTimeString();
+      const nextRefresh = new Date(STATE.lastRefresh.getTime() + refreshInterval);
+      els.nextUpdate.textContent = `Next: ${nextRefresh.toLocaleTimeString()}`;
+    }
+  }
+  
+  setInterval(updateTimestamps, 1000);
 
+  /* =====================================================
+   * [H09] Screensaver prevention (Wake Lock)
+   * ===================================================== */
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+      log('Wake Lock API not supported', 'warn');
+      return;
+    }
     try {
-      const signOk = await loadSignupOnce();
-      if (!signOk) scheduleSignupPoll();
-    } catch(e){ log('signup first-load: '+(e.message||e), 'error'); scheduleSignupPoll(); }
-
-    toast?.info?.('Poster ready');
+      STATE.wakeLock = await navigator.wakeLock.request('screen');
+      log('Screen wake lock activated', 'info');
+      STATE.wakeLock.addEventListener('release', () => {
+        log('Screen wake lock released', 'warn');
+      });
+    } catch (e) {
+      log(`Wake lock error: ${e.message}`, 'error');
+    }
+  }
+  
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && STATE.wakeLock === null) {
+      await requestWakeLock();
+    }
   });
 
   /* =====================================================
-   * [H10] Cleanup + diag controls
+   * [H10] Boot (DOMContentLoaded)
    * ===================================================== */
-  window.addEventListener('beforeunload', stopPolling);
+  document.addEventListener('DOMContentLoaded', async ()=>{
+    setDiagExpanded(false);
+    await requestWakeLock();
+    updateOnlineStatus();
+
+    if (!eventKey){
+      els.title.textContent = '(no event)';
+      els.namePill.textContent = '(name)';
+      els.datePill.textContent = '(date)';
+      renderGuidance('Add ?event=<id-or-slug> to the URL.');
+      setQRState('absent');
+      return;
+    }
+
+    try {
+      await loadBundleAndHeader();
+      STATE.lastRefresh = new Date();
+      updateTimestamps();
+    } catch(e){
+      log('loadBundle: ' + (e.message || e), 'error');
+      if (!STATE.isOnline && STATE.cachedData) {
+        log('Using cached data (offline mode)', 'warn');
+      }
+    }
+
+    try {
+      await loadPublicQROnce();
+    } catch(e){
+      log('loadPublicQROnce: ' + (e.message || e), 'error');
+      renderGuidance('Error loading Public link.');
+      setQRState('absent');
+    }
+    
+    startAutoRefresh();
+    log(`Display ready - refresh interval: ${refreshInterval/1000}s`, 'info');
+  });
+
+  /* =====================================================
+   * [H11] Diagnostics controls & cleanup
+   * ===================================================== */
   document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
   document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
+  
+  window.addEventListener('beforeunload', () => {
+    if (STATE.refreshTimer) clearInterval(STATE.refreshTimer);
+    if (STATE.wakeLock) STATE.wakeLock.release();
+  });
   </script>
+
 </body>
 </html>
