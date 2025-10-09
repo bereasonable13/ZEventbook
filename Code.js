@@ -143,6 +143,11 @@ function clearLogs() {
   } catch (e) { return { ok:false, error:String(e) }; }
 }
 
+function createEventbook(payload){
+  const rl = checkRateLimit_('create');
+  if (!rl.ok) return {ok:false, phase:'ratelimit', error:rl.error};
+  return _createEventbookImpl(payload);
+}
 /************************************************************
 * [S03] Config Helpers (cfgGet_/Set_, base URLs, IDs)
 ************************************************************/
