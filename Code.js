@@ -87,6 +87,39 @@ const DIAG = {
   }
 };
 
+/* ===== Rate Limiting ===== */
+const RATE_LIMITS = {
+  create: { window: 60000, max: 5 },  // 5 creates per minute
+  read: { window: 60000, max: 30 }    // 30 reads per minute
+};
+
+function checkRateLimit_(action) {
+  const cache = CacheService.getUserCache();
+  const key = 'ratelimit_' + action;
+  const data = cache.get(key);
+  
+  const now = Date.now();
+  const limit = RATE_LIMITS[action] || RATE_LIMITS.read;
+  
+  if (!data) {
+    cache.put(key, JSON.stringify({count:1, start:now}), Math.ceil(limit.window/1000));
+    return {ok:true};
+  }
+  
+  const state = JSON.parse(data);
+  if (now - state.start > limit.window) {
+    cache.put(key, JSON.stringify({count:1, start:now}), Math.ceil(limit.window/1000));
+    return {ok:true};
+  }
+  
+  if (state.count >= limit.max) {
+    return {ok:false, error:'Rate limit exceeded. Try again in ' + Math.ceil((limit.window-(now-state.start))/1000) + 's'};
+  }
+  
+  state.count++;
+  cache.put(key, JSON.stringify(state), Math.ceil(limit.window/1000));
+  return {ok:true};
+}
 /** Admin.html diagnostics buttons expect these: */
 function getLogs(maxRows) {
   try {
