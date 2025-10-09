@@ -713,23 +713,35 @@ const Shortlinks = {
     if (!target) return '';
     const props = PropertiesService.getScriptProperties();
     const map = JSON.parse(props.getProperty(SHORT_KEY_MAP)||'{}');
+    
     let token = map[key];
     if (!token){
-      token = this._token(`${key}|${target}`);
+      token = this._generateSecureToken();
       map[key] = token;
       props.setProperty(SHORT_KEY_MAP, JSON.stringify(map));
     }
+    
     const tmap = JSON.parse(props.getProperty(SHORT_TARGET_MAP)||'{}');
     tmap[token] = target;
     props.setProperty(SHORT_TARGET_MAP, JSON.stringify(tmap));
     return this.url(token);
   },
+  
+  _generateSecureToken(){
+    // Cryptographically secure 12-char token
+    const bytes = Utilities.getUuid().replace(/-/g,'');
+    return Utilities.base64EncodeWebSafe(bytes).slice(0,12);
+  },
+  
   resolve(token){
     const tmap = JSON.parse(PropertiesService.getScriptProperties().getProperty(SHORT_TARGET_MAP)||'{}');
     return tmap[token] || null;
   },
-  url(token){ const base = cfgPubUrl_(); return `${base}?page=R&t=${encodeURIComponent(token)}`; },
-  _token(raw){ return Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, raw)).slice(0,10); }
+  
+  url(token){ 
+    const base = cfgPubUrl_(); 
+    return `${base}?page=R&t=${encodeURIComponent(token)}`;
+  }
 };
 function shortFor_(eventId, type, targetUrl){ if(!targetUrl) return ''; return Shortlinks.set(`${type}:${eventId}`, targetUrl); }
 const QR = { image(url){ if(!url) return ''; return `https://quickchart.io/qr?text=${encodeURIComponent(url)}&margin=2&size=300`; } };
