@@ -1,17 +1,17 @@
 <!--
 /************************************************************
-* NextUp · Display.html — Suite Index
-* [H01] Head / Meta (title, viewport, styles)
-* [H02] Inline Styles (TV-optimized layout)
-* [H03] Layout / DOM (header, stage, diag, indicators)
-* [H04] State / Params / Refs
-* [H05] Diagnostics helpers
-* [H06] UI helpers (badges, qr/url render)
-* [H07] Data loaders (bundle, links/QR)
-* [H08] Auto-refresh & Network monitoring
-* [H09] Screensaver prevention (Wake Lock)
+* NextUp · Poster.html — Multi-Config Analytics Suite
+* [H01] Head / Meta (title, styles, SDK)
+* [H02] Inline Styles (responsive grid layout)
+* [H03] Layout / DOM (header, poster image, qr grid, diagnostics)
+* [H04] Params / State / Refs (poster ID, geo tracking)
+* [H05] Diagnostics helpers (live log, expand/collapse)
+* [H06] UI helpers (badges, QR/URL render, guidance)
+* [H07] Data loaders (poster config, QR verification)
+* [H08] Analytics tracking (scan events, geo logging)
+* [H09] One-shot verification (no polling)
 * [H10] Boot (DOMContentLoaded)
-* [H11] Diagnostics controls & cleanup
+* [H11] Cleanup + diag controls
 ************************************************************/
 -->
 
@@ -20,133 +20,158 @@
 <html lang="en">
 <head>
   <!-- [H01] Head / Meta -->
-  <meta charset="utf-8"/>
-  <title><?= appTitle ?> · Display</title>
+  <meta charset="utf-8" />
+  <title><?= appTitle ?> · Poster</title>
   <?!= include('Styles'); ?>
   <?!= include('NuSdk'); ?>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 
-  <!-- [H02] Inline Styles (TV-optimized) -->
+  <!-- [H02] Inline Styles -->
 
   <style>
-    body { cursor: none; } /* Hide cursor on TV displays */
-    .tv { max-width: 1920px; margin: 0 auto; padding: 24px; }
-    .stage {
-      display: grid;
-      grid-template-columns: 400px 1fr;
-      gap: 24px;
-      align-items: start;
+    .poster { max-width: 1200px; margin: 0 auto; padding: 16px; }
+    
+    /* Poster image section */
+    .poster-image-section {
+      margin: 24px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--card);
+      border: 1px solid var(--line);
     }
+    .poster-image-section img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    .no-poster-image {
+      padding: 40px;
+      text-align: center;
+      color: var(--muted);
+    }
+    
+    /* QR grid - responsive for up to 3 QR codes */
+    .qrgrid { 
+      display: grid; 
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px; 
+      align-items: start; 
+    }
+    
     .qrbox { 
       border: 2px solid var(--line); 
-      border-radius: 16px; 
-      background: #fff; 
-      padding: 24px;
-      min-height: 400px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
+      border-radius: 12px; 
+      padding: 16px; 
+      background: var(--card);
+      transition: border-color 0.2s;
     }
+    
+    .qrbox.verified {
+      border-color: var(--ok);
+    }
+    
     .qrbox img { 
       display: block; 
       width: 100%; 
-      max-width: 350px;
-      height: auto;
-      margin: 0 auto;
+      max-width: 280px; 
+      height: auto; 
+      margin: 12px auto;
       image-rendering: crisp-edges;
     }
-    .panel { border: 2px solid var(--line); border-radius: 16px; background: var(--card); padding: 24px; }
-    .msg { border: 2px dashed var(--line); border-radius: 12px; padding: 20px; background: var(--bg); font-size: 1.1rem; line-height: 1.6; }
-    .msg h3 { margin-top: 0; font-size: 1.3rem; }
     
-    header h1 { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .slug { display: flex; flex-wrap: wrap; gap: 0.75rem; color: var(--fg); }
-    .slug .pill { border: 2px solid var(--line); border-radius: 999px; padding: 6px 16px; font-weight: 700; font-size: 1.1rem; background: var(--card); }
-
+    .qrbox h3 {
+      margin-top: 0;
+      font-size: 1.1rem;
+    }
+    
+    .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .gap { gap: 8px; }
     .muted { color: var(--muted); }
-    .row { display: flex; align-items: center; gap: 12px; }
-    .gap { gap: 12px; }
     
-    /* High contrast mode for projectors */
-    @media (prefers-contrast: high), screen and (min-width: 1400px) {
-      .qrbox, .panel { border-width: 3px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
-      h1, h2, h3 { font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .qr-fallback { 
+      padding: 12px; 
+      border: 1px dashed var(--line); 
+      border-radius: 8px; 
+      word-break: break-all;
+      font-size: 0.9rem;
+      background: var(--bg);
     }
     
-    /* Network status indicators */
-    .refresh-indicator {
-      position: fixed; top: 20px; right: 20px;
-      background: var(--card); border: 2px solid var(--line); border-radius: 8px;
-      padding: 8px 16px; font-size: 0.9rem; opacity: 0; transition: opacity 0.3s; z-index: 1000;
+    /* Analytics info */
+    .analytics-info {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--line);
+      font-size: 0.85rem;
     }
-    .refresh-indicator.active { opacity: 1; }
     
-    .offline-banner {
-      position: fixed; top: 0; left: 0; right: 0;
-      background: var(--warn-bg); color: var(--warn);
-      padding: 12px; text-align: center; font-weight: 700;
-      display: none; z-index: 2000;
+    .analytics-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 4px 0;
     }
-    .offline-banner.show { display: block; }
-
-    @media (max-width: 1200px) { .stage { grid-template-columns: 1fr; } }
-    @media print { .diag, .actions, .refresh-indicator, .offline-banner { display: none !important; } }
+    
+    /* Poster metadata */
+    .poster-meta {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }
+    
+    @media (max-width: 760px) { 
+      .qrgrid { grid-template-columns: 1fr; } 
+    }
+    
+    @media print { 
+      .pfbar, .diag, .actions, .poster-meta { display: none !important; } 
+    }
   </style>
 
 </head>
-<body data-tv="1">
-  <!-- [H03] Layout / DOM: Network indicators -->
-  <div class="offline-banner" id="offlineBanner">
-    Connection lost. Displaying cached data. Reconnecting...
-  </div>
-  <div class="refresh-indicator" id="refreshIndicator">Updating...</div>
-
-  <main class="tv container">
+<body>
+  <main class="poster">
     <!-- [H03] Layout / DOM: Header -->
     <header>
-      <h1 id="title" data-testid="display-title">(event)</h1>
+      <h1 id="posterTitle" data-testid="poster-title">(event)</h1>
       <div class="meta">
-        <div class="slug">
-          <span class="pill" id="namePill" data-testid="display-name">(name)</span>
-          <span class="pill" id="datePill" data-testid="display-date">(date)</span>
-        </div>
-        <span id="statusBadge" style="margin-left:8px;" data-testid="display-status"></span>
+        <small id="eventDate" data-testid="poster-date"></small>
+        <span id="statusBadge" style="margin-left:8px;" data-testid="poster-status"></span>
       </div>
     </header>
 
 ```
-<!-- [H03] Layout / DOM: Stage -->
-<section class="stage" aria-label="Display layout">
-  <div class="qrbox" data-testid="display-public-card">
-    <h2 class="row gap">
-      Public Access
-      <span id="qrState" class="badge" data-testid="display-public-badge">Loading…</span>
-    </h2>
-    <div id="qr" data-testid="display-public-qr">
-      <div class="spinner" aria-label="Loading Public QR"></div>
+<!-- [H03] Layout / DOM: Poster metadata -->
+<div class="poster-meta" id="posterMetaSection" style="display:none;">
+  <div class="row" style="justify-content: space-between;">
+    <div>
+      <strong>Poster ID:</strong> <code id="posterId"></code>
     </div>
-    <small id="url" class="muted" data-testid="display-public-url"></small>
+    <div>
+      <strong>Location:</strong> <span id="posterLocation"></span>
+    </div>
   </div>
+  <div style="margin-top: 8px;">
+    <strong>Active QR Codes:</strong> <span id="activeQrCount">0</span> of <span id="totalQrCount">0</span>
+  </div>
+</div>
 
-  <div class="panel" data-testid="display-info-card">
-    <h2>Event Information</h2>
-    <section class="msg" aria-label="Messaging">
-      <h3 class="row gap">
-        Welcome
-        <span class="muted" id="msgHint" data-testid="display-msg-hint"></span>
-      </h3>
-      <div id="msgBody" class="muted" data-testid="display-msg-body">
-        Scan the QR code to view live standings and schedule on your device.
-      </div>
-      <div id="signupBlock" class="row" style="margin-top:16px;" data-testid="display-signup-block"></div>
-      <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line);">
-        <small class="muted">
-          Last updated: <span id="lastUpdate">--:--</span>
-          <span id="nextUpdate" style="margin-left: 16px;"></span>
-        </small>
-      </div>
-    </section>
-  </div>
+<!-- [H03] Layout / DOM: Poster image (configurable) -->
+<section class="poster-image-section" id="posterImageSection" style="display:none;">
+  <img id="posterImage" alt="Event Poster" data-testid="poster-image" />
+</section>
+
+<!-- [H03] Layout / DOM: QR grid (up to 3 configurable) -->
+<section class="qrgrid" id="qrGrid" aria-label="Poster QR Codes">
+  <!-- Dynamically populated based on configuration -->
+</section>
+
+<section aria-label="Poster Information">
+  <p class="muted" data-testid="poster-tip">
+    QR codes appear only when verified and working. Each code includes analytics tracking for performance monitoring.
+  </p>
 </section>
 
 <!-- [H03] Layout / DOM: Diagnostics -->
@@ -170,7 +195,7 @@
 
   <script>
   /* =====================================================
-   * [H04] State / Params / Refs
+   * [H04] Params / State / Refs (poster ID, geo tracking)
    * ===================================================== */
   const SDK = (typeof NUSDK !== 'undefined') ? NUSDK : {
     rpc: (fn, ...args) => new Promise((res, rej)=>{
@@ -187,38 +212,39 @@
 
   const params = new URLSearchParams(location.search);
   const eventKey = params.get('event') || '';
-  const refreshInterval = parseInt(params.get('refresh') || '120') * 1000;
-
+  const posterId = params.get('poster') || 'default'; // Unique poster identifier
+  
   const STATE = {
-    qrVerified: false,
-    lastUrl: '',
-    isOnline: true,
-    lastRefresh: null,
-    refreshTimer: null,
-    wakeLock: null,
-    cachedData: null
+    posterId,
+    posterConfig: null,
+    qrConfigs: [],
+    geoLocation: null,
+    sessionId: generateSessionId(),
+    pageLoadTime: Date.now()
   };
 
   const els = {
-    title: document.getElementById('title'),
-    namePill: document.getElementById('namePill'),
-    datePill: document.getElementById('datePill'),
+    title: document.getElementById('posterTitle'),
+    date: document.getElementById('eventDate'),
     badge: document.getElementById('statusBadge'),
-    qrState: document.getElementById('qrState'),
-    qr: document.getElementById('qr'),
-    url: document.getElementById('url'),
-    msgBody: document.getElementById('msgBody'),
-    signupBlock: document.getElementById('signupBlock'),
-    lastUpdate: document.getElementById('lastUpdate'),
-    nextUpdate: document.getElementById('nextUpdate'),
-    refreshIndicator: document.getElementById('refreshIndicator'),
-    offlineBanner: document.getElementById('offlineBanner'),
+    posterMetaSection: document.getElementById('posterMetaSection'),
+    posterId: document.getElementById('posterId'),
+    posterLocation: document.getElementById('posterLocation'),
+    activeQrCount: document.getElementById('activeQrCount'),
+    totalQrCount: document.getElementById('totalQrCount'),
+    posterImageSection: document.getElementById('posterImageSection'),
+    posterImage: document.getElementById('posterImage'),
+    qrGrid: document.getElementById('qrGrid'),
     diag: document.getElementById('diag'),
     diagBody: document.getElementById('diagBody'),
     btnClearLogs: document.getElementById('btnClearLogs'),
     btnToggleDiag: document.getElementById('btnToggleDiag'),
     chkLive: document.getElementById('chkLiveLogs')
   };
+
+  function generateSessionId() {
+    return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
 
   /* =====================================================
    * [H05] Diagnostics helpers
@@ -234,263 +260,369 @@
     }
     els.diagBody.scrollTop = els.diagBody.scrollHeight;
   }
+  
   function setDiagExpanded(expanded){
     els.diag.classList.toggle('collapsed', !expanded);
     els.btnToggleDiag.textContent = expanded ? 'Collapse' : 'Expand';
   }
 
   /* =====================================================
-   * [H06] UI helpers (badges, qr/url render)
+   * [H06] UI helpers (badges, QR/URL render, guidance)
    * ===================================================== */
-  function setQRState(state){
+  function createQRBox(config) {
+    const box = document.createElement('div');
+    box.className = 'qrbox';
+    box.id = `qrbox-${config.id}`;
+    box.dataset.qrId = config.id;
+    
+    box.innerHTML = `
+      <h3 class="row gap">
+        ${esc(config.label)}
+        <span class="badge" id="badge-${config.id}">Loading…</span>
+      </h3>
+      <div id="qr-${config.id}" class="qr-container">
+        <div class="spinner" aria-label="Loading ${esc(config.label)} QR"></div>
+      </div>
+      <small id="url-${config.id}" class="muted"></small>
+      <div class="analytics-info" id="analytics-${config.id}" style="display:none;">
+        <div class="analytics-row">
+          <span class="muted">QR ID:</span>
+          <code>${config.id}</code>
+        </div>
+        <div class="analytics-row">
+          <span class="muted">Type:</span>
+          <span>${config.type}</span>
+        </div>
+      </div>
+    `;
+    
+    return box;
+  }
+
+  function setBadge(qrId, state){
+    const badgeEl = document.getElementById(`badge-${qrId}`);
+    if (!badgeEl) return;
+    
     const map = {
-      loading:{ cls:'badge', text:'Loading…' },
-      url:    { cls:'badge', text:'URL Ready' },
-      qr:     { cls:'badge', text:'Verified QR' },
-      absent: { cls:'badge badge-warn', text:'Configure' }
+      loading: { cls:'badge', text:'Loading…' },
+      absent:  { cls:'badge badge-warn', text:'Not Configured' },
+      url:     { cls:'badge', text:'URL Only' },
+      qr:      { cls:'badge', text:'Active' },
+      error:   { cls:'badge badge-warn', text:'Error' }
     };
-    const v = map[state] || map.loading;
-    els.qrState.className = v.cls;
-    els.qrState.textContent = v.text;
+    const b = map[state] || map.loading;
+    badgeEl.className = b.cls;
+    badgeEl.textContent = b.text;
   }
-  function renderQrFromUrl(imgUrl, alt){
-    if (!imgUrl) return;
-    els.qr.innerHTML = `<img alt="${esc(alt||'Public QR')}" src="${esc(imgUrl)}" data-testid="qr-img" />`;
+  
+  function renderQR(qrId, imgUrl, alt){
+    const container = document.getElementById(`qr-${qrId}`);
+    if (!container || !imgUrl) return;
+    container.innerHTML = `<img alt="${esc(alt||'QR Code')}" src="${esc(imgUrl)}" />`;
+    
+    // Mark parent box as verified
+    const box = document.getElementById(`qrbox-${qrId}`);
+    if (box) box.classList.add('verified');
+    
+    // Show analytics
+    const analytics = document.getElementById(`analytics-${qrId}`);
+    if (analytics) analytics.style.display = 'block';
   }
-  function renderURL(url){
-    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-fallback" style="word-break:break-all;font-size:1.1rem;">${esc(url)}</div>`;
+  
+  function renderURL(qrId, url){
+    const container = document.getElementById(`qr-${qrId}`);
+    const urlLabel = document.getElementById(`url-${qrId}`);
+    if (!container) return;
+    
+    container.innerHTML = `<div class="qr-fallback">${esc(url)}</div>`;
+    if (urlLabel) urlLabel.textContent = url;
   }
-  function renderGuidance(txt){
-    els.qr.innerHTML = `<div class="qr-fallback" data-testid="qr-guidance" style="font-size:1.1rem;">${esc(txt)}</div>`;
+  
+  function renderGuidance(qrId, text){
+    const container = document.getElementById(`qr-${qrId}`);
+    if (!container) return;
+    container.innerHTML = `<div class="qr-fallback">${esc(text)}</div>`;
   }
 
   /* =====================================================
-   * [H07] Data loaders (bundle, links/QR)
+   * [H07] Data loaders (poster config, QR verification)
    * ===================================================== */
-  async function loadBundleAndHeader(){
-    const r = await retry(()=> rpc('getPublicBundle', eventKey), 3, [300,700,1200]);
-    if (!r?.ok) throw new Error(r?.error || 'bundle failed');
-
-    STATE.cachedData = r;
-    const title = r.title || '(event)';
-    const datePretty = r.datePretty || '';
-
-    els.title.textContent = title;
-    els.namePill.textContent = title;
-    els.datePill.textContent = datePretty;
-    els.badge.innerHTML = '';
-
+  async function loadPosterConfig(){
     try {
-      const ql = await rpc('getEventQuickLinks', eventKey);
-      const sb = els.signupBlock;
-      sb.replaceChildren();
-      if (ql && ql.formUrlView) {
-        const lbl = document.createElement('div'); 
-        lbl.className='muted'; 
-        lbl.textContent='Sign up online:';
-        lbl.style.fontSize='1.1rem';
-        const a = document.createElement('a'); 
-        a.href=ql.formUrlView; 
-        a.target='_blank'; 
-        a.rel='noopener';
-        a.textContent='Registration Form →';
-        a.style.fontSize='1.2rem';
-        a.style.fontWeight='600';
-        sb.appendChild(lbl); 
-        sb.appendChild(a);
-      } else {
-        const hint = document.createElement('div'); 
-        hint.className='muted'; 
-        hint.textContent='Scan QR code for event details';
-        hint.style.fontSize='1.1rem';
-        sb.appendChild(hint);
+      const config = await retry(()=> rpc('getPosterConfig', eventKey, posterId), 3, [300,700,1200]);
+      if (!config?.ok) throw new Error(config?.error || 'config load failed');
+      
+      STATE.posterConfig = config;
+      
+      // Update header
+      els.title.textContent = config.title || '(event)';
+      els.date.textContent = config.datePretty || '';
+      
+      // Update poster metadata
+      if (config.posterMeta) {
+        els.posterMetaSection.style.display = 'block';
+        els.posterId.textContent = posterId;
+        els.posterLocation.textContent = config.posterMeta.location || 'Not specified';
       }
+      
+      // Load poster image if configured
+      if (config.posterImageUrl) {
+        els.posterImageSection.style.display = 'block';
+        els.posterImage.src = config.posterImageUrl;
+        log(`Poster image loaded: ${config.posterImageUrl}`, 'info');
+      }
+      
+      // Store QR configurations (up to 3)
+      STATE.qrConfigs = config.qrCodes || [];
+      els.totalQrCount.textContent = STATE.qrConfigs.length;
+      
+      log(`Poster config loaded: ${STATE.qrConfigs.length} QR codes configured`, 'info');
+      return config;
+      
     } catch (e) {
-      log('quicklinks: ' + (e.message||e), 'warn');
+      log(`Config load error: ${e.message}`, 'error');
+      throw e;
     }
   }
 
-  async function loadPublicQROnce(){
-    setQRState('loading');
-
-    if (google?.script?.run?.getShareQrVerified) {
-      const r = await retry(()=> rpc('getShareQrVerified', eventKey), 3, [300,600,1200]);
-      if (r?.ok) {
-        if (r.qrUrlVerified) {
-          renderQrFromUrl(r.qrUrlVerified, 'Public QR');
-          els.url.textContent = r.url || '';
-          els.url.style.fontSize = '1rem';
-          setQRState('qr');
-          STATE.qrVerified = true;
-          return true;
-        } else if (r.url) {
-          if (STATE.lastUrl !== r.url) {
-            renderURL(r.url);
-            els.url.textContent = r.url || '';
-            STATE.lastUrl = r.url;
-          }
-          setQRState('url');
-          STATE.qrVerified = false;
-          return false;
-        }
-      }
-      renderGuidance('Public link not ready. Check Admin.');
-      els.url.textContent = '';
-      setQRState('absent');
-      STATE.qrVerified = false;
-      return false;
-    }
-
+  async function verifyQRCode(qrConfig) {
+    const qrId = qrConfig.id;
+    setBadge(qrId, 'loading');
+    
     try {
-      const ql = await rpc('getEventQuickLinks', eventKey);
-      const url = ql?.publicUrl || '';
-      if (url) {
-        renderURL(url);
-        els.url.textContent = url;
-        setQRState('url');
-        STATE.qrVerified = false;
+      // Call appropriate verification endpoint based on QR type
+      let result;
+      
+      if (qrConfig.type === 'public') {
+        result = await retry(()=> rpc('getShareQrVerified', eventKey), 3, [300,600,1200]);
+      } else if (qrConfig.type === 'signup') {
+        const ql = await retry(()=> rpc('getEventQuickLinks', eventKey), 3, [300,600,1200]);
+        result = {
+          ok: !!ql?.formUrlView,
+          url: ql?.formUrlView || '',
+          qrUrlVerified: (ql?.short?.form && ql?.qr?.form) ? ql.qr.form : ''
+        };
+      } else if (qrConfig.type === 'custom') {
+        // Custom QR type - verify via generic endpoint
+        result = await retry(()=> rpc('verifyCustomQR', eventKey, qrId), 3, [300,600,1200]);
+      }
+      
+      if (result?.ok && result.qrUrlVerified) {
+        // QR verified and ready
+        renderQR(qrId, result.qrUrlVerified, qrConfig.label);
+        const urlLabel = document.getElementById(`url-${qrId}`);
+        if (urlLabel) urlLabel.textContent = result.url || '';
+        setBadge(qrId, 'qr');
+        
+        // Track successful display
+        await trackQRDisplay(qrId, 'verified', result.url);
+        
+        log(`QR ${qrId} verified and displayed`, 'info');
+        return true;
+        
+      } else if (result?.url) {
+        // URL available but QR not verified
+        renderURL(qrId, result.url);
+        setBadge(qrId, 'url');
+        
+        await trackQRDisplay(qrId, 'url_only', result.url);
+        
+        log(`QR ${qrId} showing URL fallback`, 'warn');
+        return false;
+        
+      } else {
+        // Not configured or error
+        renderGuidance(qrId, qrConfig.notConfiguredMessage || 'Not configured');
+        setBadge(qrId, 'absent');
+        
+        await trackQRDisplay(qrId, 'not_configured', null);
+        
+        log(`QR ${qrId} not configured`, 'warn');
         return false;
       }
-    } catch(e){ /* ignore */ }
-
-    renderGuidance('Public link not ready. Check Admin.');
-    setQRState('absent');
-    STATE.qrVerified = false;
-    return false;
+      
+    } catch (e) {
+      renderGuidance(qrId, 'Error loading QR code');
+      setBadge(qrId, 'error');
+      log(`QR ${qrId} verification error: ${e.message}`, 'error');
+      return false;
+    }
   }
 
   /* =====================================================
-   * [H08] Auto-refresh & Network monitoring
+   * [H08] Analytics tracking (scan events, geo logging)
    * ===================================================== */
-  function updateOnlineStatus() {
-    const online = navigator.onLine;
-    if (STATE.isOnline !== online) {
-      STATE.isOnline = online;
-      els.offlineBanner.classList.toggle('show', !online);
-      log(`Network status: ${online ? 'online' : 'offline'}`, online ? 'info' : 'warn');
-      if (online) {
-        log('Reconnected - refreshing data', 'info');
-        refreshData();
-      }
+  async function initializeGeolocation() {
+    if (!navigator.geolocation) {
+      log('Geolocation not supported', 'warn');
+      return null;
     }
+    
+    return new Promise((resolve) => {
+      const options = {
+        enableHighAccuracy: false,
+        timeout: 5000,
+        maximumAge: 300000 // Cache for 5 minutes
+      };
+      
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          STATE.geoLocation = {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: position.timestamp
+          };
+          log(`Geolocation acquired: ${STATE.geoLocation.latitude}, ${STATE.geoLocation.longitude}`, 'info');
+          resolve(STATE.geoLocation);
+        },
+        (error) => {
+          log(`Geolocation error: ${error.message}`, 'warn');
+          resolve(null);
+        },
+        options
+      );
+    });
   }
-  
-  window.addEventListener('online', updateOnlineStatus);
-  window.addEventListener('offline', updateOnlineStatus);
 
-  async function refreshData() {
-    if (!STATE.isOnline) {
-      log('Skipping refresh - offline', 'warn');
-      return;
-    }
-    try {
-      els.refreshIndicator.classList.add('active');
-      await loadBundleAndHeader();
-      if (!STATE.qrVerified) {
-        await loadPublicQROnce();
+  async function trackQRDisplay(qrId, displayState, url) {
+    const event = {
+      eventType: 'qr_display',
+      posterId: STATE.posterId,
+      qrId,
+      displayState,
+      url,
+      sessionId: STATE.sessionId,
+      timestamp: new Date().toISOString(),
+      geo: STATE.geoLocation,
+      userAgent: navigator.userAgent,
+      screenSize: {
+        width: window.screen.width,
+        height: window.screen.height
+      },
+      viewport: {
+        width: window.innerWidth,
+        height: window.innerHeight
       }
-      STATE.lastRefresh = new Date();
-      updateTimestamps();
-      log('Data refreshed successfully', 'info');
+    };
+    
+    try {
+      await rpc('logPosterAnalytics', eventKey, event);
+      log(`Analytics tracked: ${qrId} - ${displayState}`, 'info');
     } catch (e) {
-      log(`Refresh failed: ${e.message}`, 'error');
-    } finally {
-      els.refreshIndicator.classList.remove('active');
+      log(`Analytics tracking failed: ${e.message}`, 'warn');
+      // Don't fail the display if analytics fail
     }
   }
-  
-  function startAutoRefresh() {
-    if (STATE.refreshTimer) {
-      clearInterval(STATE.refreshTimer);
+
+  async function trackPageView() {
+    const event = {
+      eventType: 'poster_view',
+      posterId: STATE.posterId,
+      sessionId: STATE.sessionId,
+      timestamp: new Date().toISOString(),
+      geo: STATE.geoLocation,
+      referrer: document.referrer,
+      loadTime: Date.now() - STATE.pageLoadTime
+    };
+    
+    try {
+      await rpc('logPosterAnalytics', eventKey, event);
+      log('Page view tracked', 'info');
+    } catch (e) {
+      log(`Page view tracking failed: ${e.message}`, 'warn');
     }
-    STATE.refreshTimer = setInterval(refreshData, refreshInterval);
-    log(`Auto-refresh enabled: ${refreshInterval / 1000}s interval`, 'info');
   }
-  
-  function updateTimestamps() {
-    if (STATE.lastRefresh) {
-      els.lastUpdate.textContent = STATE.lastRefresh.toLocaleTimeString();
-      const nextRefresh = new Date(STATE.lastRefresh.getTime() + refreshInterval);
-      els.nextUpdate.textContent = `Next: ${nextRefresh.toLocaleTimeString()}`;
-    }
-  }
-  
-  setInterval(updateTimestamps, 1000);
 
   /* =====================================================
-   * [H09] Screensaver prevention (Wake Lock)
+   * [H09] One-shot verification (no polling)
    * ===================================================== */
-  async function requestWakeLock() {
-    if (!('wakeLock' in navigator)) {
-      log('Wake Lock API not supported', 'warn');
+  async function verifyAllQRCodes() {
+    if (!STATE.qrConfigs.length) {
+      log('No QR codes configured', 'warn');
       return;
     }
-    try {
-      STATE.wakeLock = await navigator.wakeLock.request('screen');
-      log('Screen wake lock activated', 'info');
-      STATE.wakeLock.addEventListener('release', () => {
-        log('Screen wake lock released', 'warn');
-      });
-    } catch (e) {
-      log(`Wake lock error: ${e.message}`, 'error');
-    }
+    
+    // Render QR boxes
+    els.qrGrid.innerHTML = '';
+    STATE.qrConfigs.forEach(config => {
+      const box = createQRBox(config);
+      els.qrGrid.appendChild(box);
+    });
+    
+    // Verify all QR codes in parallel
+    const results = await Promise.all(
+      STATE.qrConfigs.map(config => 
+        verifyQRCode(config).catch(e => {
+          log(`QR ${config.id} verification exception: ${e.message}`, 'error');
+          return false;
+        })
+      )
+    );
+    
+    // Update active count
+    const activeCount = results.filter(r => r === true).length;
+    els.activeQrCount.textContent = activeCount;
+    
+    log(`QR verification complete: ${activeCount} of ${STATE.qrConfigs.length} active`, 'info');
   }
-  
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && STATE.wakeLock === null) {
-      await requestWakeLock();
-    }
-  });
 
   /* =====================================================
    * [H10] Boot (DOMContentLoaded)
    * ===================================================== */
   document.addEventListener('DOMContentLoaded', async ()=>{
     setDiagExpanded(false);
-    await requestWakeLock();
-    updateOnlineStatus();
 
-    if (!eventKey){
+    if (!eventKey) {
       els.title.textContent = '(no event)';
-      els.namePill.textContent = '(name)';
-      els.datePill.textContent = '(date)';
-      renderGuidance('Add ?event=<id-or-slug> to the URL.');
-      setQRState('absent');
+      els.date.textContent = '';
+      log('No event key provided in URL', 'error');
       return;
     }
 
-    try {
-      await loadBundleAndHeader();
-      STATE.lastRefresh = new Date();
-      updateTimestamps();
-    } catch(e){
-      log('loadBundle: ' + (e.message || e), 'error');
-      if (!STATE.isOnline && STATE.cachedData) {
-        log('Using cached data (offline mode)', 'warn');
-      }
-    }
+    log(`Poster initialized: ${posterId}`, 'info');
+    
+    // Initialize geolocation (async, non-blocking)
+    initializeGeolocation();
 
     try {
-      await loadPublicQROnce();
-    } catch(e){
-      log('loadPublicQROnce: ' + (e.message || e), 'error');
-      renderGuidance('Error loading Public link.');
-      setQRState('absent');
+      // Load poster configuration
+      await loadPosterConfig();
+      
+      // Verify and display QR codes
+      await verifyAllQRCodes();
+      
+      // Track page view
+      await trackPageView();
+      
+      log('Poster ready', 'info');
+      
+    } catch(e) {
+      log(`Poster initialization failed: ${e.message}`, 'error');
+      toast?.error?.('Failed to load poster configuration');
     }
-    
-    startAutoRefresh();
-    log(`Display ready - refresh interval: ${refreshInterval/1000}s`, 'info');
   });
 
   /* =====================================================
-   * [H11] Diagnostics controls & cleanup
+   * [H11] Cleanup + diag controls
    * ===================================================== */
   document.getElementById('btnClearLogs').onclick = ()=> els.diagBody.replaceChildren();
   document.getElementById('btnToggleDiag').onclick = ()=> setDiagExpanded(els.diag.classList.contains('collapsed'));
   
-  window.addEventListener('beforeunload', () => {
-    if (STATE.refreshTimer) clearInterval(STATE.refreshTimer);
-    if (STATE.wakeLock) STATE.wakeLock.release();
+  // Track page unload
+  window.addEventListener('beforeunload', async () => {
+    const sessionDuration = Date.now() - STATE.pageLoadTime;
+    try {
+      await rpc('logPosterAnalytics', eventKey, {
+        eventType: 'poster_unload',
+        posterId: STATE.posterId,
+        sessionId: STATE.sessionId,
+        sessionDuration,
+        timestamp: new Date().toISOString()
+      });
+    } catch (e) {
+      // Silent fail on unload
+    }
   });
   </script>
 
