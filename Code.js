@@ -143,11 +143,7 @@ function clearLogs() {
   } catch (e) { return { ok:false, error:String(e) }; }
 }
 
-function createEventbook(payload){
-  const rl = checkRateLimit_('create');
-  if (!rl.ok) return {ok:false, phase:'ratelimit', error:rl.error};
-  return _createEventbookImpl(payload);
-}
+
 /************************************************************
 * [S03] Config Helpers (cfgGet_/Set_, base URLs, IDs)
 ************************************************************/
@@ -524,7 +520,11 @@ function eventWorkbookTitle_(name, slug, dateISO, id){
   const safeSlug = (String(slug||'event').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'')) || 'event';
   return `NextUp · ${safeName} · ${safeDate} · ${safeSlug}`;
 }
-function createEventbook(payload){ return _createEventbookImpl(payload); }
+function createEventbook(payload){
+  const rl = checkRateLimit_('create');
+  if (!rl.ok) return {ok:false, phase:'ratelimit', error:rl.error};
+  return _createEventbookImpl(payload);
+}
 function createEventV2(payload){ return _createEventbookImpl(payload); } // back-compat
 function createEvent(payload){   return _createEventbookImpl(payload); } // back-compat
 
