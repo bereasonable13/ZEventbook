@@ -433,6 +433,50 @@ function getEventsSafe(etagOpt){
 /** Back-compat alias (same unified envelope) */
 function getEventbooksSafe(etagOpt){ return getEventsSafe(etagOpt); }
 
+/* ===== Input Validation Layer ===== */
+const VALIDATORS = {
+  eventName: (v) => {
+    const s = String(v||'').trim();
+    if (!s) return {valid:false, error:'Name required'};
+    if (s.length > 200) return {valid:false, error:'Name too long (max 200)'};
+    if (/<script|javascript:|on\w+=/i.test(s)) return {valid:false, error:'Invalid characters'};
+    return {valid:true, value:s};
+  },
+  
+  dateISO: (v) => {
+    const s = String(v||'').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return {valid:false, error:'Date format: YYYY-MM-DD'};
+    const d = new Date(s);
+    if (isNaN(d.getTime())) return {valid:false, error:'Invalid date'};
+    return {valid:true, value:s};
+  },
+  
+  eventKey: (v) => {
+    const s = String(v||'').trim();
+    if (!s) return {valid:false, error:'Event key required'};
+    if (s.length > 100) return {valid:false, error:'Key too long'};
+    if (/[<>"'`]/.test(s)) return {valid:false, error:'Invalid characters'};
+    return {valid:true, value:s};
+  },
+  
+  seedMode: (v) => {
+    const allowed = ['random','seeded'];
+    if (!allowed.includes(v)) return {valid:false, error:'Invalid seed mode'};
+    return {valid:true, value:v};
+  },
+  
+  elimType: (v) => {
+    const allowed = ['single','double','none'];
+    if (!allowed.includes(v)) return {valid:false, error:'Invalid elim type'};
+    return {valid:true, value:v};
+  }
+};
+
+function validateInput_(type, value) {
+  const validator = VALIDATORS[type];
+  if (!validator) return {valid:true, value}; // Unknown type passes through
+  return validator(value);
+}
 /************************************************************
 * [S07] Eventbook Creation (workbook-first, idempotent)
 ************************************************************/
