@@ -561,7 +561,7 @@ function findControlByNameOrAlias_(){
 }
 
 function ensureControlWorkbook_(){
-  let id = cfgGet_(
+  const id = cfgGet_(
     CFG_KEYS.CONTROL_ID, 
     (typeof EVENTS_SPREADSHEET_ID!=='undefined' ? EVENTS_SPREADSHEET_ID : '')
   );
@@ -611,7 +611,7 @@ function ensureEventsHeaders_(controlId){
 }
 
 function ensureEventTemplate_(){
-  let id = cfgGet_(CFG_KEYS.TEMPLATE_ID, EVENT_TEMPLATE_ID);
+  const id = cfgGet_(CFG_KEYS.TEMPLATE_ID, EVENT_TEMPLATE_ID);
   if (id) { 
     try { 
       SpreadsheetApp.openById(id); 
@@ -640,7 +640,7 @@ function ensurePosterDefaults_(tmplId){
 }
 
 function ensureEventsFolder_(){
-  let id = cfgGet_(CFG_KEYS.EVENTS_DIR, EVENTS_ROOT_FOLDER_ID);
+  const id = cfgGet_(CFG_KEYS.EVENTS_DIR, EVENTS_ROOT_FOLDER_ID);
   if (id) { 
     try { 
       DriveApp.getFolderById(id); 
@@ -2417,8 +2417,8 @@ function encodePlusCode_(lat, lon) {
   lat = Math.max(-LAT_MAX, Math.min(LAT_MAX, lat));
   lon = ((lon + LON_MAX) % 360) - LON_MAX;
   
-  let latVal = (lat + LAT_MAX) * 8000;
-  let lonVal = (lon + LON_MAX) * 8000;
+  const latVal = (lat + LAT_MAX) * 8000;
+  const lonVal = (lon + LON_MAX) * 8000;
   
   let code = '';
   for (let i = 0; i < 5; i++) {
