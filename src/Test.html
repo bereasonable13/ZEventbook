@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title><?= appTitle ?> · Tests</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <?!= include('Styles'); ?>
+  <?!= include('NUSDK'); ?>
+  <style>
+    .test-result {
+      padding: 10px;
+      margin: 5px 0;
+      border-left: 4px solid #ddd;
+      background: var(--bg-surface);
+    }
+    .test-pass {
+      border-color: #4caf50;
+      background: rgba(76, 175, 80, 0.1);
+    }
+    .test-fail {
+      border-color: #f44336;
+      background: rgba(244, 67, 54, 0.1);
+    }
+    .test-warn {
+      border-color: #ff9800;
+      background: rgba(255, 152, 0, 0.1);
+    }
+    .test-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    .test-message {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+    .test-duration {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      float: right;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1><?= appTitle ?> Test Suite</h1>
+    <small id="build" class="muted">Build: <?= BUILD_ID ?></small>
+  </header>
+
+  <section class="card">
+    <h2>Test Controls</h2>
+    <div class="row">
+      <button id="btn-run-all" class="btn-primary">Run All Tests</button>
+      <button id="btn-run-contract" class="btn-secondary">Contract Tests</button>
+      <button id="btn-clear" class="btn-secondary">Clear Results</button>
+    </div>
+    <p class="muted" style="margin-top:10px;">
+      <strong>Note:</strong> If tests fail with rate limits, wait 60 seconds and try again.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>Test Results</h2>
+    <div id="test-summary" style="margin-bottom:20px;">
+      <strong>Status:</strong> <span id="status-text">Ready</span>
+    </div>
+    <div id="test-results"></div>
+  </section>
+</div>
+
+<script>
+const TestRunner = {
+  results: [],
+  isRunning: false,
+  
+  async runAll() {
+    if (this.isRunning) {
+      alert('Tests already running. Please wait...');
+      return;
+    }
+    
+    this.isRunning = true;
+    this.clear();
+    this.setStatus('Running...');
+    this.disableButtons();
+    
+    const startTime = performance.now();
+    
+    await this.runContractTests();
+    
+    const duration = performance.now() - startTime;
+    const passed = this.results.filter(r => r.status === 'PASS').length;
+    const failed = this.results.filter(r => r.status === 'FAIL').length;
+    const warnings = this.results.filter(r => r.status === 'WARN').length;
+    
+    this.setStatus(`Complete - ${passed} passed, ${failed} failed, ${warnings} warnings (${duration.toFixed(0)}ms)`);
+    this.enableButtons();
+    this.isRunning = false;
+  },
+  
+  async runContractTests() {
+    this.addResult('Contract Tests', 'Validating API contracts...', 'info');
+    
+    try {
+      const result = await NU.rpc('runContractTests');
+      
+      // Check for rate limit
+      if (result.code === 429) {
+        this.addResult(
+          'Contract Tests', 
+          `Rate limited. Wait ${result.retryAfter || 60} seconds and try again.`,
+          'FAIL'
+        );
+        return;
+      }
+      
+      if (result.results) {
+        result.results.forEach(test => {
+          this.addResult(
+            test.contract,
+            test.message,
+            test.passed ? 'PASS' : 'FAIL',
+            test.duration
+          );
+        });
+      }
+      
+    } catch (err) {
+      const errorStr = String(err);
+      if (errorStr.includes('429') || errorStr.includes('Rate limit')) {
+        this.addResult('Contract Tests', 'Rate limited. Wait 60 seconds and try again.', 'FAIL');
+      } else {
+        this.addResult('Contract Tests', 'Failed: ' + err, 'FAIL');
+      }
+    }
+  },
+  
+  addResult(name, message, status, duration) {
+    const result = { name, message, status, duration };
+    this.results.push(result);
+    this.renderResult(result);
+  },
+  
+  renderResult(result) {
+    const container = document.getElementById('test-results');
+    const div = document.createElement('div');
+    
+    let className = 'test-result';
+    if (result.status === 'PASS') className += ' test-pass';
+    if (result.status === 'FAIL') className += ' test-fail';
+    if (result.status === 'WARN') className += ' test-warn';
+    
+    div.className = className;
+    
+    let html = `<div class="test-name">${result.name}`;
+    if (result.duration) {
+      html += `<span class="test-duration">${result.duration.toFixed(0)}ms</span>`;
+    }
+    html += `</div>`;
+    html += `<div class="test-message">${result.message}</div>`;
+    
+    div.innerHTML = html;
+    container.appendChild(div);
+  },
+  
+  clear() {
+    this.results = [];
+    document.getElementById('test-results').innerHTML = '';
+  },
+  
+  setStatus(text) {
+    document.getElementById('status-text').textContent = text;
+  },
+  
+  disableButtons() {
+    document.getElementById('btn-run-all').disabled = true;
+    document.getElementById('btn-run-contract').disabled = true;
+  },
+  
+  enableButtons() {
+    document.getElementById('btn-run-all').disabled = false;
+    document.getElementById('btn-run-contract').disabled = false;
+  }
+};
+
+// Wire buttons
+document.getElementById('btn-run-all').onclick = () => TestRunner.runAll();
+document.getElementById('btn-run-contract').onclick = () => TestRunner.runContractTests();
+document.getElementById('btn-clear').onclick = () => {
+  TestRunner.clear();
+  TestRunner.setStatus('Ready');
+};
+</script>
+
+</body>
+</html>
