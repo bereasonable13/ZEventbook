@@ -2303,7 +2303,7 @@ function statusCheck_(id,label,status,detail){
 
 function finalizeSection_(title, checks){
   const sevOrder = { red:3, yellow:2, green:1 };
-  const worst = 'green';
+  let worst = 'green';
   for (let i=0;i<checks.length;i++){ 
     const s = checks[i].status || 'green'; 
     if (sevOrder[s] > sevOrder[worst]) worst = s; 
