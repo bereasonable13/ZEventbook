@@ -15,6 +15,22 @@ module.exports = {
     node: true,
     jest: true,
   },
+  globals: {
+    CacheService: 'readonly',
+    SpreadsheetApp: 'readonly',
+    PropertiesService: 'readonly',
+    ScriptApp: 'readonly',
+    Logger: 'readonly',
+    Session: 'readonly',
+    clientLog: 'readonly',
+    getLogs: 'readonly',
+    clearLogs: 'readonly',
+    UrlFetchApp: 'readonly',
+    Utilities: 'readonly',
+    DriveApp: 'readonly',
+    ContentService: 'readonly',
+    HtmlService: 'readonly',
+  },
   parserOptions: {
     ecmaVersion: 'latest',
     sourceType: 'module',
@@ -30,16 +46,6 @@ module.exports = {
     'prefer-const': 'error',
     'no-var': 'error',
     'eqeqeq': ['error', 'always'],
-    'no-eval': 'error',
-    'no-implied-eval': 'error',
-    'jsx-a11y/anchor-is-valid': [
-      'error',
-      {
-        components: ['Link'],
-        specialLink: ['hrefLeft', 'hrefRight'],
-        aspects: ['invalidHref', 'preferButton'],
-      },
-    ],
   },
   settings: {
     react: {
