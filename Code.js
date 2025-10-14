@@ -2302,10 +2302,10 @@ function statusCheck_(id,label,status,detail){
 }
 
 function finalizeSection_(title, checks){
-  var sevOrder = { red:3, yellow:2, green:1 };
-  var worst = 'green';
-  for (var i=0;i<checks.length;i++){ 
-    var s = checks[i].status || 'green'; 
+  const sevOrder = { red:3, yellow:2, green:1 };
+  const worst = 'green';
+  for (let i=0;i<checks.length;i++){ 
+    const s = checks[i].status || 'green'; 
     if (sevOrder[s] > sevOrder[worst]) worst = s; 
   }
   return { 
