@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Config files that aren't JS
+*.json
+appsscript.js
+src/appsscript.json
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+
+# Test coverage
+coverage/
+
+# Logs
+*.log
