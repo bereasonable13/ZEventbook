@@ -115,14 +115,14 @@ class DeploymentVerifier {
   /**
    * Check file naming conventions
    */
-  checkFileNaming() {
-    // Check for HealthCheck vs Healthcheck
-    const healthFile = path.join(this.projectDir, 'HealthCheck.html');
-    const healthFileWrong = path.join(this.projectDir, 'Healthcheck.html');
-    
-    if (fs.existsSync(healthFileWrong)) {
-      this.errors.push('Found "Healthcheck.html" but Code.gs expects "HealthCheck.html" (capital C)');
-      this.fixes.push('Rename Healthcheck.html → HealthCheck.html');
+    checkFileNaming() {
+      // Check for HealthCheck vs Healthcheck
+      const healthFileWrong = path.join(this.projectDir, 'Healthcheck.html');
+      
+      if (fs.existsSync(healthFileWrong)) {
+        this.errors.push('Found "Healthcheck.html" but Code.gs expects "HealthCheck.html" (capital C)');
+        this.fixes.push('Rename Healthcheck.html → HealthCheck.html');
+      }
     }
     
     // Check for -FIXED suffix files
