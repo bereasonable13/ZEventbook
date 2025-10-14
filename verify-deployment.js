@@ -115,37 +115,23 @@ class DeploymentVerifier {
   /**
    * Check file naming conventions
    */
-  checkFileNaming() {
-    const healthFileWrong = path.join(this.projectDir, 'Healthcheck.html');
-    
-    if (fs.existsSync(healthFileWrong)) {
-      this.errors.push('Found "Healthcheck.html" but Code.gs expects "HealthCheck.html" (capital C)');
-      this.fixes.push('Rename Healthcheck.html → HealthCheck.html');
+    checkFileNaming() {
+      // Check for HealthCheck vs Healthcheck
+      const healthFileWrong = path.join(this.projectDir, 'Healthcheck.html');
+      
+      if (fs.existsSync(healthFileWrong)) {
+        this.errors.push('Found "Healthcheck.html" but Code.gs expects "HealthCheck.html" (capital C)');
+        this.fixes.push('Rename Healthcheck.html → HealthCheck.html');
+      }
     }
     
+    // Check for -FIXED suffix files
     const files = fs.readdirSync(this.projectDir).filter(f => f.endsWith('-FIXED.html'));
     if (files.length > 0) {
       this.warnings.push(`Found ${files.length} files with -FIXED suffix: ${files.join(', ')}`);
       this.fixes.push('Remove -FIXED suffix from production files');
     }
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-    if (files.length > 0) {
-      this.warnings.push(`Found ${files.length} files with -FIXED suffix: ${files.join(', ')}`);
-      this.fixes.push('Remove -FIXED suffix from production files');
-    }
-  }
+  
 
   /**
    * Check Code.gs for syntax errors
