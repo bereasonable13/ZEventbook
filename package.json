@@ -14,7 +14,6 @@
     "test:unit": "jest --testPathPattern=tests/unit --passWithNoTests",
     "test:integration": "jest --testPathPattern=tests/integration --passWithNoTests",
     "test:e2e": "playwright test",
-    "test:mobile": "npx @lhci/cli@0.14.0 autorun --config=./lighthouserc-mobile.json",
     "test:smoke": "playwright test --grep @smoke",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
