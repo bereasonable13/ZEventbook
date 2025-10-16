@@ -1,14 +1,7 @@
 module.exports = {
-  extends: [
-    'next/core-web-vitals',
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react-hooks/recommended',
-    'plugin:jsx-a11y/recommended',
-    'plugin:jest/recommended',
-    'prettier'
-  ],
-  plugins: ['react', 'react-hooks', 'jsx-a11y', 'jest'],
+  root: true,
+  extends: ['eslint:recommended', 'plugin:jest/recommended', 'prettier'],
+  plugins: ['jest'],
   env: {
     browser: true,
     es2021: true,
@@ -44,19 +37,12 @@ module.exports = {
     },
   },
   rules: {
-    'react/react-in-jsx-scope': 'off',
-    'react/prop-types': 'off',
-    'no-console': 'off',           // TURN OFF - allow console statements
+    'no-console': 'off',
     'no-unused-vars': 'warn',
     'prefer-const': 'warn',
-    'no-var': 'warn',
-    'eqeqeq': ['error', 'always'],
+    'no-var': 'error',
+    eqeqeq: ['error', 'always'],
     'no-empty': 'warn',
     'no-undef': 'warn',
-  },
-  settings: {
-    react: {
-      version: 'detect',
-    },
   },
 };

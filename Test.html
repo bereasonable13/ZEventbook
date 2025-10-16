@@ -154,6 +154,36 @@
     /* =======================================================
      * A) CONSTANTS & LABELS
      * ======================================================= */
+    if (typeof window !== 'undefined' && typeof window.google === 'undefined') {
+      const runProxy = new Proxy(
+        {},
+        {
+          get(_target, prop) {
+            if (prop === 'withSuccessHandler') {
+              return (handler) => {
+                runProxy._success = handler;
+                return runProxy;
+              };
+            }
+
+            if (prop === 'withFailureHandler') {
+              return () => runProxy;
+            }
+
+            return (...args) => {
+              if (typeof runProxy._success === 'function') {
+                const payload = { ok: true, status: 200, functionName: prop, args };
+                setTimeout(() => runProxy._success(payload), 0);
+              }
+              return runProxy;
+            };
+          },
+        }
+      );
+
+      window.google = { script: { run: runProxy } };
+    }
+
     const THRESH = { GREEN_MS: 90000, YELLOW_MS: 180000 }; // 90s / 180s
     const SLA = {
       BARE_NOPOSTER: 'TtL w/o Form · No Poster',

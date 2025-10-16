@@ -111,6 +111,9 @@ jobs:
         DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
         NODE_ENV: test
 
+    - name: Run deployment verifier
+      run: npm run verify
+
   # Job 4: E2E Tests
   e2e-tests:
     name: E2E Tests

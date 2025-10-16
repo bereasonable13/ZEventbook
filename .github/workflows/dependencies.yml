@@ -37,7 +37,9 @@ jobs:
     - name: Run tests
       run: |
         npm ci
-        npm test
+        npm run lint
+        npm run test:unit
+        npm run verify
         
     - name: Create Pull Request
       uses: peter-evans/create-pull-request@v5

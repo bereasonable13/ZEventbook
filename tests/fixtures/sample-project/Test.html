@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <?!= include('Styles'); ?>
+    <script>
+      function init() {
+        const results = document.querySelector('[data-testid="sla-results"]');
+        results.textContent = 'ready';
+      }
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    </script>
+  </head>
+  <body>
+    <section data-testid="test-preflight">
+      <button data-testid="btn-smoke" onclick="google.script.run.createEventbook()">Smoke</button>
+      <button data-testid="btn-selftests" onclick="google.script.run.getEventsSafe()">Contracts</button>
+    </section>
+    <section>
+      <button data-testid="btn-sla-mock">SLA</button>
+      <div data-testid="sla-results"></div>
+      <div class="diag" data-testid="diag-pane"></div>
+    </section>
+  </body>
+</html>

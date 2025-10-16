@@ -264,6 +264,17 @@ function clientLog(entry) {
   }
 }
 
+if (typeof module !== 'undefined') {
+  module.exports = {
+    envelope_,
+    ok_,
+    notModified_,
+    rateLimited_,
+    serverError_,
+    calculateBackoffSchedule_,
+  };
+}
+
 function getLogs(maxRows) {
   const started = Date.now();
   try {

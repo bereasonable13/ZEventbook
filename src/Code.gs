@@ -1841,3 +1841,14 @@ function ping() {
     user: Session.getEffectiveUser().getEmail() || 'anonymous'
   };
 }
+
+if (typeof module !== 'undefined') {
+  module.exports = {
+    envelope_,
+    ok_,
+    notModified_,
+    rateLimited_,
+    serverError_,
+    calculateBackoffSchedule_,
+  };
+}
