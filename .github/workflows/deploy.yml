@@ -1,0 +1,33 @@
+name: Deploy to Google Apps Script
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm ci
+    
+    - name: Run verification
+      run: node verify-deployment.js src/
+    
+    - name: Run linting
+      run: npm run lint
+      continue-on-error: true
+    
+    - name: Run tests
+      run: npm test
+      continue-on-error: true
