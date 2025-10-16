@@ -109,9 +109,12 @@ class DeploymentVerifier {
       } else {
         this.passes.push(`✓ ${file} exists`);
       }
-  /**
     });
-  /** Check file naming conventions
+  }
+
+  /**
+   * Check file naming conventions
+   */
    */
   checkFileNaming() {
     // Check for HealthCheck vs Healthcheck
