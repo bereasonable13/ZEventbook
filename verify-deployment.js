@@ -111,7 +111,7 @@ class DeploymentVerifier {
       }
   /**
     });
-   * Check file naming conventions
+  /** Check file naming conventions
    */
   checkFileNaming() {
     // Check for HealthCheck vs Healthcheck
@@ -131,9 +131,6 @@ class DeploymentVerifier {
   }
       this.warnings.push(`Found ${files.length} files with -FIXED suffix: ${files.join(', ')}`);
       this.fixes.push('Remove -FIXED suffix from production files');
-    }
-  
-
   /**
    * Check Code.gs for syntax errors
    */
