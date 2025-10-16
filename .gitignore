@@ -7,3 +7,8 @@ npm-debug.log*
 dist/
 build/
 .next/
+
+# Tokens and secrets
+*token*.txt
+*secret*.txt
+*.token
