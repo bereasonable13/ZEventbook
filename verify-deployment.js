@@ -110,6 +110,7 @@ class DeploymentVerifier {
         this.passes.push(`✓ ${file} exists`);
       }
   /**
+    });
    * Check file naming conventions
    */
   checkFileNaming() {
