@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * NextUp Pre-Deployment Verification System
+ * ZEventbook Pre-Deployment Verification System
  * 
  * Runs comprehensive checks BEFORE code reaches Apps Script
  * Catches issues at development time, not production time
  * 
- * Usage: node verify-deployment.js [--fix]
+ * Usage: node verify-deployment.js <project-dir>
+ * 
+ * @version 1.0.0
+ * @author ZEventbook Team
  */
 
 const fs = require('fs');
@@ -22,13 +25,61 @@ const colors = {
   cyan: '\x1b[36m'
 };
 
+// Configuration constants
+const CONFIG = {
+  MAX_FILE_SIZE_KB: 100,
+  REQUIRED_FILES: [
+    'Code.gs',
+    'Styles.html',
+    'NUSDK.html',
+    'Admin.html',
+    'Display.html',
+    'Public.html',
+    'Poster.html',
+    'Test.html',
+    'HealthCheck.html',
+    'appsscript.json'
+  ],
+  CRITICAL_FUNCTIONS: [
+    'getEventsSafe',
+    'createEventbook',
+    'getPublicBundle',
+    'getShareQrVerified'
+  ]
+};
+
 class DeploymentVerifier {
   constructor(projectDir) {
-    this.projectDir = projectDir;
+    this.projectDir = path.resolve(projectDir);
     this.errors = [];
     this.warnings = [];
     this.passes = [];
     this.fixes = [];
+    this.exportedFunctions = [];
+  }
+
+  /**
+   * Validate project directory exists and is accessible
+   */
+  validateProjectDirectory() {
+    try {
+      if (!fs.existsSync(this.projectDir)) {
+        throw new Error(`Project directory does not exist: ${this.projectDir}`);
+      }
+      
+      const stats = fs.statSync(this.projectDir);
+      if (!stats.isDirectory()) {
+        throw new Error(`Path is not a directory: ${this.projectDir}`);
+      }
+      
+      // Test read access
+      fs.readdirSync(this.projectDir);
+      
+      return true;
+    } catch (err) {
+      console.error(`${colors.red}✗ Cannot access project directory:${colors.reset}`, err.message);
+      return false;
+    }
   }
 
   /**
@@ -36,73 +87,96 @@ class DeploymentVerifier {
    */
   async verify() {
     console.log(`${colors.cyan}═══════════════════════════════════════${colors.reset}`);
-    console.log(`${colors.cyan}   NextUp Deployment Verification${colors.reset}`);
+    console.log(`${colors.cyan}   ZEventbook Deployment Verification${colors.reset}`);
     console.log(`${colors.cyan}═══════════════════════════════════════${colors.reset}\n`);
+    console.log(`Project: ${this.projectDir}\n`);
 
-    // Phase 1: File Structure
-    console.log(`${colors.blue}[Phase 1] Verifying File Structure...${colors.reset}`);
-    this.checkRequiredFiles();
-    this.checkFileNaming();
-    
-    // Phase 2: Code Quality
-    console.log(`\n${colors.blue}[Phase 2] Checking Code Quality...${colors.reset}`);
-    this.checkCodeGsSyntax();
-    this.checkFunctionExports();
-    this.checkHtmlSyntax();
-    
-    // Phase 3: Dependencies
-    console.log(`\n${colors.blue}[Phase 3] Analyzing Dependencies...${colors.reset}`);
-    this.checkIncludes();
-    this.checkRpcCalls();
-    this.checkCircularDependencies();
-    
-    // Phase 4: Contracts
-    console.log(`\n${colors.blue}[Phase 4] Verifying API Contracts...${colors.reset}`);
-    this.checkFunctionSignatures();
-    this.checkResponseStructures();
-    this.checkErrorHandling();
-    
-    // Phase 5: UX Patterns
-    console.log(`\n${colors.blue}[Phase 5] Validating UX Patterns...${colors.reset}`);
-    this.checkNavigationPatterns();
-    this.checkModalPatterns();
-    this.checkInlineResults();
-    
-    // Phase 6: Performance
-    console.log(`\n${colors.blue}[Phase 6] Checking Performance...${colors.reset}`);
-    this.checkFileSize();
-    this.checkDuplication();
-    
-    // Results
-    this.printResults();
-    
-    return {
-      success: this.errors.length === 0,
-      errors: this.errors,
-      warnings: this.warnings,
-      passes: this.passes,
-      fixes: this.fixes
-    };
+    // Validate project directory first
+    if (!this.validateProjectDirectory()) {
+      return {
+        success: false,
+        errors: ['Invalid project directory'],
+        warnings: [],
+        passes: [],
+        fixes: []
+      };
+    }
+
+    try {
+      // Phase 1: File Structure
+      console.log(`${colors.blue}[Phase 1] Verifying File Structure...${colors.reset}`);
+      this.checkRequiredFiles();
+      this.checkFileNaming();
+      
+      // Phase 2: Code Quality
+      console.log(`\n${colors.blue}[Phase 2] Checking Code Quality...${colors.reset}`);
+      this.checkCodeGsSyntax();
+      this.checkFunctionExports();
+      this.checkHtmlSyntax();
+      
+      // Phase 3: Dependencies
+      console.log(`\n${colors.blue}[Phase 3] Analyzing Dependencies...${colors.reset}`);
+      this.checkIncludes();
+      this.checkRpcCalls();
+      this.checkCircularDependencies();
+      
+      // Phase 4: Contracts
+      console.log(`\n${colors.blue}[Phase 4] Verifying API Contracts...${colors.reset}`);
+      this.checkFunctionSignatures();
+      this.checkResponseStructures();
+      this.checkErrorHandling();
+      
+      // Phase 5: UX Patterns
+      console.log(`\n${colors.blue}[Phase 5] Validating UX Patterns...${colors.reset}`);
+      this.checkNavigationPatterns();
+      this.checkModalPatterns();
+      this.checkInlineResults();
+      
+      // Phase 6: Performance
+      console.log(`\n${colors.blue}[Phase 6] Checking Performance...${colors.reset}`);
+      this.checkFileSize();
+      this.checkDuplication();
+      
+      // Results
+      this.printResults();
+      
+      return {
+        success: this.errors.length === 0,
+        errors: this.errors,
+        warnings: this.warnings,
+        passes: this.passes,
+        fixes: this.fixes
+      };
+    } catch (err) {
+      console.error(`${colors.red}✗ Verification failed:${colors.reset}`, err.message);
+      this.errors.push(`Fatal error: ${err.message}`);
+      return {
+        success: false,
+        errors: this.errors,
+        warnings: this.warnings,
+        passes: this.passes,
+        fixes: this.fixes
+      };
+    }
+  }
+
+  /**
+   * Safely read file with error handling
+   */
+  safeReadFile(filepath) {
+    try {
+      return fs.readFileSync(filepath, 'utf8');
+    } catch (err) {
+      this.errors.push(`Cannot read file ${path.basename(filepath)}: ${err.message}`);
+      return null;
+    }
   }
 
   /**
    * Check that all required files exist
    */
   checkRequiredFiles() {
-    const required = [
-      'Code.gs',
-      'Styles.html',
-      'NUSDK.html',
-      'Admin.html',
-      'Display.html',
-      'Public.html',
-      'Poster.html',
-      'Test.html',
-      'HealthCheck.html',
-      'appsscript.json'
-    ];
-
-    required.forEach(file => {
+    CONFIG.REQUIRED_FILES.forEach(file => {
       const filepath = path.join(this.projectDir, file);
       if (!fs.existsSync(filepath)) {
         this.errors.push(`Missing required file: ${file}`);
@@ -115,7 +189,6 @@ class DeploymentVerifier {
   /**
    * Check file naming conventions
    */
-   */
   checkFileNaming() {
     // Check for HealthCheck vs Healthcheck
     const healthFileWrong = path.join(this.projectDir, 'Healthcheck.html');
@@ -126,14 +199,17 @@ class DeploymentVerifier {
     }
     
     // Check for -FIXED suffix files
-    const files = fs.readdirSync(this.projectDir).filter(f => f.endsWith('-FIXED.html'));
-    if (files.length > 0) {
-      this.warnings.push(`Found ${files.length} files with -FIXED suffix: ${files.join(', ')}`);
-      this.fixes.push('Remove -FIXED suffix from production files');
+    try {
+      const files = fs.readdirSync(this.projectDir).filter(f => f.endsWith('-FIXED.html'));
+      if (files.length > 0) {
+        this.warnings.push(`Found ${files.length} files with -FIXED suffix: ${files.join(', ')}`);
+        this.fixes.push('Remove -FIXED suffix from production files');
+      }
+    } catch (err) {
+      this.warnings.push(`Cannot scan for -FIXED files: ${err.message}`);
     }
   }
-      this.warnings.push(`Found ${files.length} files with -FIXED suffix: ${files.join(', ')}`);
-      this.fixes.push('Remove -FIXED suffix from production files');
+
   /**
    * Check Code.gs for syntax errors
    */
@@ -141,7 +217,8 @@ class DeploymentVerifier {
     const codeFile = path.join(this.projectDir, 'Code.gs');
     if (!fs.existsSync(codeFile)) return;
     
-    const content = fs.readFileSync(codeFile, 'utf8');
+    const content = this.safeReadFile(codeFile);
+    if (!content) return;
     
     // Check for unclosed braces
     const openBraces = (content.match(/{/g) || []).length;
@@ -172,7 +249,7 @@ class DeploymentVerifier {
     }
     
     // Check for doGet function
-    if (content.includes('function doGet(e)')) {
+    if (content.includes('function doGet(e)') || content.includes('function doGet(')) {
       this.passes.push('✓ Code.gs has doGet() function');
     } else {
       this.errors.push('Code.gs: Missing doGet() function - app will not load');
@@ -186,7 +263,9 @@ class DeploymentVerifier {
     const codeFile = path.join(this.projectDir, 'Code.gs');
     if (!fs.existsSync(codeFile)) return;
     
-    const content = fs.readFileSync(codeFile, 'utf8');
+    const content = this.safeReadFile(codeFile);
+    if (!content) return;
+    
     const functionRegex = /^function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(/gm;
     const functions = [];
     let match;
@@ -209,12 +288,18 @@ class DeploymentVerifier {
    * Check HTML files for syntax errors
    */
   checkHtmlSyntax() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html'));
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir).filter(f => f.endsWith('.html'));
+    } catch (err) {
+      this.errors.push(`Cannot read HTML files: ${err.message}`);
+      return;
+    }
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
       // Check for unclosed tags
       const openTags = (content.match(/<(?!\/)[a-z][^>]*>/gi) || []).length;
@@ -232,7 +317,7 @@ class DeploymentVerifier {
         const scriptIndex = content.indexOf('<script>');
         const includeIndex = includeMatch ? content.indexOf(includeMatch[0]) : -1;
         
-        if (includeIndex > scriptIndex) {
+        if (includeIndex > scriptIndex && scriptIndex !== -1 && includeIndex !== -1) {
           this.errors.push(`${file}: include() call AFTER <script> tag - will not work`);
           this.fixes.push(`${file}: Move include() calls to <head> before any <script> tags`);
         }
@@ -244,12 +329,17 @@ class DeploymentVerifier {
    * Check that all include() calls reference existing files
    */
   checkIncludes() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html'));
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir).filter(f => f.endsWith('.html'));
+    } catch (err) {
+      return;
+    }
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
       const includeRegex = /<?!=\s*include\(['"]([^'"]+)['"]\)\s*\?>/g;
       let match;
@@ -271,16 +361,22 @@ class DeploymentVerifier {
    * Check that all NU.rpc() calls reference existing functions
    */
   checkRpcCalls() {
-    if (!this.exportedFunctions) return;
+    if (!this.exportedFunctions || this.exportedFunctions.length === 0) return;
     
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html') && f !== 'NUSDK.html');
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.html') && f !== 'NUSDK.html');
+    } catch (err) {
+      return;
+    }
     
     const allCalls = {};
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
       const rpcRegex = /NU\.rpc\(['"]([a-zA-Z_][a-zA-Z0-9_]*)['"][\s,)]/g;
       let match;
@@ -322,14 +418,19 @@ class DeploymentVerifier {
    * Check for circular include dependencies
    */
   checkCircularDependencies() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html'));
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir).filter(f => f.endsWith('.html'));
+    } catch (err) {
+      return;
+    }
     
     const dependencies = {};
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
       const includeRegex = /<?!=\s*include\(['"]([^'"]+)['"]\)\s*\?>/g;
       const includes = [];
@@ -342,16 +443,20 @@ class DeploymentVerifier {
       dependencies[file.replace('.html', '')] = includes;
     });
     
-    // Check for circular deps (simplified - could be more thorough)
+    // Check for circular deps
+    let foundCircular = false;
     Object.entries(dependencies).forEach(([file, includes]) => {
       includes.forEach(inc => {
         if (dependencies[inc] && dependencies[inc].includes(file)) {
           this.errors.push(`Circular dependency: ${file} ↔ ${inc}`);
+          foundCircular = true;
         }
       });
     });
     
-    this.passes.push('✓ No circular dependencies detected');
+    if (!foundCircular) {
+      this.passes.push('✓ No circular dependencies detected');
+    }
   }
 
   /**
@@ -361,17 +466,10 @@ class DeploymentVerifier {
     const codeFile = path.join(this.projectDir, 'Code.gs');
     if (!fs.existsSync(codeFile)) return;
     
-    const content = fs.readFileSync(codeFile, 'utf8');
+    const content = this.safeReadFile(codeFile);
+    if (!content) return;
     
-    // Check critical functions have contract tests
-    const criticalFunctions = [
-      'getEventsSafe',
-      'createEventbook',
-      'getPublicBundle',
-      'getShareQrVerified'
-    ];
-    
-    criticalFunctions.forEach(func => {
+    CONFIG.CRITICAL_FUNCTIONS.forEach(func => {
       const testFunc = `test${func.charAt(0).toUpperCase() + func.slice(1)}Contract`;
       
       if (content.includes(`function ${testFunc}(`)) {
@@ -390,16 +488,15 @@ class DeploymentVerifier {
     const codeFile = path.join(this.projectDir, 'Code.gs');
     if (!fs.existsSync(codeFile)) return;
     
-    const content = fs.readFileSync(codeFile, 'utf8');
+    const content = this.safeReadFile(codeFile);
+    if (!content) return;
     
-    // Check for errorResponse_ helper usage
     if (content.includes('function errorResponse_(')) {
       this.passes.push('✓ Code.gs has errorResponse_() helper');
     } else {
       this.warnings.push('Code.gs missing errorResponse_() helper - inconsistent error responses');
     }
     
-    // Check for successResponse_ helper usage
     if (content.includes('function successResponse_(')) {
       this.passes.push('✓ Code.gs has successResponse_() helper');
     } else {
@@ -411,14 +508,19 @@ class DeploymentVerifier {
    * Check that HTML files handle errors properly
    */
   checkErrorHandling() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    } catch (err) {
+      return;
+    }
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
-      // Check for error handling patterns
       const hasErrorCheck = content.includes('result.error') || 
                            content.includes('if (error)') ||
                            content.includes('.catch(');
@@ -441,21 +543,26 @@ class DeploymentVerifier {
   }
 
   /**
-   * Check for bad navigation patterns (window.location.href in buttons)
+   * Check for bad navigation patterns
    */
   checkNavigationPatterns() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    } catch (err) {
+      return;
+    }
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
-      // Check for window.location.href in onclick
       const badPattern = /onclick=["']window\.location\.href=/g;
       const matches = content.match(badPattern);
       
-      if (matches) {
+      if (matches && matches.length > 0) {
         this.warnings.push(`${file}: Found ${matches.length} navigation patterns - consider inline actions instead`);
         this.fixes.push(`${file}: Replace window.location.href with modal or inline result patterns`);
       } else {
@@ -468,26 +575,29 @@ class DeploymentVerifier {
    * Check for modal pattern implementations
    */
   checkModalPatterns() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    } catch (err) {
+      return;
+    }
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
-      // Check if file has modals
       const hasModal = content.includes('modal-overlay') || 
                       content.includes('class="modal"');
       
       if (hasModal) {
-        // Check for ESC key handler
         if (content.includes('Escape') || content.includes('keyCode === 27')) {
           this.passes.push(`✓ ${file} modal has ESC key support`);
         } else {
           this.warnings.push(`${file}: Modal missing ESC key handler`);
         }
         
-        // Check for backdrop click handler
         if (content.includes('stopPropagation')) {
           this.passes.push(`✓ ${file} modal handles backdrop clicks`);
         } else {
@@ -501,20 +611,24 @@ class DeploymentVerifier {
    * Check for inline result patterns
    */
   checkInlineResults() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    } catch (err) {
+      return;
+    }
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
-      // Check for result containers
       const hasResultContainer = content.includes('-results') ||
                                  content.includes('id="test-') ||
                                  content.includes('id="health-');
       
       if (hasResultContainer) {
-        // Check for loading states
         if (content.includes('loading') || content.includes('spinner')) {
           this.passes.push(`✓ ${file} has loading states for inline results`);
         } else {
@@ -528,18 +642,27 @@ class DeploymentVerifier {
    * Check file sizes
    */
   checkFileSize() {
-    const files = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.gs') || f.endsWith('.html'));
+    let files;
+    try {
+      files = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.gs') || f.endsWith('.html'));
+    } catch (err) {
+      return;
+    }
     
     files.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const stats = fs.statSync(filepath);
-      const sizeKB = (stats.size / 1024).toFixed(1);
-      
-      if (stats.size > 100 * 1024) {
-        this.warnings.push(`${file}: Large file size (${sizeKB}KB) - consider splitting`);
-      } else {
-        this.passes.push(`✓ ${file}: ${sizeKB}KB`);
+      try {
+        const stats = fs.statSync(filepath);
+        const sizeKB = (stats.size / 1024).toFixed(1);
+        
+        if (stats.size > CONFIG.MAX_FILE_SIZE_KB * 1024) {
+          this.warnings.push(`${file}: Large file size (${sizeKB}KB) - consider splitting`);
+        } else {
+          this.passes.push(`✓ ${file}: ${sizeKB}KB`);
+        }
+      } catch (err) {
+        this.warnings.push(`Cannot check size of ${file}: ${err.message}`);
       }
     });
   }
@@ -548,16 +671,21 @@ class DeploymentVerifier {
    * Check for code duplication
    */
   checkDuplication() {
-    const htmlFiles = fs.readdirSync(this.projectDir)
-      .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    let htmlFiles;
+    try {
+      htmlFiles = fs.readdirSync(this.projectDir)
+        .filter(f => f.endsWith('.html') && f !== 'NUSDK.html' && f !== 'Styles.html');
+    } catch (err) {
+      return;
+    }
     
     const commonPatterns = {};
     
     htmlFiles.forEach(file => {
       const filepath = path.join(this.projectDir, file);
-      const content = fs.readFileSync(filepath, 'utf8');
+      const content = this.safeReadFile(filepath);
+      if (!content) return;
       
-      // Look for common function patterns
       const functionRegex = /async function\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*{/g;
       let match;
       
@@ -570,7 +698,6 @@ class DeploymentVerifier {
       }
     });
     
-    // Find duplicated functions
     Object.entries(commonPatterns).forEach(([func, files]) => {
       if (files.length > 1) {
         this.warnings.push(`Function "${func}()" duplicated in: ${files.join(', ')} - consider extracting to NUSDK`);
@@ -586,28 +713,24 @@ class DeploymentVerifier {
     console.log(`${colors.cyan}   Verification Results${colors.reset}`);
     console.log(`${colors.cyan}═══════════════════════════════════════${colors.reset}\n`);
     
-    // Errors
     if (this.errors.length > 0) {
       console.log(`${colors.red}✗ ${this.errors.length} ERRORS:${colors.reset}`);
       this.errors.forEach(err => console.log(`  ${colors.red}•${colors.reset} ${err}`));
       console.log('');
     }
     
-    // Warnings
     if (this.warnings.length > 0) {
       console.log(`${colors.yellow}⚠ ${this.warnings.length} WARNINGS:${colors.reset}`);
       this.warnings.forEach(warn => console.log(`  ${colors.yellow}•${colors.reset} ${warn}`));
       console.log('');
     }
     
-    // Fixes
     if (this.fixes.length > 0) {
       console.log(`${colors.blue}🔧 ${this.fixes.length} SUGGESTED FIXES:${colors.reset}`);
       this.fixes.forEach(fix => console.log(`  ${colors.blue}•${colors.reset} ${fix}`));
       console.log('');
     }
     
-    // Summary
     console.log(`${colors.cyan}═══════════════════════════════════════${colors.reset}`);
     if (this.errors.length === 0) {
       console.log(`${colors.green}✓ PASS - Safe to deploy${colors.reset}`);
@@ -623,12 +746,23 @@ class DeploymentVerifier {
 }
 
 // Main execution
-const projectDir = process.argv[2] || './';
-const verifier = new DeploymentVerifier(projectDir);
+if (require.main === module) {
+  const projectDir = process.argv[2] || './src';
+  
+  if (!projectDir) {
+    console.error(`${colors.red}Usage: node verify-deployment.js <project-directory>${colors.reset}`);
+    process.exit(1);
+  }
+  
+  const verifier = new DeploymentVerifier(projectDir);
+  
+  verifier.verify().then(result => {
+    process.exit(result.success ? 0 : 1);
+  }).catch(err => {
+    console.error(`${colors.red}Verification failed:${colors.reset}`, err.message);
+    console.error(err.stack);
+    process.exit(1);
+  });
+}
 
-verifier.verify().then(result => {
-  process.exit(result.success ? 0 : 1);
-}).catch(err => {
-  console.error(`${colors.red}Verification failed:${colors.reset}`, err);
-  process.exit(1);
-});
+module.exports = DeploymentVerifier;
