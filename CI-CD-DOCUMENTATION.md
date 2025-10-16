@@ -48,7 +48,12 @@ This project uses **GitHub Actions** for continuous integration and continuous d
 #### Quality Check
 - Runs ESLint with zero warnings policy
 - Checks Prettier formatting
-- Scans for console.log statements
+- Scans for console/debug statements and debugger usage
+
+#### Type Check
+- Runs strict TypeScript type checking
+- Blocks pipeline on type errors
+- Shares npm cache with subsequent jobs for faster execution
 
 #### Unit Tests
 - Runs isolated component tests
@@ -69,6 +74,12 @@ This project uses **GitHub Actions** for continuous integration and continuous d
 #### Build Verification
 - Ensures production build succeeds
 - Uploads build artifacts
+
+#### Mobile Experience Audit
+- Launches production build in CI
+- Executes Lighthouse in mobile emulation mode
+- Requires 90+ scores for performance, accessibility, best practices, and SEO
+- Enforces fast initial load (FCP < 2s, TTI < 4s) and responsive images
 
 #### Security Scan
 - Runs `npm audit` for vulnerabilities
@@ -154,6 +165,7 @@ cp ci.yml .github/workflows/
 cp deploy.yml .github/workflows/
 cp pr-checks.yml .github/workflows/
 cp dependencies.yml .github/workflows/
+cp lighthouserc-mobile.json .
 ```
 
 ### Step 2: Required Secrets
