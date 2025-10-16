@@ -8,62 +8,64 @@ on:
 jobs:
   # Deploy to Staging
   deploy-staging:
-    name: Deploy to Staging
+    name: Package for Staging
     runs-on: ubuntu-latest
     environment:
       name: staging
-      url: https://staging.yourdomain.com
-    
+      url: https://script.google.com
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
         cache: 'npm'
-        
+
     - name: Install dependencies
       run: npm ci
-      
-    - name: Build application
+
+    - name: Run quality gates
+      run: |
+        npm run lint
+        npm run test:unit
+        npm run verify
+
+    - name: Package Apps Script bundle
       run: npm run build
-      env:
-        NODE_ENV: production
-        REACT_APP_ENV: staging
-        
-    - name: Run smoke tests
-      run: npm run test:smoke
-      continue-on-error: true
-      
-    - name: Deploy to Vercel (Staging)
-      uses: amondnet/vercel-action@v25
+
+    - name: Archive build artifacts
+      run: |
+        tar -czf staging-build.tgz -C build .
+
+    - name: Upload staging artifact
+      uses: actions/upload-artifact@v3
       with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        working-directory: ./
-        
+        name: staging-apps-script-bundle
+        path: staging-build.tgz
+        retention-days: 7
+
     - name: Notify deployment status
       if: always()
       run: |
-        echo "🚀 Deployed to staging environment"
-        echo "📍 URL: https://staging.yourdomain.com"
+        echo "🚀 Staging bundle prepared"
+        echo "📦 Artifact: staging-apps-script-bundle"
 
   # Deploy to Production
   deploy-production:
-    name: Deploy to Production
+    name: Promote to Production
     runs-on: ubuntu-latest
     needs: deploy-staging
     environment:
       name: production
-      url: https://yourdomain.com
-    
+      url: https://script.google.com
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
@@ -73,21 +75,22 @@ jobs:
     - name: Install dependencies
       run: npm ci
       
-    - name: Build application
-      run: npm run build
-      env:
-        NODE_ENV: production
-        REACT_APP_ENV: production
-        
-    - name: Deploy to Vercel (Production)
-      uses: amondnet/vercel-action@v25
+    - name: Validate bundle
+      run: |
+        npm run verify
+        npm run build
+
+    - name: Archive production artifacts
+      run: |
+        tar -czf production-build.tgz -C build .
+
+    - name: Upload production artifact
+      uses: actions/upload-artifact@v3
       with:
-        vercel-token: ${{ secrets.VERCEL_TOKEN }}
-        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-        vercel-args: '--prod'
-        working-directory: ./
-        
+        name: production-apps-script-bundle
+        path: production-build.tgz
+        retention-days: 30
+
     - name: Create GitHub Release
       uses: actions/create-release@v1
       env:
@@ -96,19 +99,18 @@ jobs:
         tag_name: v${{ github.run_number }}
         release_name: Release v${{ github.run_number }}
         body: |
-          🚀 Automated production deployment
-          
+          🚀 Automated Apps Script bundle promotion
+
           **Commit:** ${{ github.sha }}
           **Author:** ${{ github.actor }}
           **Workflow:** ${{ github.workflow }}
         draft: false
         prerelease: false
-        
+
     - name: Notify deployment status
       if: always()
       run: |
-        echo "🎉 Deployed to production environment"
-        echo "📍 URL: https://yourdomain.com"
+        echo "🎉 Production bundle published"
         echo "🏷️  Version: v${{ github.run_number }}"
 
   # Post-deployment health check
@@ -118,25 +120,18 @@ jobs:
     needs: deploy-production
     
     steps:
-    - name: Wait for deployment
-      run: sleep 30
-      
-    - name: Check application health
+    - name: Download production artifact
+      uses: actions/download-artifact@v3
+      with:
+        name: production-apps-script-bundle
+
+    - name: Verify packaged manifest
       run: |
-        response=$(curl -s -o /dev/null -w "%{http_code}" https://yourdomain.com/health)
-        if [ $response -eq 200 ]; then
-          echo "✅ Health check passed"
-        else
-          echo "❌ Health check failed with status $response"
-          exit 1
-        fi
-        
-    - name: Run production smoke tests
-      run: |
-        echo "🧪 Running production smoke tests..."
-        # Add your smoke test commands here
-        
+        mkdir -p build
+        tar -xzf production-build.tgz -C build
+        node verify-deployment.js --project build --ci
+
     - name: Notify team
       if: always()
       run: |
-        echo "📢 Production deployment complete and verified"
+        echo "📢 Production bundle verified"

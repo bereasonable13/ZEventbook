@@ -3,31 +3,26 @@
   "version": "1.0.0",
   "description": "Event management application with enterprise-grade testing infrastructure",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings 0",
-    "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "format:check": "prettier --check \"**/*.{js,jsx,ts,tsx,json,md}\"",
-    "test": "jest --passWithNoTests",
-    "test:unit": "jest --testPathPattern=tests/unit --passWithNoTests",
-    "test:integration": "jest --testPathPattern=tests/integration --passWithNoTests",
+    "lint": "eslint \"*.{js,gs}\" \"src/**/*.{js,gs}\" \"scripts/**/*.js\" --max-warnings 0 --no-error-on-unmatched-pattern",
+    "lint:fix": "eslint \"*.{js,gs}\" \"src/**/*.{js,gs}\" \"scripts/**/*.js\" --fix --no-error-on-unmatched-pattern",
+    "format": "prettier --write \"**/*.{js,gs,ts,tsx,json,md,html}\"",
+    "format:check": "prettier --check \"**/*.{js,gs,ts,tsx,json,md,html}\"",
+    "test": "npm run test:unit",
+    "test:unit": "jest --passWithNoTests --runInBand --testPathPattern=tests/unit",
+    "test:integration": "jest --passWithNoTests --runInBand --testPathPattern=tests/integration",
     "test:e2e": "playwright test",
-    "test:smoke": "playwright test --grep @smoke",
-    "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "typecheck": "tsc --noEmit",
-    "validate": "npm run lint && npm run typecheck && npm run test",
+    "verify": "node verify-deployment.js --project src --ci",
+    "build": "node scripts/package-apps-script.js",
     "prepare": "husky install",
     "pre-commit": "lint-staged"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx}": [
+    "*.{js,gs,ts,tsx}": [
       "eslint --fix",
       "prettier --write"
     ],
-    "*.{json,md}": [
+    "*.{json,md,html}": [
       "prettier --write"
     ]
   },

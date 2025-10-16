@@ -1,20 +1,18 @@
 module.exports = {
-  testEnvironment: 'jsdom',
+  testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-  },
   testMatch: [
-    '**/tests/**/*.test.{js,jsx,ts,tsx}',
-    '**/__tests__/**/*.{js,jsx,ts,tsx}',
+    '**/tests/**/*.test.[jt]s',
+    '**/tests/**/*.spec.[jt]s',
   ],
   collectCoverageFrom: [
-    'src/**/*.{js,jsx,ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/**/*.stories.{js,jsx,ts,tsx}',
+    'src/**/*.{js,gs}',
+    'verify-deployment.js',
+    'scripts/**/*.js',
     '!src/**/__tests__/**',
+    '!**/tests/**',
   ],
-  coverageThresholds: {
+  coverageThreshold: {
     global: {
       branches: 80,
       functions: 80,
@@ -23,10 +21,6 @@ module.exports = {
     },
   },
   coverageReporters: ['text', 'lcov', 'html', 'json-summary'],
-  testPathIgnorePatterns: ['/node_modules/', '/.next/', '/tests/e2e/'],
-  transformIgnorePatterns: [
-    '/node_modules/',
-    '^.+\\.module\\.(css|sass|scss)$',
-  ],
-  moduleFileExtensions: ['js', 'jsx', 'ts', 'tsx', 'json'],
+  testPathIgnorePatterns: ['/node_modules/', '/tests/e2e/'],
+  moduleFileExtensions: ['js', 'json', 'ts'],
 };

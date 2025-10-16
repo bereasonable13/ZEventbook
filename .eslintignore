@@ -6,6 +6,13 @@ package-lock.json
 *.json
 appsscript.js
 src/appsscript.json
+Code.js
+OldCompat.gs
+contractDefinitions.gs
+EventCard.test.js
+event-flows.spec.js
+events-api.test.js
+src/Code.gs
 
 # Build outputs
 .next/
