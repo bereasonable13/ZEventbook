@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title><?= appTitle ?> · Display</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <?!= include('Styles'); ?>
+  <?!= include('NUSDK'); ?>
+  <style>
+    /* Display View - TV/Kiosk Optimized */
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: #ffffff;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      overflow: hidden; /* Prevent scroll on kiosk */
+    }
+    
+    .display-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    
+    /* Event Header */
+    .event-header {
+      margin-bottom: 60px;
+      animation: fadeIn 0.8s ease-in;
+    }
+    
+    .event-title {
+      font-size: clamp(2rem, 5vw, 4rem); /* Responsive sizing */
+      font-weight: 700;
+      margin: 0 0 20px;
+      line-height: 1.2;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+      letter-spacing: -0.02em;
+    }
+    
+    .event-date {
+      font-size: clamp(1.2rem, 3vw, 2rem);
+      color: #b0b0b0;
+      margin: 0;
+      font-weight: 300;
+    }
+    
+    .event-tag {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 20px;
+      background: rgba(33, 150, 243, 0.2);
+      border: 1px solid rgba(33, 150, 243, 0.4);
+      border-radius: 20px;
+      color: #64b5f6;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    
+    /* QR Display Card */
+    .qr-display {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 60px 40px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      max-width: 500px;
+      width: 90%;
+      animation: slideUp 0.8s ease-out 0.2s both;
+    }
+    
+    #qr-status {
+      color: #666;
+      font-size: 1.2rem;
+      padding: 40px;
+    }
+    
+    #qr-container img {
+      width: 100%;
+      max-width: 350px;
+      height: auto;
+      border-radius: 8px;
+    }
+    
+    .qr-text {
+      margin-top: 30px;
+      color: #333;
+      font-size: 1.5rem;
+      font-weight: 600;
+    }
+    
+    .qr-url {
+      margin-top: 15px;
+      color: #666;
+      font-size: 1rem;
+      word-break: break-all;
+      font-family: 'Courier New', monospace;
+    }
+    
+    /* Loading State */
+    .loading {
+      display: inline-block;
+      width: 60px;
+      height: 60px;
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid #2196f3;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    /* Error State */
+    .error-message {
+      color: #ff6b6b;
+      font-size: 1.2rem;
+      padding: 20px;
+      background: rgba(255, 107, 107, 0.1);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 107, 107, 0.3);
+    }
+    
+    /* Footer Info */
+    .display-footer {
+      position: fixed;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      color: #666;
+      font-size: 0.9rem;
+      opacity: 0.7;
+    }
+    
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+    
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .display-container {
+        padding: 20px 15px;
+      }
+      
+      .event-header {
+        margin-bottom: 40px;
+      }
+      
+      .qr-display {
+        padding: 40px 30px;
+      }
+    }
+    
+    /* Landscape Tablet Optimization */
+    @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+      .display-container {
+        flex-direction: row;
+        gap: 60px;
+      }
+      
+      .event-header {
+        flex: 1;
+        text-align: left;
+        margin-bottom: 0;
+      }
+      
+      .qr-display {
+        flex: 0 0 auto;
+      }
+    }
+    
+    /* Large Display Optimization (TV) */
+    @media (min-width: 1920px) {
+      .display-container {
+        max-width: 1600px;
+        margin: 0 auto;
+      }
+      
+      .event-title {
+        font-size: 5rem;
+      }
+      
+      .event-date {
+        font-size: 2.5rem;
+      }
+      
+      .qr-display {
+        max-width: 600px;
+        padding: 80px 60px;
+      }
+      
+      #qr-container img {
+        max-width: 450px;
+      }
+    }
+    
+    /* Print Styles */
+    @media print {
+      body {
+        background: white;
+        color: black;
+      }
+      
+      .display-footer {
+        display: none;
+      }
+    }
+    
+    /* Accessibility - High Contrast Mode */
+    @media (prefers-contrast: high) {
+      body {
+        background: #000;
+      }
+      
+      .event-title {
+        text-shadow: none;
+      }
+      
+      .qr-display {
+        border: 2px solid #fff;
+      }
+    }
+    
+    /* Accessibility - Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="display-container">
+  <div class="event-header">
+    <h1 class="event-title" id="event-name">
+      <div class="loading"></div>
+    </h1>
+    <p class="event-date" id="event-date"></p>
+    <div class="event-tag" id="event-tag" style="display:none;"></div>
+  </div>
+
+  <div class="qr-display">
+    <div id="qr-status">
+      <div class="loading"></div>
+      <p style="margin-top: 20px;">Loading event...</p>
+    </div>
+    <div id="qr-container" style="display:none;">
+      <img id="qr-image" alt="Scan this QR code to join the event" />
+      <p class="qr-text">Scan to Join!</p>
+      <p class="qr-url" id="qr-url"></p>
+    </div>
+    <div id="error-container" style="display:none;">
+      <div class="error-message" id="error-message"></div>
+    </div>
+  </div>
+</div>
+
+<div class="display-footer">
+  <p>Powered by NextUp Event Management</p>
+</div>
+
+<script>
+// Get event ID from URL or use default
+const urlParams = new URLSearchParams(window.location.search);
+const eventId = urlParams.get('eventId');
+
+// State management
+const STATE = {
+  retryCount: 0,
+  maxRetries: 3,
+  retryDelay: 5000
+};
+
+/**
+ * Load and display event information
+ */
+async function loadDisplay() {
+  if (!eventId) {
+    showError('No event selected. Please provide an eventId parameter.');
+    return;
+  }
+
+  try {
+    // Load event details
+    const bundle = await NU.rpc('getPublicBundle', eventId);
+    
+    // Handle rate limiting
+    if (bundle.code === 429) {
+      showError(`Too many requests. Please wait ${bundle.retryAfter || 60} seconds.`);
+      
+      // Auto-retry after delay
+      if (STATE.retryCount < STATE.maxRetries) {
+        STATE.retryCount++;
+        const retryDelay = (bundle.retryAfter || 60) * 1000;
+        setTimeout(() => {
+          hideError();
+          loadDisplay();
+        }, retryDelay);
+      }
+      return;
+    }
+    
+    // Handle error response
+    if (bundle.error) {
+      showError('Event not found or unavailable.');
+      return;
+    }
+
+    // Display event information
+    displayEventInfo(bundle.event);
+    
+    // Load QR code
+    await loadQRCode();
+
+  } catch (err) {
+    console.error('Display error:', err);
+    NU.error('display', 'loadDisplay failed', err);
+    showError('Unable to load event. Please refresh the page.');
+    
+    // Auto-retry on network error
+    if (STATE.retryCount < STATE.maxRetries) {
+      STATE.retryCount++;
+      setTimeout(() => {
+        hideError();
+        loadDisplay();
+      }, STATE.retryDelay);
+    }
+  }
+}
+
+/**
+ * Display event information in the header
+ */
+function displayEventInfo(event) {
+  const nameEl = document.getElementById('event-name');
+  const dateEl = document.getElementById('event-date');
+  const tagEl = document.getElementById('event-tag');
+  
+  // Update event name
+  nameEl.textContent = event.name;
+  
+  // Format and display date
+  const eventDate = new Date(event.startDateISO);
+  const dateOptions = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  };
+  dateEl.textContent = eventDate.toLocaleDateString('en-US', dateOptions);
+  
+  // Display tag if present
+  if (event.tag) {
+    tagEl.textContent = event.tag;
+    tagEl.style.display = 'inline-block';
+  }
+}
+
+/**
+ * Load and display QR code
+ */
+async function loadQRCode() {
+  const statusEl = document.getElementById('qr-status');
+  const containerEl = document.getElementById('qr-container');
+  const imageEl = document.getElementById('qr-image');
+  const urlEl = document.getElementById('qr-url');
+  
+  try {
+    statusEl.innerHTML = '<div class="loading"></div><p style="margin-top: 20px;">Loading QR code...</p>';
+    
+    const qr = await NU.rpc('getShareQrVerified', eventId);
+    
+    // Handle rate limiting
+    if (qr.code === 429) {
+      statusEl.innerHTML = `<p class="error-message">Rate limited. Refreshing in ${qr.retryAfter || 60}s...</p>`;
+      setTimeout(loadQRCode, (qr.retryAfter || 60) * 1000);
+      return;
+    }
+    
+    // Display QR code if ready
+    if (qr.status === 'READY') {
+      imageEl.src = qr.qrCodeUrl;
+      imageEl.onload = () => {
+        statusEl.style.display = 'none';
+        containerEl.style.display = 'block';
+      };
+      
+      // Display short URL
+      if (qr.shortUrl) {
+        urlEl.textContent = qr.shortUrl;
+      }
+    } else if (qr.status === 'VERIFYING') {
+      statusEl.innerHTML = '<p style="color: #ff9800;">QR code is being generated. Please wait...</p>';
+      
+      // Retry after 5 seconds
+      setTimeout(loadQRCode, 5000);
+    } else if (qr.status === 'EXPIRED') {
+      statusEl.innerHTML = '<p class="error-message">QR code has expired. Please contact administrator.</p>';
+    } else {
+      statusEl.innerHTML = '<p class="error-message">QR code unavailable. Please contact administrator.</p>';
+    }
+
+  } catch (err) {
+    console.error('QR load error:', err);
+    NU.error('display', 'loadQRCode failed', err);
+    statusEl.innerHTML = '<p class="error-message">Error loading QR code. Retrying...</p>';
+    
+    // Retry after delay
+    setTimeout(loadQRCode, 5000);
+  }
+}
+
+/**
+ * Show error message
+ */
+function showError(message) {
+  const nameEl = document.getElementById('event-name');
+  const statusEl = document.getElementById('qr-status');
+  const errorContainer = document.getElementById('error-container');
+  const errorMessage = document.getElementById('error-message');
+  
+  nameEl.textContent = 'Unable to Load Event';
+  statusEl.style.display = 'none';
+  
+  errorMessage.textContent = message;
+  errorContainer.style.display = 'block';
+}
+
+/**
+ * Hide error message
+ */
+function hideError() {
+  const errorContainer = document.getElementById('error-container');
+  const statusEl = document.getElementById('qr-status');
+  
+  errorContainer.style.display = 'none';
+  statusEl.style.display = 'block';
+}
+
+/**
+ * Auto-refresh every 5 minutes to keep display current
+ */
+function setupAutoRefresh() {
+  const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes
+  
+  setInterval(() => {
+    console.log('Auto-refreshing display...');
+    STATE.retryCount = 0; // Reset retry counter
+    loadQRCode(); // Reload QR in case it changed
+  }, REFRESH_INTERVAL);
+}
+
+/**
+ * Initialize display
+ */
+window.addEventListener('DOMContentLoaded', () => {
+  loadDisplay();
+  setupAutoRefresh();
+  
+  // Log page view
+  NU.info('display', 'Display page loaded', { eventId });
+});
+
+/**
+ * Handle visibility change (screen sleep/wake)
+ */
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    // Screen woke up, refresh display
+    console.log('Screen visible again, refreshing...');
+    loadDisplay();
+  }
+});
+
+/**
+ * Handle online/offline events
+ */
+window.addEventListener('online', () => {
+  console.log('Connection restored, refreshing...');
+  hideError();
+  STATE.retryCount = 0;
+  loadDisplay();
+});
+
+window.addEventListener('offline', () => {
+  console.log('Connection lost');
+  showError('No internet connection. Waiting for connection...');
+});
+</script>
+
+</body>
+</html>

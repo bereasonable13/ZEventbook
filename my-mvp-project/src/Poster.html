@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title><?= appTitle ?> · Poster</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <?!= include('Styles'); ?>
+  <?!= include('NUSDK'); ?>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: white;
+    }
+    .poster-container {
+      width: 100%;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      text-align: center;
+    }
+    .poster-header {
+      margin-bottom: 30px;
+    }
+    .poster-title {
+      font-size: 2.5rem;
+      margin: 0;
+      color: #333;
+    }
+    .poster-date {
+      font-size: 1.2rem;
+      color: #666;
+      margin-top: 10px;
+    }
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 30px;
+      margin-top: 40px;
+    }
+    .qr-box {
+      background: #f9f9f9;
+      padding: 20px;
+      border-radius: 8px;
+      border: 2px solid #ddd;
+    }
+    .qr-box.ready {
+      border-color: #4caf50;
+    }
+    .qr-box h3 {
+      margin: 0 0 15px;
+      color: #333;
+    }
+    .qr-box img {
+      width: 100%;
+      max-width: 250px;
+    }
+    .qr-url {
+      font-size: 0.9rem;
+      color: #666;
+      word-break: break-all;
+      margin-top: 10px;
+    }
+    @media print {
+      body {
+        background: white;
+      }
+      .poster-container {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="poster-container">
+  <div class="poster-header">
+    <h1 class="poster-title" id="event-name">Loading...</h1>
+    <p class="poster-date" id="event-date"></p>
+  </div>
+
+  <div class="qr-grid">
+    <div class="qr-box" id="public-qr-box">
+      <h3>Event Page</h3>
+      <div id="public-qr-status">Verifying...</div>
+      <div id="public-qr-container" style="display:none;">
+        <img id="public-qr-image" alt="Event Page QR" />
+        <p class="qr-url" id="public-url"></p>
+      </div>
+    </div>
+
+    <div class="qr-box" id="signup-qr-box" style="display:none;">
+      <h3>Sign-Up Form</h3>
+      <div id="signup-qr-container">
+        <img id="signup-qr-image" alt="Sign-Up QR" />
+        <p class="qr-url" id="signup-url"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const eventId = urlParams.get('eventId');
+
+async function loadPoster() {
+  if (!eventId) {
+    document.getElementById('event-name').textContent = 'No event selected';
+    return;
+  }
+
+  try {
+    // Load event details
+    const bundle = await NU.rpc('getPublicBundle', eventId);
+    
+    // Check for rate limit
+    if (bundle.code === 429) {
+      document.getElementById('event-name').textContent = 'Please wait and refresh';
+      document.getElementById('event-date').textContent = 'Too many requests';
+      return;
+    }
+    
+    if (bundle.error) {
+      document.getElementById('event-name').textContent = 'Event not found';
+      return;
+    }
+
+    document.getElementById('event-name').textContent = bundle.event.name;
+    document.getElementById('event-date').textContent = new Date(bundle.event.startDateISO).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    // Load public QR
+    await loadPublicQR();
+
+    // Load signup QR
+    await loadSignupQR();
+
+  } catch (err) {
+    console.error('Poster error:', err);
+    document.getElementById('event-name').textContent = 'Error loading event';
+  }
+}
+
+async function loadPublicQR() {
+  try {
+    const qr = await NU.rpc('getShareQrVerified', eventId);
+    
+    // Check for rate limit
+    if (qr.code === 429) {
+      document.getElementById('public-qr-status').textContent = 'Rate limited - refresh later';
+      return;
+    }
+    
+    if (qr.status === 'READY') {
+      document.getElementById('public-qr-image').src = qr.qrCodeUrl;
+      document.getElementById('public-url').textContent = qr.shortUrl;
+      document.getElementById('public-qr-container').style.display = 'block';
+      document.getElementById('public-qr-status').style.display = 'none';
+      document.getElementById('public-qr-box').classList.add('ready');
+    } else {
+      document.getElementById('public-qr-status').textContent = 'Not ready';
+    }
+  } catch (err) {
+    console.error('Public QR error:', err);
+    document.getElementById('public-qr-status').textContent = 'Error';
+  }
+}
+
+async function loadSignupQR() {
+  try {
+    const links = await NU.rpc('getEventQuickLinks', eventId);
+    
+    // Check for rate limit
+    if (links.code === 429) {
+      return; // Silent fail for signup
+    }
+    
+    if (links.error || !links.links.signupUrl) {
+      return; // No signup configured
+    }
+
+    const signupUrl = links.links.signupUrl;
+    const qrUrl = `https://quickchart.io/qr?text=${encodeURIComponent(signupUrl)}&size=300`;
+
+    document.getElementById('signup-qr-image').src = qrUrl;
+    document.getElementById('signup-url').textContent = signupUrl;
+    document.getElementById('signup-qr-box').style.display = 'block';
+    document.getElementById('signup-qr-box').classList.add('ready');
+
+  } catch (err) {
+    console.error('Signup QR error:', err);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', loadPoster);
+
+// Auto-print on load (commented out by default)
+// window.addEventListener('load', () => setTimeout(() => window.print(), 1000));
+</script>
+
+</body>
+</html>

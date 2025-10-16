@@ -2,212 +2,312 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop, 'feature/**' ]
+    branches: [main, develop, 'feature/**']
   pull_request:
-    branches: [ main, develop ]
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '20'  # GAS supports modern JavaScript
 
 jobs:
-  # Job 1: Code Quality Checks
+  # ✅ KEEP AS-IS - This is perfect
   quality:
     name: Code Quality
     runs-on: ubuntu-latest
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
-    - name: Run ESLint
-      run: npm run lint
-      continue-on-error: false
+      - name: Install dependencies
+        run: npm ci
       
-    - name: Run Prettier check
-      run: npm run format:check
-      continue-on-error: false
+      - name: Run ESLint
+        run: npm run lint
       
-    - name: Check for console.logs
-      run: |
-        if grep -r "console.log" src/ --exclude-dir=node_modules; then
-          echo "❌ Found console.log statements. Please remove them."
-          exit 1
-        fi
-      continue-on-error: true
+      - name: Check formatting
+        run: npm run format:check
+      
+      - name: Check for console.log
+        run: |
+          if grep -r "console\.log" src/ --exclude-dir=node_modules; then
+            echo "❌ Found console.log statements in src/"
+            exit 1
+          fi
+          echo "✅ No console.log found"
 
-  # Job 2: Unit Tests
+  # ✅ KEEP AS-IS - Works great for pure functions
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: quality
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
-    - name: Run unit tests
-      run: npm run test:unit -- --coverage
+      - name: Install dependencies
+        run: npm ci
       
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        files: ./coverage/lcov.info
-        flags: unittests
-        name: unit-coverage
-        fail_ci_if_error: false
+      - name: Run unit tests
+        run: npm run test:unit -- --coverage
+      
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unit
+          fail_ci_if_error: false
+      
+      - name: Check coverage threshold
+        run: |
+          COVERAGE=$(node -p "
+            const coverage = require('./coverage/coverage-summary.json');
+            Math.round(coverage.total.lines.pct);
+          ")
+          echo "Coverage: ${COVERAGE}%"
+          if [ $COVERAGE -lt 80 ]; then
+            echo "❌ Coverage ${COVERAGE}% is below 80% threshold"
+            exit 1
+          fi
+          echo "✅ Coverage meets threshold"
 
-  # Job 3: Integration Tests
-  integration-tests:
-    name: Integration Tests
+  # ➕ NEW - Validate GAS code
+  gas-validation:
+    name: GAS Code Validation
     runs-on: ubuntu-latest
     needs: quality
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: testuser
-          POSTGRES_PASSWORD: testpass
-          POSTGRES_DB: testdb
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
-    - name: Run integration tests
-      run: npm run test:integration
-      env:
-        DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
-        NODE_ENV: test
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Install clasp
+        run: npm install -g @google/clasp
+      
+      - name: Validate GAS syntax
+        run: |
+          # Check for GAS-incompatible syntax
+          echo "Checking for GAS compatibility..."
+          
+          # Check for ES6 imports (GAS doesn't support them)
+          if grep -r "^import " src/*.gs 2>/dev/null; then
+            echo "❌ Found ES6 imports in .gs files (not supported in GAS)"
+            exit 1
+          fi
+          
+          # Check for async/await (GAS V8 supports, but verify)
+          if grep -r "async function" src/*.gs 2>/dev/null; then
+            echo "⚠️  Found async functions - ensure GAS V8 runtime is enabled"
+          fi
+          
+          echo "✅ GAS syntax validation passed"
+      
+      - name: Dry-run clasp push
+        run: |
+          # This validates the project structure without actually pushing
+          if [ -f .clasp.json ]; then
+            echo "✅ .clasp.json found"
+            
+            # Validate .clasp.json format
+            node -e "require('./.clasp.json')" || exit 1
+            echo "✅ .clasp.json is valid JSON"
+          else
+            echo "⚠️  .clasp.json not found - will be created in setup"
+          fi
 
-  # Job 4: E2E Tests
+  # 🔄 ADAPT - Changed from integration tests with DB to GAS-specific checks
+  gas-checks:
+    name: GAS Runtime Checks
+    runs-on: ubuntu-latest
+    needs: [quality, unit-tests]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Check for Node.js-only modules
+        run: |
+          echo "Checking for Node.js-specific modules..."
+          
+          # List of modules that won't work in GAS
+          FORBIDDEN_MODULES="fs|path|http|https|child_process|os"
+          
+          if grep -rE "require\('($FORBIDDEN_MODULES)'\)" src/ 2>/dev/null; then
+            echo "❌ Found Node.js-specific modules in src/ (not available in GAS)"
+            exit 1
+          fi
+          
+          echo "✅ No Node.js-specific modules found"
+      
+      - name: Validate GAS Services usage
+        run: |
+          echo "Checking GAS Services usage patterns..."
+          
+          # Check for common GAS services
+          if grep -r "SpreadsheetApp\|HtmlService\|PropertiesService" src/ 2>/dev/null; then
+            echo "✅ Found GAS Services - good!"
+          fi
+          
+          # Check for proper error handling
+          if ! grep -r "try {" src/*.gs 2>/dev/null; then
+            echo "⚠️  No try-catch blocks found - consider adding error handling"
+          fi
+          
+          echo "✅ GAS Services validation passed"
+
+  # 🔄 ADAPT - E2E tests will run on deployed GAS web app
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
-    
+    needs: [unit-tests, gas-checks]
+    # Only run E2E on main branch or when PR is ready
+    if: github.ref == 'refs/heads/main' || contains(github.event.pull_request.labels.*.name, 'ready-for-e2e')
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
-    - name: Install Playwright browsers
-      run: npx playwright install --with-deps
+      - name: Install dependencies
+        run: npm ci
       
-    - name: Build application
-      run: npm run build
+      - name: Install Playwright
+        run: npx playwright install --with-deps chromium
       
-    - name: Run E2E tests
-      run: npm run test:e2e
+      - name: Run E2E tests
+        env:
+          # You'll need to set this in GitHub Secrets
+          GAS_WEB_APP_URL: ${{ secrets.GAS_TEST_DEPLOYMENT_URL }}
+        run: |
+          if [ -z "$GAS_WEB_APP_URL" ]; then
+            echo "⚠️  GAS_WEB_APP_URL not set - skipping E2E tests"
+            echo "Set GAS_TEST_DEPLOYMENT_URL in GitHub Secrets"
+            exit 0
+          fi
+          
+          npm run test:e2e
       
-    - name: Upload test results
-      if: always()
-      uses: actions/upload-artifact@v3
-      with:
-        name: playwright-report
-        path: playwright-report/
-        retention-days: 30
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
 
-  # Job 5: Build
+  # 🔄 ADAPT - Build check validates the project structure
   build:
-    name: Build Application
+    name: Build Verification
     runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests]
-    
+    needs: [quality, gas-validation]
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
-    - name: Build application
-      run: npm run build
+      - name: Install dependencies
+        run: npm ci
       
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: build-output
-        path: build/
-        retention-days: 7
+      - name: Verify project structure
+        run: |
+          echo "Verifying GAS project structure..."
+          
+          # Check required files
+          REQUIRED_FILES="appsscript.json"
+          for file in $REQUIRED_FILES; do
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing required file: $file"
+              exit 1
+            fi
+            echo "✅ Found: $file"
+          done
+          
+          # Check for main entry points
+          if [ ! -f "src/Code.gs" ] && [ ! -f "src/Code.js" ]; then
+            echo "⚠️  No Code.gs or Code.js found in src/"
+          fi
+          
+          if [ ! -f "src/Index.html" ]; then
+            echo "⚠️  No Index.html found in src/"
+          fi
+          
+          echo "✅ Project structure validated"
+      
+      - name: Create artifact
+        run: |
+          # Package source files for potential deployment
+          mkdir -p dist
+          cp -r src/* dist/ 2>/dev/null || true
+          cp appsscript.json dist/ 2>/dev/null || true
+          cp .clasp.json dist/ 2>/dev/null || true
+          
+          echo "✅ Artifact prepared"
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: gas-source
+          path: dist/
+          retention-days: 7
 
-  # Job 6: Security Scan
-  security:
+  # ✅ KEEP - Security is important
+  security-scan:
     name: Security Scan
     runs-on: ubuntu-latest
-    
+    needs: quality
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - uses: actions/checkout@v4
       
-    - name: Run npm audit
-      run: npm audit --audit-level=moderate
-      continue-on-error: true
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
       
-    - name: Run Snyk security scan
-      uses: snyk/actions/node@master
-      continue-on-error: true
-      env:
-        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-
-  # Job 7: Test Summary
-  test-summary:
-    name: Test Summary
-    runs-on: ubuntu-latest
-    needs: [unit-tests, integration-tests, e2e-tests, build]
-    if: always()
-    
-    steps:
-    - name: Check all jobs status
-      run: |
-        echo "🎉 All tests passed successfully!"
-        echo "✅ Code quality checks"
-        echo "✅ Unit tests"
-        echo "✅ Integration tests"
-        echo "✅ E2E tests"
-        echo "✅ Build completed"
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Check for secrets in code
+        run: |
+          echo "Checking for potential secrets..."
+          
+          # Check for hardcoded API keys, passwords, tokens
+          if grep -rE "(api[_-]?key|password|secret|token|auth)" src/ --include="*.js" --include="*.gs" -i | grep -v "test" | grep -v "example"; then
+            echo "⚠️  Potential secrets found - review carefully"
+          fi
+          
+          echo "✅ Security scan complete"

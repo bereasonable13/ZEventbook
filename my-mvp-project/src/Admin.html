@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title><?= appTitle ?> · Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <?!= include('Styles'); ?>
+  <?!= include('NUSDK'); ?>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1><?= appTitle ?> Admin</h1>
+    <small class="muted">Build: <?= BUILD_ID ?></small>
+  </header>
+
+  <!-- Create New Event -->
+  <section class="card">
+    <h2>Create New Event</h2>
+    <form id="form-create" onsubmit="return false;">
+      <div class="row">
+        <div class="col">
+          <label>Event Name *</label>
+          <input type="text" id="event-name" placeholder="ABC Opening Weekend" required />
+        </div>
+        <div class="col">
+          <label>Start Date *</label>
+          <input type="date" id="event-date" required />
+        </div>
+      </div>
+      <button type="submit" class="btn-primary" id="btn-create">Create Event</button>
+    </form>
+    <div id="create-status" style="margin-top:15px;"></div>
+  </section>
+
+  <!-- Event List -->
+  <section class="card">
+    <div class="row">
+      <div class="col">
+        <h2>Events</h2>
+      </div>
+      <div class="col-auto">
+        <button id="btn-refresh" class="btn-secondary">Refresh</button>
+      </div>
+    </div>
+    
+    <div id="events-list">
+      <p class="muted">Loading events...</p>
+    </div>
+  </section>
+
+  <!-- Selected Event Details -->
+  <section class="card" id="event-details" style="display:none;">
+    <h2>Event Links</h2>
+    
+    <div style="margin-bottom:20px;">
+      <h3 id="selected-event-name" style="margin:0 0 5px;"></h3>
+      <p id="selected-event-date" class="muted" style="margin:0;"></p>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label>Public Page</label>
+      <div class="row" style="gap:8px;">
+        <input type="text" id="public-url" readonly style="flex:1;" />
+        <button onclick="copyUrl('public-url')" class="btn-secondary">Copy</button>
+        <button onclick="openUrl('public-url')" class="btn-secondary">Open</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label>Display Page (TV/Kiosk)</label>
+      <div class="row" style="gap:8px;">
+        <input type="text" id="display-url" readonly style="flex:1;" />
+        <button onclick="copyUrl('display-url')" class="btn-secondary">Copy</button>
+        <button onclick="openUrl('display-url')" class="btn-secondary">Open</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label>Poster Page (Print)</label>
+      <div class="row" style="gap:8px;">
+        <input type="text" id="poster-url" readonly style="flex:1;" />
+        <button onclick="copyUrl('poster-url')" class="btn-secondary">Copy</button>
+        <button onclick="openUrl('poster-url')" class="btn-secondary">Open</button>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px;">
+      <label>Event Spreadsheet</label>
+      <div class="row" style="gap:8px;">
+        <input type="text" id="spreadsheet-url" readonly style="flex:1;" />
+        <button onclick="openUrl('spreadsheet-url')" class="btn-secondary">Open Spreadsheet</button>
+      </div>
+    </div>
+
+    <div class="row" style="margin-top:30px;">
+      <button onclick="setAsDefault()" class="btn-success" id="btn-set-default">Set as Default</button>
+      <button onclick="archiveEvent()" class="btn-danger" id="btn-archive">Archive Event</button>
+    </div>
+  </section>
+
+  <!-- Quick Links -->
+  <section class="card">
+    <h2>System Tools</h2>
+    <div class="row">
+      <button onclick="window.location.href='?page=health'" class="btn-secondary">Health Check</button>
+      <button onclick="window.location.href='?page=test'" class="btn-secondary">Run Tests</button>
+    </div>
+  </section>
+</div>
+
+<script>
+// State
+let currentEventId = null;
+let eventsEtag = null;
+
+/**
+ * Create new event
+ */
+document.getElementById('form-create').onsubmit = async function(e) {
+  e.preventDefault();
+  
+  const name = document.getElementById('event-name').value.trim();
+  const date = document.getElementById('event-date').value;
+  const statusEl = document.getElementById('create-status');
+  const btn = document.getElementById('btn-create');
+  
+  if (!name || !date) {
+    statusEl.innerHTML = '<p style="color:var(--danger);">Please fill in all fields</p>';
+    return;
+  }
+  
+  btn.disabled = true;
+  btn.textContent = 'Creating...';
+  statusEl.innerHTML = '<p class="muted">Creating event...</p>';
+  
+  try {
+    const result = await NU.rpc('createEventbook', name, date);
+    
+    if (result.error) {
+      statusEl.innerHTML = `<p style="color:var(--danger);">Error: ${result.error}</p>`;
+      btn.disabled = false;
+      btn.textContent = 'Create Event';
+      return;
+    }
+    
+    if (result.existed) {
+      statusEl.innerHTML = '<p style="color:var(--warning);">Event already exists with this name</p>';
+    } else {
+      statusEl.innerHTML = '<p style="color:var(--success);">✓ Event created successfully!</p>';
+      document.getElementById('event-name').value = '';
+      document.getElementById('event-date').value = '';
+    }
+    
+    // Refresh events list
+    await loadEvents(true);
+    
+    // Auto-select the new event
+    if (result.event) {
+      selectEvent(result.event.id);
+    }
+    
+  } catch (err) {
+    statusEl.innerHTML = `<p style="color:var(--danger);">Failed: ${err}</p>`;
+    NU.error('admin', 'createEvent failed', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Event';
+  }
+};
+
+/**
+ * Load events list with SWR caching
+ */
+async function loadEvents(forceRefresh = false) {
+  const listEl = document.getElementById('events-list');
+  
+  try {
+    const result = await NU.rpc('getEventsSafe', forceRefresh ? null : eventsEtag);
+    
+    if (result.notModified) {
+      console.log('Events not modified, using cached data');
+      return;
+    }
+    
+    if (result.error) {
+      listEl.innerHTML = `<p style="color:var(--danger);">Error: ${result.error}</p>`;
+      return;
+    }
+    
+    eventsEtag = result.etag;
+    
+    if (!result.events || result.events.length === 0) {
+      listEl.innerHTML = '<p class="muted">No events yet. Create one above!</p>';
+      return;
+    }
+    
+    // Render events
+    listEl.innerHTML = '';
+    result.events.forEach(event => {
+      const div = document.createElement('div');
+      div.className = 'event-item';
+      div.style.cssText = 'padding:15px; margin:10px 0; border:1px solid var(--border-color); border-radius:8px; cursor:pointer; transition:all 0.2s;';
+      
+      const date = new Date(event.startDateISO).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+      
+      div.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <strong style="font-size:1.1rem;">${event.name}</strong>
+            ${event.isDefault ? '<span style="margin-left:10px; padding:2px 8px; background:var(--success); color:white; border-radius:4px; font-size:0.75rem;">DEFAULT</span>' : ''}
+            <br>
+            <span class="muted">${date}</span>
+          </div>
+          <button class="btn-primary" style="padding:8px 16px;">Select</button>
+        </div>
+      `;
+      
+      div.onclick = () => selectEvent(event.id);
+      
+      // Hover effect
+      div.onmouseenter = () => {
+        div.style.background = 'var(--bg-hover)';
+        div.style.transform = 'translateY(-2px)';
+        div.style.boxShadow = 'var(--shadow-lg)';
+      };
+      div.onmouseleave = () => {
+        div.style.background = '';
+        div.style.transform = '';
+        div.style.boxShadow = '';
+      };
+      
+      listEl.appendChild(div);
+    });
+    
+  } catch (err) {
+    listEl.innerHTML = `<p style="color:var(--danger);">Failed to load events: ${err}</p>`;
+    NU.error('admin', 'loadEvents failed', err);
+  }
+}
+
+/**
+ * Select an event and show details
+ */
+function selectEvent(eventId) {
+  currentEventId = eventId;
+  
+  // Find event in list
+  NU.rpc('getEventsSafe', eventsEtag).then(result => {
+    const event = result.events.find(e => e.id === eventId);
+    if (!event) return;
+    
+    // Show details section
+    document.getElementById('event-details').style.display = 'block';
+    document.getElementById('selected-event-name').textContent = event.name;
+    document.getElementById('selected-event-date').textContent = new Date(event.startDateISO).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Build URLs
+    const baseUrl = window.location.origin + window.location.pathname;
+    document.getElementById('public-url').value = `${baseUrl}?page=public&eventId=${eventId}`;
+    document.getElementById('display-url').value = `${baseUrl}?page=display&eventId=${eventId}`;
+    document.getElementById('poster-url').value = `${baseUrl}?page=poster&eventId=${eventId}`;
+    document.getElementById('spreadsheet-url').value = event.ssUrl;
+    
+    // Update buttons
+    document.getElementById('btn-set-default').disabled = event.isDefault;
+    
+    // Scroll to details
+    document.getElementById('event-details').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+}
+
+/**
+ * Copy URL to clipboard
+ */
+function copyUrl(inputId) {
+  const input = document.getElementById(inputId);
+  input.select();
+  document.execCommand('copy');
+  
+  // Visual feedback
+  const btn = event.target;
+  const originalText = btn.textContent;
+  btn.textContent = '✓ Copied';
+  btn.style.background = 'var(--success)';
+  setTimeout(() => {
+    btn.textContent = originalText;
+    btn.style.background = '';
+  }, 2000);
+}
+
+/**
+ * Open URL in new tab
+ */
+function openUrl(inputId) {
+  const url = document.getElementById(inputId).value;
+  window.open(url, '_blank');
+}
+
+/**
+ * Set event as default
+ */
+async function setAsDefault() {
+  if (!currentEventId) return;
+  
+  const btn = document.getElementById('btn-set-default');
+  btn.disabled = true;
+  btn.textContent = 'Setting...';
+  
+  try {
+    const result = await NU.rpc('setDefaultEvent', currentEventId);
+    
+    if (result.error) {
+      alert('Error: ' + result.error);
+      return;
+    }
+    
+    alert('✓ Set as default event');
+    await loadEvents(true);
+    selectEvent(currentEventId);
+    
+  } catch (err) {
+    alert('Failed: ' + err);
+    NU.error('admin', 'setDefaultEvent failed', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Set as Default';
+  }
+}
+
+/**
+ * Archive event
+ */
+async function archiveEvent() {
+  if (!currentEventId) return;
+  
+  if (!confirm('Archive this event? This will expire all shortlinks and remove it from the list.')) {
+    return;
+  }
+  
+  const btn = document.getElementById('btn-archive');
+  btn.disabled = true;
+  btn.textContent = 'Archiving...';
+  
+  try {
+    const result = await NU.rpc('archiveEvent', currentEventId);
+    
+    if (result.error) {
+      alert('Error: ' + result.error);
+      return;
+    }
+    
+    alert('✓ Event archived');
+    document.getElementById('event-details').style.display = 'none';
+    currentEventId = null;
+    await loadEvents(true);
+    
+  } catch (err) {
+    alert('Failed: ' + err);
+    NU.error('admin', 'archiveEvent failed', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Archive Event';
+  }
+}
+
+// Wire up refresh button
+document.getElementById('btn-refresh').onclick = () => loadEvents(true);
+
+// Initial load
+window.addEventListener('DOMContentLoaded', () => {
+  loadEvents();
+  
+  // Set today's date as default
+  document.getElementById('event-date').valueAsDate = new Date();
+  
+  // Log page load
+  NU.info('admin', 'Admin page loaded');
+});
+
+// Auto-refresh every 30 seconds
+setInterval(() => loadEvents(false), 30000);
+</script>
+
+</body>
+</html>

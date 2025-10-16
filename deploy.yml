@@ -1,0 +1,46 @@
+# .github/workflows/deploy-apps-script.yml
+name: Deploy to Apps Script
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Google Apps Script
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: Install clasp
+      run: npm install -g @google/clasp
+      
+    - name: Configure clasp credentials
+      run: |
+        echo "$CLASP_TOKEN" > ~/.clasprc.json
+      env:
+        CLASP_TOKEN: ${{ secrets.CLASP_TOKEN }}
+        
+    - name: Create .clasp.json
+      run: |
+        echo '{"scriptId":"${{ secrets.APPS_SCRIPT_ID }}"}' > .clasp.json
+        
+    - name: Push to Apps Script
+      run: clasp push
+      
+    - name: Deploy new version
+      run: |
+        clasp deploy --description "Deploy from GitHub Actions - ${{ github.sha }}"
+        
+    - name: Get deployment URL
+      run: |
+        echo "🚀 Deployed to Apps Script"
+        echo "📍 URL: https://script.google.com/macros/s/${{ secrets.APPS_SCRIPT_ID }}/exec"
