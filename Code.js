@@ -2607,3 +2607,226 @@ function getProvisionStatus(key){
     return serverError_(e, 'provision-status', started);
   }
 }
+
+// ==============================================
+// EXPORTS FOR TESTING (GAS ignores this)
+
+// ==============================================
+// VALIDATORS & FORMATTERS (for event management)
+// ==============================================
+
+function validateEventTitle_(title) {
+  if (!title || typeof title !== 'string') {
+    return { valid: false, error: 'Title is required' };
+  }
+  const trimmed = title.trim();
+  if (trimmed.length === 0) return { valid: false, error: 'Title cannot be empty' };
+  if (trimmed.length < 3) return { valid: false, error: 'Title must be at least 3 characters' };
+  if (trimmed.length > 100) return { valid: false, error: 'Title cannot exceed 100 characters' };
+  return { valid: true };
+}
+
+function isValidShortCode_(code) {
+  if (!code || typeof code !== 'string') return false;
+  return /^[a-z0-9]{6}$/.test(code);
+}
+
+function validateEventDate_(dateStr) {
+  if (!dateStr || typeof dateStr !== "string") return { valid: false, error: "Date is required" };
+  
+  // Strict YYYY-MM-DD format check
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+    return { valid: false, error: "Invalid date format" };
+  }
+  
+  const date = new Date(dateStr + 'T00:00:00');
+  if (isNaN(date.getTime())) return { valid: false, error: "Invalid date format" };
+  
+  // Verify date components match input (catches 2025-13-01, 2025-02-30, etc.)
+  const [inputYear, inputMonth, inputDay] = dateStr.split('-').map(Number);
+  if (date.getFullYear() !== inputYear || 
+      date.getMonth() + 1 !== inputMonth || 
+      date.getDate() !== inputDay) {
+    return { valid: false, error: "Invalid date format" };
+  }
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  date.setHours(0, 0, 0, 0);
+  
+  if (date.getTime() < today.getTime()) return { valid: false, error: "Date must be today or future" };
+  return { valid: true };
+}
+
+function isValidTimeFormat_(time) {
+  if (!time) return true;
+  if (typeof time !== 'string') return false;
+  const match = time.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return false;
+  const hour = parseInt(match[1], 10);
+  const minute = parseInt(match[2], 10);
+  return hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59;
+}
+
+function validateLocation_(location) {
+  if (!location || typeof location !== 'string') return { valid: false, error: 'Location is required' };
+  if (location.trim().length === 0) return { valid: false, error: 'Location cannot be empty' };
+  return { valid: true };
+}
+
+function formatDate_(dateStr, format) {
+  if (!dateStr) return 'Invalid Date';
+  
+  // Parse YYYY-MM-DD as local date (not UTC)
+  const match = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return 'Invalid Date';
+  
+  const year = parseInt(match[1], 10);
+  const month = parseInt(match[2], 10) - 1; // 0-indexed
+  const day = parseInt(match[3], 10);
+  
+  const date = new Date(year, month, day);
+  if (isNaN(date.getTime())) return 'Invalid Date';
+  
+  if (format === 'long') {
+    return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  }
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function formatTime_(time) {
+  if (!time) return '';
+  const match = time.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return '';
+  let hour = parseInt(match[1], 10);
+  const minute = match[2];
+  const ampm = hour >= 12 ? 'PM' : 'AM';
+  hour = hour % 12 || 12;
+  return hour + ':' + minute + ' ' + ampm;
+}
+
+function slugify_(text) {
+  if (!text) return '';
+  return text.toString().toLowerCase().trim()
+    .replace(/[^\w\s-]/g, '').replace(/[\s_-]+/g, '-').replace(/^-+|-+$/g, '');
+}
+
+function sanitizeString(str) {
+  if (!str) return '';
+  return str.replace(/[<>]/g, '');
+}
+
+function truncateText(text, maxLength) {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength - 3) + '...';
+}
+
+function isValidISODate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return false;
+  const date = new Date(dateStr + 'T00:00:00.000Z');
+  return !isNaN(date.getTime()) && date.toISOString().startsWith(dateStr);
+}
+
+function addDays(date, days) {
+  const result = new Date(date.getTime());
+  result.setUTCDate(result.getUTCDate() + days);
+  return result;
+}
+function validateEventName(name) {
+  if (!name || name.trim().length === 0) {
+    return { valid: false, errors: ['Name cannot be empty'] };
+  }
+  return { valid: true, errors: [] };
+}
+
+function validateEventData_(eventData) {
+  const errors = [];
+  const titleResult = validateEventTitle_(eventData.title);
+  if (!titleResult.valid) errors.push(titleResult.error);
+  const dateResult = validateEventDate_(eventData.date);
+  if (!dateResult.valid) errors.push(dateResult.error);
+  const locationResult = validateLocation_(eventData.location);
+  if (!locationResult.valid) errors.push(locationResult.error);
+  if (eventData.time && !isValidTimeFormat_(eventData.time)) {
+    errors.push("Invalid time format. Use HH:MM in 24-hour format");
+  }
+  if (eventData.shortCode && !isValidShortCode_(eventData.shortCode)) {
+    errors.push("Invalid shortcode format");
+  }
+  return { valid: errors.length === 0, errors: errors };
+}
+
+// ==============================================
+// EXPORTS FOR TESTING
+// ==============================================
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = {
+    ok_: ok_,
+    serverError_: serverError_,
+    envelope_: envelope_,
+    validateEventTitle_: validateEventTitle_,
+    isValidShortCode_: isValidShortCode_,
+    validateEventDate_: validateEventDate_,
+    isValidTimeFormat_: isValidTimeFormat_,
+    validateLocation_: validateLocation_,
+    formatDate_: formatDate_,
+    formatTime_: formatTime_,
+    slugify_: slugify_,
+    sanitizeString: sanitizeString,
+    truncateText: truncateText,
+    isValidISODate: isValidISODate,
+    addDays: addDays,
+    validateEventName: validateEventName,
+    validateEventData_: validateEventData_,
+    cfgGet_: cfgGet_,
+    cfgSet_: cfgSet_,
+    generateShortCode_: generateShortCode_,
+    generateSlug_: generateSlug_,
+    generateEventId_: generateEventId_,
+    checkRateLimit_: checkRateLimit_,
+    buildOrgUrl_: buildOrgUrl_,
+    checkRateLimit_: checkRateLimit_,
+    buildOrgUrl_: buildOrgUrl_,
+    generateTimestamp_: generateTimestamp_
+  };
+}
+
+// ==============================================
+// GENERATORS
+// ==============================================
+
+function generateShortCode_() {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+function generateSlug_(title, existingSlugs) {
+  if (!title) return '';
+  let slug = slugify_(title);
+  
+  // Handle collisions
+  if (existingSlugs && existingSlugs.includes(slug)) {
+    let counter = 1;
+    while (existingSlugs.includes(slug + '-' + counter)) {
+      counter++;
+    }
+    slug = slug + '-' + counter;
+  }
+  
+  return slug;
+}
+
+function generateEventId_() {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 6);
+  return 'evt-' + timestamp + '-' + random;
+}
+
+function generateTimestamp_() {
+  return new Date().toISOString();
+}
