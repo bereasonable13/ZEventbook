@@ -1841,3 +1841,28 @@ function ping() {
     user: Session.getEffectiveUser().getEmail() || 'anonymous'
   };
 }
+
+/**
+ * Force a clean bootstrap - clears all IDs and recreates everything
+ */
+function forceCleanBootstrap() {
+  console.log('[Force Bootstrap] Clearing all stored IDs...');
+  
+  // Clear all configuration
+  cfgSet_(CFG_KEYS.CONTROL_ID, '');
+  cfgSet_(CFG_KEYS.TEMPLATE_ID, '');
+  cfgSet_(CFG_KEYS.EVENTS_DIR, '');
+  
+  console.log('[Force Bootstrap] Starting fresh bootstrap...');
+  
+  // Run bootstrap
+  const ss = ensureControlStrictOnBoot();
+  
+  console.log('[Force Bootstrap] Complete!');
+  console.log('Control spreadsheet URL:', ss.getUrl());
+  
+  return {
+    controlUrl: ss.getUrl(),
+    controlId: ss.getId()
+  };
+}

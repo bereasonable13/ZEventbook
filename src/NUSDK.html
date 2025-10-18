@@ -57,8 +57,7 @@ window.NU = (function() {
               console.error(`[NU] ${method} ✗ ${duration.toFixed(0)}ms`, error);
               reject(error);
             }
-          })
-          [method](...args);
+          })[method](...args);
       }
       
       attemptCall();

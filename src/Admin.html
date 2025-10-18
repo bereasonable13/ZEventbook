@@ -181,7 +181,7 @@ async function createEvent(e) {
     btn.disabled = false;
     btn.textContent = 'Create Event';
   }
-};
+}
 
 /**
 
@@ -208,7 +208,6 @@ async function loadEvents(forceRefresh = false) {
       }
       listEl.innerHTML = `<p style="color:var(--danger);">Error: ${result.error}</p>`;
       return;
-    }
     }
     
     eventsEtag = result.etag;
