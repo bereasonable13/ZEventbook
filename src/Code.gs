@@ -548,7 +548,7 @@ function getEventsSafe(clientEtag) {
   
   const ss = getControlSafe_();
   if (!ss) {
-    return { error: 'Control spreadsheet not found', events: [] };
+    return { error: 'System initializing - please refresh the page in a few seconds', events: [], isBootstrapping: true };
   }
   
   const sheet = ss.getSheetByName(EVENTS_SHEET);

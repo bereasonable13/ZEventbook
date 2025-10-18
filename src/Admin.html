@@ -201,8 +201,14 @@ async function loadEvents(forceRefresh = false) {
     }
     
     if (result.error) {
+      // Show friendly message for bootstrapping
+      if (result.isBootstrapping) {
+        listEl.innerHTML = `<p class="muted">🚀 Setting up your NextUp system for the first time...<br><button onclick="loadEvents(true)" class="btn-primary" style="margin-top:10px;">Check Again</button></p>`;
+        return;
+      }
       listEl.innerHTML = `<p style="color:var(--danger);">Error: ${result.error}</p>`;
       return;
+    }
     }
     
     eventsEtag = result.etag;
