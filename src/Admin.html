@@ -131,7 +131,7 @@ let eventsEtag = null;
 /**
  * Create new event
  */
-document.getElementById('form-create').onsubmit = async function(e) {
+async function createEvent(e) {
   e.preventDefault();
   
   const name = document.getElementById('event-name').value.trim();
@@ -184,6 +184,9 @@ document.getElementById('form-create').onsubmit = async function(e) {
 };
 
 /**
+
+// Wire up form submission handler
+document.getElementById('form-create').onsubmit = createEvent;
  * Load events list with SWR caching
  */
 async function loadEvents(forceRefresh = false) {
