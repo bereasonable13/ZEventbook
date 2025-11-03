@@ -13,3 +13,4 @@ build/
 *secret*.txt
 *.token
 chrome_OS_personal_access_token.txt
+scripts/setup-github-token.gs
