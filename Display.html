@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Event Display</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, sans-serif; overflow: hidden; background: #000; }
+    #display-container { width: 100vw; height: 100vh; }
+    .carousel-frame { width: 100%; height: 100%; border: none; display: none; }
+    .carousel-frame.active { display: block; }
+    #offline-notice { position: fixed; bottom: 20px; right: 20px; background: rgba(200,16,46,0.9); color: white; padding: 12px 20px; border-radius: 8px; font-size: 14px; display: none; }
+    #loading { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; color: #666; font-size: 24px; }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading display...</div>
+  <div id="display-container" style="display:none;"></div>
+  <div id="offline-notice">📶 Offline - Showing cached content</div>
+  
+  <script>
+    const CONFIG = { REFRESH_MS: 20000, JSON_BASE_URL: 'https://drive.google.com/uc?id=' };
+    let eventId, jsonFileId, displayMode = 'static', carouselItems = [], currentIndex = 0, carouselInterval, refreshInterval;
+    
+    async function init() {
+      try {
+        const params = new URLSearchParams(location.search);
+        eventId = params.get('event');
+        jsonFileId = params.get('fileId');
+        if (!eventId || !jsonFileId) { showError('Invalid URL'); return; }
+        
+        // Register service worker for offline support
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('/sw.js').catch(e => console.log('SW registration failed:', e));
+        }
+        
+        await loadConfig();
+        if (displayMode === 'static') {
+          await startStaticMode();
+        } else {
+          await startCarouselMode();
+        }
+      } catch (e) {
+        console.error('Init error:', e);
+        showError('Failed to initialize display');
+      }
+    }
+    
+    async function loadConfig() {
+      try {
+        const url = `${CONFIG.JSON_BASE_URL}${jsonFileId}&t=${Date.now()}`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        
+        displayMode = d.displayConfig?.mode || 'static';
+        carouselItems = d.displayConfig?.carousel || [];
+        
+        console.log('Display mode:', displayMode);
+        console.log('Carousel items:', carouselItems);
+      } catch (e) {
+        console.error('Config load error:', e);
+        // Fallback to static mode
+        displayMode = 'static';
+      }
+    }
+    
+    async function startStaticMode() {
+      console.log('Starting static mode');
+      document.getElementById('loading').style.display = 'none';
+      const container = document.getElementById('display-container');
+      container.style.display = 'block';
+      
+      // Clone Public.html content
+      const publicUrl = window.location.origin + window.location.pathname + `?p=Public&event=${eventId}&fileId=${jsonFileId}`;
+      container.innerHTML = `<iframe src="${publicUrl}" style="width:100%;height:100%;border:none;"></iframe>`;
+    }
+    
+    async function startCarouselMode() {
+      console.log('Starting carousel mode');
+      if (!carouselItems || carouselItems.length === 0) {
+        console.log('No carousel items, falling back to static');
+        await startStaticMode();
+        return;
+      }
+      
+      document.getElementById('loading').style.display = 'none';
+      const container = document.getElementById('display-container');
+      container.style.display = 'block';
+      
+      // Create iframe for each URL
+      carouselItems.forEach((item, index) => {
+        const iframe = document.createElement('iframe');
+        iframe.className = 'carousel-frame';
+        iframe.src = item.url;
+        iframe.id = `frame-${index}`;
+        if (index === 0) iframe.classList.add('active');
+        container.appendChild(iframe);
+        
+        // Cache URL for offline
+        if ('caches' in window) {
+          caches.open('display-carousel-v1').then(cache => {
+            cache.add(item.url).catch(e => console.log('Cache failed:', item.url, e));
+          });
+        }
+      });
+      
+      // Start rotation
+      rotateCarousel();
+    }
+    
+    function rotateCarousel() {
+      if (!carouselItems || carouselItems.length === 0) return;
+      
+      const currentItem = carouselItems[currentIndex];
+      const duration = (currentItem.duration || 20) * 1000;
+      
+      setTimeout(() => {
+        // Hide current
+        document.getElementById(`frame-${currentIndex}`).classList.remove('active');
+        
+        // Show next
+        currentIndex = (currentIndex + 1) % carouselItems.length;
+        document.getElementById(`frame-${currentIndex}`).classList.add('active');
+        
+        // Continue rotation
+        rotateCarousel();
+      }, duration);
+    }
+    
+    function showError(msg) {
+      document.getElementById('loading').innerHTML = `<div style="color:#c8102e;">${msg}</div>`;
+    }
+    
+    // Network status monitoring
+    window.addEventListener('online', () => {
+      document.getElementById('offline-notice').style.display = 'none';
+    });
+    
+    window.addEventListener('offline', () => {
+      document.getElementById('offline-notice').style.display = 'block';
+    });
+    
+    // Start
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

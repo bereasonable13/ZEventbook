@@ -390,21 +390,7 @@
 
   
   <div class="container">
-    <!-- Header -->
-    <div class="header">
-      <h1>Event Manager</h1>
-      <div class="header-meta">
-        Event Only MVP · Build <?= BUILD_ID ?>
-      </div>
-    </div>
     
-    <!-- Brand Switcher -->
-    <div class="brand-switcher">
-      <label>Brand</label>
-      <div class="brand-tabs" id="brand-tabs">
-        <!-- Populated dynamically -->
-      </div>
-    </div>
     
     <!-- Create Event Card -->
     <div class="card">
@@ -673,15 +659,20 @@
       try {
         const result = await NU.rpc('clientGetEvents', currentBrand);
         if (result.ok) {
-          events = result.events;
+          events = result.events || [];  // Ensure it's an array
           renderEvents();
         } else {
+          // Clear loading state and show empty
+          events = [];
+          renderEvents();
           showToast(result.error || 'Failed to load events', 'error');
         }
       } catch (error) {
+        // Clear loading state and show error
+        events = [];
+        const container = document.getElementById('events-container');
+        container.innerHTML = '<div class="empty-state">Failed to load events. Please refresh.</div>';
         showToast('Failed to load events', 'error');
-        document.getElementById('events-container').innerHTML = 
-          '<div class="empty-state">Failed to load events</div>';
       }
     }
     

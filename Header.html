@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><?= brand.name ?> Event Manager</title>
+  
+  <style>
+    /* Dynamic brand styling injected via Apps Script */
+    :root {
+      --brand-primary: <?= brand.colors.primary ?>;
+      --brand-secondary: <?= brand.colors.secondary ?>;
+      --brand-accent: <?= brand.colors.accent ?>;
+      --brand-text: <?= brand.colors.text ?>;
+      --brand-background: <?= brand.colors.background ?>;
+    }
+    
+    .brand-header {
+      background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+      padding: 20px;
+      text-align: center;
+      border-bottom: 4px solid var(--brand-accent);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .brand-logo-container {
+      margin-bottom: 15px;
+    }
+    
+    .brand-logo {
+      max-width: 200px;
+      height: auto;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      transition: transform 0.3s ease;
+    }
+    
+    .brand-logo:hover {
+      transform: scale(1.05);
+    }
+    
+    .brand-name {
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 10px 0 5px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      letter-spacing: 0.5px;
+    }
+    
+    .brand-tagline {
+      color: rgba(255,255,255,0.9);
+      font-size: 16px;
+      font-weight: 400;
+      margin: 5px 0;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .brand-description {
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+      font-style: italic;
+      margin: 10px 0 0 0;
+    }
+    
+    /* Team-specific styling */
+    .team-info {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 8px;
+    }
+    
+    .team-league-badge {
+      background: var(--brand-accent);
+      color: white;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .social-links {
+      margin-top: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    .social-link {
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+    
+    .social-link:hover {
+      color: white;
+      text-decoration: underline;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .brand-logo {
+        max-width: 150px;
+      }
+      
+      .brand-name {
+        font-size: 24px;
+      }
+      
+      .brand-tagline {
+        font-size: 14px;
+      }
+      
+      .brand-description {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="brand-header">
+    
+    <!-- Logo -->
+    <div class="brand-logo-container">
+      <img 
+        class="brand-logo" 
+        src="<?= brand.logo ?>" 
+        alt="<?= brand.name ?> Logo"
+        onerror="this.style.display='none'"
+      />
+    </div>
+    
+    <!-- Brand Name -->
+    <h1 class="brand-name"><?= brand.name ?></h1>
+    
+    <!-- Tagline -->
+    <? if (brand.tagline) { ?>
+      <div class="brand-tagline"><?= brand.tagline ?></div>
+    <? } ?>
+    
+    <!-- Description -->
+    <? if (brand.description) { ?>
+      <div class="brand-description"><?= brand.description ?></div>
+    <? } ?>
+    
+    <!-- Team-specific info (for CBL teams) -->
+    <? if (brand.league) { ?>
+      <div class="team-info">
+        <span class="team-league-badge"><?= brand.league ?> Franchise</span>
+        <? if (brand.venue) { ?>
+          <span style="color: rgba(255,255,255,0.9); font-size: 13px;">
+            @ <?= brand.venue ?>
+          </span>
+        <? } ?>
+      </div>
+    <? } ?>
+    
+    <!-- Social Links -->
+    <? if (brand.website || brand.instagram) { ?>
+      <div class="social-links">
+        <? if (brand.website) { ?>
+          <a href="<?= brand.website ?>" target="_blank" class="social-link">
+            🌐 Website
+          </a>
+        <? } ?>
+        <? if (brand.instagram) { ?>
+          <a href="https://instagram.com/<?= brand.instagram.replace('@', '') ?>" target="_blank" class="social-link">
+            📸 <?= brand.instagram ?>
+          </a>
+        <? } ?>
+      </div>
+    <? } ?>
+    
+  </div>
+  
+</body>
+</html>

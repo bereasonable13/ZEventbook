@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>American Bocce Co. · Event Poster</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  
+  <?!= include('Styles_Enhanced_ABC'); ?>
+  
+  <style>
+    body {
+      background: var(--neutral-900);
+      margin: 0;
+      padding: var(--space-4);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    
+    /* Poster container - printable size */
+    .poster {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 11 / 17; /* Standard poster ratio */
+      background: linear-gradient(135deg, var(--abc-cream-light), var(--abc-cream));
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xl);
+      padding: var(--space-8);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    /* Background image overlay */
+    .poster-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      opacity: 0.15;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+    
+    .poster-background img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      filter: blur(2px) brightness(1.2);
+    }
+    
+    /* Content on top of background */
+    .poster-content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    /* Image upload section */
+    .image-upload-section {
+      position: absolute;
+      top: var(--space-4);
+      right: var(--space-4);
+      z-index: 100;
+    }
+    
+    .upload-button {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+      padding: var(--space-3) var(--space-4);
+      background: white;
+      border: 2px solid var(--abc-red);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      font-weight: var(--font-semibold);
+      color: var(--abc-red);
+      box-shadow: var(--shadow-md);
+      transition: all var(--transition-base);
+      min-height: var(--touch-target-min); /* 44px touch target */
+    }
+    
+    .upload-button:hover {
+      background: var(--abc-red);
+      color: white;
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }
+    
+    .upload-button:active {
+      transform: translateY(0);
+    }
+    
+    /* Hidden file input */
+    #imageUpload {
+      display: none;
+    }
+    
+    /* Image preview/remove */
+    .image-controls {
+      display: none;
+      flex-direction: column;
+      gap: var(--space-2);
+      position: absolute;
+      top: var(--space-4);
+      right: var(--space-4);
+      z-index: 100;
+    }
+    
+    .image-controls.active {
+      display: flex;
+    }
+    
+    .image-info {
+      background: white;
+      padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md);
+      font-size: var(--text-xs);
+      color: var(--neutral-600);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-remove-image {
+      padding: var(--space-2) var(--space-4);
+      background: var(--abc-red);
+      color: white;
+      border: none;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      font-weight: var(--font-semibold);
+      font-size: var(--text-sm);
+      min-height: var(--touch-target-min);
+      transition: all var(--transition-base);
+    }
+    
+    .btn-remove-image:hover {
+      background: var(--abc-red-dark);
+      transform: translateY(-1px);
+    }
+    
+    /* Upload modal/overlay */
+    .upload-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: var(--z-modal);
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-4);
+    }
+    
+    .upload-modal.active {
+      display: flex;
+    }
+    
+    .upload-modal-content {
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: var(--space-8);
+      max-width: 500px;
+      width: 100%;
+      box-shadow: var(--shadow-xl);
+    }
+    
+    .upload-modal h3 {
+      color: var(--abc-red);
+      margin-bottom: var(--space-4);
+    }
+    
+    .upload-guidelines {
+      background: var(--abc-cream-light);
+      padding: var(--space-4);
+      border-radius: var(--radius-md);
+      margin-bottom: var(--space-4);
+      font-size: var(--text-sm);
+      line-height: var(--leading-relaxed);
+    }
+    
+    .upload-guidelines ul {
+      margin: var(--space-2) 0 0 var(--space-4);
+      padding: 0;
+    }
+    
+    .upload-guidelines li {
+      margin-bottom: var(--space-1);
+    }
+    
+    .format-badge {
+      display: inline-block;
+      padding: var(--space-1) var(--space-2);
+      background: var(--bocce-green);
+      color: white;
+      border-radius: var(--radius-sm);
+      font-size: var(--text-xs);
+      font-weight: var(--font-bold);
+      margin-right: var(--space-1);
+    }
+    
+    .size-warning {
+      color: var(--bocce-yellow-dark);
+      font-weight: var(--font-semibold);
+    }
+    
+    .modal-buttons {
+      display: flex;
+      gap: var(--space-3);
+      margin-top: var(--space-6);
+    }
+    
+    .modal-buttons button {
+      flex: 1;
+      min-height: var(--touch-target-comfortable);
+    }
+    
+    /* ABC branding header */
+    .poster-header {
+      text-align: center;
+      margin-bottom: var(--space-8);
+    }
+    
+    .poster-logo {
+      font-size: var(--text-4xl);
+      margin-bottom: var(--space-4);
+    }
+    
+    .poster-brand {
+      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
+      color: var(--abc-red);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: var(--space-2);
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    }
+    
+    /* Event info */
+    .event-info {
+      text-align: center;
+      margin-bottom: var(--space-10);
+    }
+    
+    .event-title {
+      font-size: clamp(var(--text-3xl), 5vw, var(--text-5xl));
+      font-weight: var(--font-bold);
+      color: var(--abc-red);
+      margin-bottom: var(--space-4);
+      line-height: var(--leading-tight);
+      text-transform: uppercase;
+      text-shadow: 0 2px 4px rgba(255, 255, 255, 0.8);
+    }
+    
+    .event-date {
+      font-size: clamp(var(--text-xl), 3vw, var(--text-3xl));
+      color: var(--neutral-700);
+      font-weight: var(--font-semibold);
+      margin-bottom: var(--space-2);
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    }
+    
+    .event-details {
+      font-size: var(--text-lg);
+      color: var(--neutral-600);
+      text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8);
+    }
+    
+    /* QR codes section */
+    .qr-section {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+      margin-top: auto;
+    }
+    
+    .qr-box {
+      background: white;
+      border-radius: var(--radius-xl);
+      padding: var(--space-6);
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      border: 3px solid var(--abc-red);
+      position: relative;
+    }
+    
+    .qr-box.left {
+      border-color: var(--bocce-green);
+    }
+    
+    .qr-box.right {
+      border-color: var(--bocce-blue);
+    }
+    
+    .qr-title {
+      font-size: var(--text-lg);
+      font-weight: var(--font-bold);
+      color: var(--neutral-800);
+      margin-bottom: var(--space-4);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .qr-box.left .qr-title {
+      color: var(--bocce-green-dark);
+    }
+    
+    .qr-box.right .qr-title {
+      color: var(--bocce-blue-dark);
+    }
+    
+    .qr-image-container {
+      width: 100%;
+      max-width: 280px;
+      aspect-ratio: 1;
+      background: white;
+      border-radius: var(--radius-lg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: var(--space-4);
+      padding: var(--space-2);
+    }
+    
+    .qr-image {
+      width: 100%;
+      height: 100%;
+      border-radius: var(--radius-md);
+    }
+    
+    .qr-url {
+      font-size: var(--text-sm);
+      color: var(--neutral-700);
+      font-family: monospace;
+      word-break: break-all;
+      padding: var(--space-2) var(--space-3);
+      background: var(--abc-cream-light);
+      border-radius: var(--radius-md);
+      margin-top: var(--space-2);
+    }
+    
+    .qr-label {
+      position: absolute;
+      bottom: var(--space-3);
+      font-size: var(--text-xs);
+      color: var(--neutral-600);
+      font-weight: var(--font-medium);
+    }
+    
+    .qr-box.left .qr-label {
+      left: var(--space-3);
+    }
+    
+    .qr-box.right .qr-label {
+      right: var(--space-3);
+    }
+    
+    /* Loading state */
+    .loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--space-4);
+      color: var(--neutral-600);
+    }
+    
+    /* Print button */
+    .print-button {
+      position: fixed;
+      bottom: var(--space-6);
+      right: var(--space-6);
+      z-index: 100;
+    }
+    
+    /* Print styles */
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+      }
+      
+      .poster {
+        max-width: 100%;
+        width: 8.5in;
+        height: 11in;
+        box-shadow: none;
+        border-radius: 0;
+        page-break-inside: avoid;
+      }
+      
+      .image-upload-section,
+      .image-controls,
+      .print-button,
+      .no-print {
+        display: none !important;
+      }
+      
+      .qr-image {
+        image-rendering: crisp-edges;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+      }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .poster {
+        aspect-ratio: auto;
+        min-height: 100vh;
+      }
+      
+      .qr-section {
+        grid-template-columns: 1fr;
+      }
+      
+      .event-title {
+        font-size: var(--text-2xl);
+      }
+      
+      .event-date {
+        font-size: var(--text-xl);
+      }
+      
+      .upload-button {
+        font-size: var(--text-sm);
+        padding: var(--space-2) var(--space-3);
+      }
+      
+      .upload-modal-content {
+        padding: var(--space-6);
+      }
+    }
+  </style>
+</head>
+<body>
+  <?!= include('NUSDK'); ?>
+
+    <div style="max-width: 1400px; margin: 0 auto; padding: 1rem;">
+        <?!= include('Header'); ?>
+    </div>
+
+<div class="poster">
+  <!-- Background Image (if uploaded) -->
+  <div class="poster-background" id="posterBackground" style="display:none;">
+    <img id="backgroundImage" alt="Poster background"/>
+  </div>
+  
+  <!-- Image Upload Section -->
+  <div class="image-upload-section no-print">
+    <label for="imageUpload" class="upload-button">
+      <span>📷</span>
+      <span>Upload Image</span>
+    </label>
+    <input 
+      type="file" 
+      id="imageUpload" 
+      accept="image/jpeg,image/png,image/webp"
+      capture="environment"
+    />
+  </div>
+  
+  <!-- Image Controls (shown after upload) -->
+  <div class="image-controls no-print" id="imageControls">
+    <div class="image-info" id="imageInfo">
+      <strong>Image:</strong> <span id="imageFileName">-</span><br/>
+      <strong>Size:</strong> <span id="imageFileSize">-</span>
+    </div>
+    <button class="btn-remove-image" id="btnRemoveImage">
+      🗑 Remove Image
+    </button>
+  </div>
+  
+  <!-- Poster Content -->
+  <div class="poster-content">
+    <!-- ABC Branding -->
+    <div class="poster-header">
+      <div class="poster-logo">🎯</div>
+      <div class="poster-brand">American Bocce Co.</div>
+    </div>
+    
+    <!-- Event Information -->
+    <div class="event-info">
+      <h1 class="event-title" id="eventTitle">Loading Event...</h1>
+      <p class="event-date" id="eventDate">Please wait...</p>
+      <p class="event-details" id="eventDetails">Event details loading</p>
+    </div>
+    
+    <!-- QR Codes Section -->
+    <div class="qr-section">
+      <!-- Sign-Up Form QR (Left) -->
+      <div class="qr-box left">
+        <h2 class="qr-title">📝 Sign Up</h2>
+        <div class="qr-image-container">
+          <img id="signupQR" class="qr-image" alt="Sign-up QR Code" style="display:none;"/>
+          <div id="signupLoading" class="loading">
+            <div class="spinner-lg"></div>
+            <span>Loading QR...</span>
+          </div>
+        </div>
+        <div class="qr-url" id="signupURL" style="display:none;"></div>
+        <span class="qr-label">Lower Left</span>
+      </div>
+      
+      <!-- Public Page QR (Right) -->
+      <div class="qr-box right">
+        <h2 class="qr-title">📱 View Event</h2>
+        <div class="qr-image-container">
+          <img id="publicQR" class="qr-image" alt="Public page QR Code" style="display:none;"/>
+          <div id="publicLoading" class="loading">
+            <div class="spinner-lg"></div>
+            <span>Loading QR...</span>
+          </div>
+        </div>
+        <div class="qr-url" id="publicURL" style="display:none;"></div>
+        <span class="qr-label">Lower Right</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Upload Guidelines Modal -->
+<div class="upload-modal" id="uploadModal">
+  <div class="upload-modal-content">
+    <h3>📷 Upload Poster Image</h3>
+    
+    <div class="upload-guidelines">
+      <strong>✅ Accepted Formats:</strong>
+      <ul>
+        <li><span class="format-badge">JPG</span> Best for photos (smaller file size)</li>
+        <li><span class="format-badge">PNG</span> Best for graphics (transparency)</li>
+        <li><span class="format-badge">WebP</span> Modern format (best quality/size ratio)</li>
+      </ul>
+      
+      <strong class="size-warning">⚠ Size Restrictions:</strong>
+      <ul>
+        <li><strong>Max file size:</strong> 2 MB</li>
+        <li><strong>Recommended:</strong> 1200×1800 px (poster ratio)</li>
+        <li><strong>Min resolution:</strong> 800×1200 px</li>
+        <li><strong>Print quality:</strong> 150-300 DPI</li>
+      </ul>
+      
+      <strong>💡 Tips:</strong>
+      <ul>
+        <li>Use high-contrast images for readability</li>
+        <li>Avoid busy backgrounds (text must be readable)</li>
+        <li>Image will appear at 15% opacity as background</li>
+        <li>Mobile camera photos work great!</li>
+      </ul>
+    </div>
+    
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" id="btnCancelUpload">Cancel</button>
+      <button class="btn btn-primary" id="btnConfirmUpload">Select Image</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print Button -->
+<button class="btn btn-primary btn-lg print-button no-print" onclick="window.print()">
+  🖨 Print Poster
+</button>
+
+<script>
+/* ================= Poster v5.1 (With Image Upload) ================= */
+
+// Get event ID from URL
+const urlParams = new URLSearchParams(window.location.search);
+const eventId = urlParams.get('eventId') || urlParams.get('event');
+
+// Image upload configuration
+const IMAGE_CONFIG = {
+  maxSize: 2 * 1024 * 1024, // 2 MB
+  acceptedFormats: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'],
+  minWidth: 800,
+  minHeight: 1200,
+  recommendedWidth: 1200,
+  recommendedHeight: 1800,
+  quality: 0.85, // For compression
+};
+
+// DOM elements
+const els = {
+  uploadButton: document.getElementById('imageUpload'),
+  uploadModal: document.getElementById('uploadModal'),
+  btnConfirmUpload: document.getElementById('btnConfirmUpload'),
+  btnCancelUpload: document.getElementById('btnCancelUpload'),
+  btnRemoveImage: document.getElementById('btnRemoveImage'),
+  imageControls: document.getElementById('imageControls'),
+  posterBackground: document.getElementById('posterBackground'),
+  backgroundImage: document.getElementById('backgroundImage'),
+  imageInfo: document.getElementById('imageInfo'),
+  imageFileName: document.getElementById('imageFileName'),
+  imageFileSize: document.getElementById('imageFileSize'),
+};
+
+// Image upload handler
+els.uploadButton.addEventListener('change', handleImageSelect);
+els.btnConfirmUpload.addEventListener('click', showUploadModal);
+els.btnCancelUpload.addEventListener('click', hideUploadModal);
+els.btnRemoveImage.addEventListener('click', removeImage);
+
+// Show modal when clicking upload button
+document.querySelector('.upload-button').addEventListener('click', () => {
+  showUploadModal();
+});
+
+function showUploadModal() {
+  els.uploadModal.classList.add('active');
+}
+
+function hideUploadModal() {
+  els.uploadModal.classList.remove('active');
+}
+
+function handleImageSelect(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // Validate file
+  const validation = validateImage(file);
+  if (!validation.valid) {
+    alert('❌ ' + validation.error);
+    event.target.value = ''; // Reset input
+    return;
+  }
+  
+  // Load and display image
+  loadImage(file);
+  hideUploadModal();
+}
+
+function validateImage(file) {
+  // Check file type
+  if (!IMAGE_CONFIG.acceptedFormats.includes(file.type)) {
+    return {
+      valid: false,
+      error: `Invalid format. Please use JPG, PNG, or WebP.\nSelected: ${file.type}`
+    };
+  }
+  
+  // Check file size
+  if (file.size > IMAGE_CONFIG.maxSize) {
+    const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+    const maxMB = (IMAGE_CONFIG.maxSize / 1024 / 1024).toFixed(0);
+    return {
+      valid: false,
+      error: `File too large: ${sizeMB} MB\nMaximum allowed: ${maxMB} MB\n\nTip: Compress your image or use a smaller photo.`
+    };
+  }
+  
+  return { valid: true };
+}
+
+function loadImage(file) {
+  const reader = new FileReader();
+  
+  reader.onload = function(e) {
+    const img = new Image();
+    
+    img.onload = function() {
+      // Check dimensions
+      if (img.width < IMAGE_CONFIG.minWidth || img.height < IMAGE_CONFIG.minHeight) {
+        alert(`❌ Image too small!\n\nMinimum: ${IMAGE_CONFIG.minWidth}×${IMAGE_CONFIG.minHeight} px\nYour image: ${img.width}×${img.height} px\n\nPlease use a higher resolution image.`);
+        return;
+      }
+      
+      // Check aspect ratio (should be close to 11:17 or portrait)
+      const aspectRatio = img.width / img.height;
+      if (aspectRatio > 0.8) { // Too wide
+        const shouldContinue = confirm(`⚠ Image aspect ratio warning\n\nYour image appears wide (${img.width}×${img.height}).\nPoster works best with portrait/tall images.\n\nContinue anyway?`);
+        if (!shouldContinue) return;
+      }
+      
+      // Optimize image if needed
+      optimizeAndDisplayImage(img, file);
+    };
+    
+    img.src = e.target.result;
+  };
+  
+  reader.readAsDataURL(file);
+}
+
+function optimizeAndDisplayImage(img, file) {
+  // If image is larger than recommended, resize it
+  let finalWidth = img.width;
+  let finalHeight = img.height;
+  
+  if (img.width > IMAGE_CONFIG.recommendedWidth || img.height > IMAGE_CONFIG.recommendedHeight) {
+    const scaleWidth = IMAGE_CONFIG.recommendedWidth / img.width;
+    const scaleHeight = IMAGE_CONFIG.recommendedHeight / img.height;
+    const scale = Math.min(scaleWidth, scaleHeight);
+    
+    finalWidth = Math.round(img.width * scale);
+    finalHeight = Math.round(img.height * scale);
+  }
+  
+  // Create canvas for optimization
+  const canvas = document.createElement('canvas');
+  canvas.width = finalWidth;
+  canvas.height = finalHeight;
+  
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, finalWidth, finalHeight);
+  
+  // Convert to optimized format
+  const optimizedDataUrl = canvas.toDataURL('image/jpeg', IMAGE_CONFIG.quality);
+  
+  // Display the image
+  els.backgroundImage.src = optimizedDataUrl;
+  els.posterBackground.style.display = 'block';
+  
+  // Update controls
+  document.querySelector('.image-upload-section').style.display = 'none';
+  els.imageControls.classList.add('active');
+  
+  // Update file info
+  els.imageFileName.textContent = file.name;
+  const sizeKB = (file.size / 1024).toFixed(0);
+  els.imageFileSize.textContent = `${sizeKB} KB`;
+  
+  console.log(`Image loaded: ${file.name} (${finalWidth}×${finalHeight})`);
+}
+
+function removeImage() {
+  // Hide image
+  els.posterBackground.style.display = 'none';
+  els.backgroundImage.src = '';
+  
+  // Reset controls
+  els.imageControls.classList.remove('active');
+  document.querySelector('.image-upload-section').style.display = 'block';
+  
+  // Clear file input
+  els.uploadButton.value = '';
+  
+  console.log('Image removed');
+}
+
+// Event loading functions (from original Poster)
+async function loadPoster() {
+  if (!eventId) {
+    document.getElementById('eventTitle').textContent = 'No Event Selected';
+    document.getElementById('eventDate').textContent = 'Please provide eventId parameter';
+    document.getElementById('eventDetails').textContent = '';
+    document.getElementById('signupLoading').innerHTML = '<span style="color: var(--abc-red);">❌ No event ID</span>';
+    document.getElementById('publicLoading').innerHTML = '<span style="color: var(--abc-red);">❌ No event ID</span>';
+    return;
+  }
+  
+  try {
+    console.log('Loading event:', eventId);
+    const bundle = await NU.rpc('getPublicBundle', eventId);
+    
+    if (!bundle || !bundle.ok || !bundle.eventMeta) {
+      throw new Error('Event not found');
+    }
+    
+    const event = bundle.eventMeta;
+    
+    // Update event information
+    document.getElementById('eventTitle').textContent = event.name || event.slug || 'Event';
+    
+    if (event.dateISO || event.startDateISO) {
+      const dateStr = event.dateISO || event.startDateISO;
+      const date = new Date(dateStr);
+      const formatted = date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+      document.getElementById('eventDate').textContent = formatted;
+    } else {
+      document.getElementById('eventDate').textContent = 'Date TBD';
+    }
+    
+    const details = [];
+    if (event.elimType) {
+      const elimMap = {
+        'single': 'Single Elimination',
+        'double': 'Double Elimination',
+        'round-robin': 'Round Robin'
+      };
+      details.push(elimMap[event.elimType] || event.elimType);
+    }
+    if (event.seedMode) {
+      const seedMap = {
+        'seeded': 'Seeded Tournament',
+        'random': 'Random Seeding',
+        'none': 'Open Play'
+      };
+      details.push(seedMap[event.seedMode] || event.seedMode);
+    }
+    document.getElementById('eventDetails').textContent = details.join(' · ') || 'Tournament Event';
+    
+    await loadQRCodes(eventId, event);
+    
+  } catch (e) {
+    console.error('Error loading poster:', e);
+    document.getElementById('eventTitle').textContent = 'Error Loading Event';
+    document.getElementById('eventDate').textContent = e.message || 'Please try again';
+    document.getElementById('eventDetails').textContent = '';
+    document.getElementById('signupLoading').innerHTML = '<span style="color: var(--abc-red);">❌ Load failed</span>';
+    document.getElementById('publicLoading').innerHTML = '<span style="color: var(--abc-red);">❌ Load failed</span>';
+  }
+}
+
+async function loadQRCodes(eventId, event) {
+  try {
+    const links = await NU.rpc('getEventQuickLinks', eventId);
+    
+    if (!links || !links.ok || !links.links) {
+      throw new Error('Failed to load links');
+    }
+    
+    const { signupUrl, publicUrl } = links.links;
+    
+    // QR size increased to 600px for print quality (300 DPI at 2")
+    const qrSize = 600;
+    
+    if (signupUrl) {
+      const signupQRUrl = `https://quickchart.io/qr?text=${encodeURIComponent(signupUrl)}&size=${qrSize}&margin=2`;
+      const signupImg = document.getElementById('signupQR');
+      const signupUrlEl = document.getElementById('signupURL');
+      const signupLoading = document.getElementById('signupLoading');
+      
+      signupImg.src = signupQRUrl;
+      signupImg.onload = () => {
+        signupImg.style.display = 'block';
+        signupLoading.style.display = 'none';
+        signupUrlEl.textContent = signupUrl;
+        signupUrlEl.style.display = 'block';
+      };
+      signupImg.onerror = () => {
+        signupLoading.innerHTML = '<span style="color: var(--abc-red);">❌ QR failed</span>';
+      };
+    } else {
+      document.getElementById('signupLoading').innerHTML = `
+        <span style="color: var(--bocce-yellow-dark); text-align: center;">
+          ⚠ No form created yet<br/>
+          <small>Create form in Admin</small>
+        </span>
+      `;
+    }
+    
+    if (publicUrl) {
+      const publicQRUrl = `https://quickchart.io/qr?text=${encodeURIComponent(publicUrl)}&size=${qrSize}&margin=2`;
+      const publicImg = document.getElementById('publicQR');
+      const publicUrlEl = document.getElementById('publicURL');
+      const publicLoading = document.getElementById('publicLoading');
+      
+      publicImg.src = publicQRUrl;
+      publicImg.onload = () => {
+        publicImg.style.display = 'block';
+        publicLoading.style.display = 'none';
+        publicUrlEl.textContent = publicUrl;
+        publicUrlEl.style.display = 'block';
+      };
+      publicImg.onerror = () => {
+        publicLoading.innerHTML = '<span style="color: var(--abc-red);">❌ QR failed</span>';
+      };
+    } else {
+      document.getElementById('publicLoading').innerHTML = `
+        <span style="color: var(--bocce-yellow-dark); text-align: center;">
+          ⚠ Public page not ready<br/>
+          <small>Complete setup in Admin</small>
+        </span>
+      `;
+    }
+    
+  } catch (e) {
+    console.error('Error loading QR codes:', e);
+    document.getElementById('signupLoading').innerHTML = '<span style="color: var(--abc-red);">❌ Failed to load</span>';
+    document.getElementById('publicLoading').innerHTML = '<span style="color: var(--abc-red);">❌ Failed to load</span>';
+  }
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', loadPoster);
+
+console.log('Poster with Image Upload initialized');
+console.log('Event ID:', eventId);
+console.log('Image config:', IMAGE_CONFIG);
+</script>
+
+</body>
+</html>
