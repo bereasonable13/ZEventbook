@@ -1,0 +1,17 @@
+# Development files
+.eslintrc.js
+.prettierrc
+.gitignore
+.git/
+.github/
+node_modules/
+package.json
+package-lock.json
+jest.config.js
+*.md
+tests/
+scripts/
+coverage/
+*.backup
+fix-*.py
+fix-*.sh
