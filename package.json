@@ -1,12 +1,14 @@
 {
   "name": "zeventbook",
   "version": "6.1.0",
-  "description": "NextUp Event Manager",
+  "description": "NextUp Event Manager - Multi-Brand Event Management Platform",
   "scripts": {
     "test": "jest",
-    "test:contract": "jest tests/contract",
-    "test:unit": "jest tests/unit",
-    "test:smoke": "jest tests/smoke",
+    "test:config": "jest tests/contract/brand-config.test.js --verbose",
+    "test:contract": "jest tests/contract --verbose",
+    "test:unit": "jest tests/unit --verbose",
+    "test:smoke": "jest tests/smoke --verbose",
+    "test:all": "jest --verbose",
     "lint": "eslint '**/*.js' --ignore-pattern 'node_modules/**'",
     "verify": "node scripts/verify-deployment.js"
   },
@@ -16,5 +18,15 @@
     "eslint": "^8.56.0",
     "eslint-plugin-html": "^7.1.0",
     "jest": "^29.7.0"
-  }
+  },
+  "keywords": [
+    "event-management",
+    "bocce",
+    "tournament",
+    "multi-brand",
+    "saas"
+  ],
+  "author": "Matt Zdanowicz",
+  "license": "UNLICENSED",
+  "private": true
 }
