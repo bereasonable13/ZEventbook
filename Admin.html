@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title><?= appTitle ?> · Admin</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  
+  <?!= include('NUSDK'); ?>
+  
+  <style>
+    /* ===== VARIABLES ===== */
+    :root {
+      --abc-red: #c8102e;
+      --abc-red-dark: #a00d25;
+      --abc-cream: #f5f1e8;
+      --abc-cream-light: #fff8e7;
+      --bocce-green: #00a651;
+      --bocce-blue: #0047bb;
+      --text-dark: #2c2416;
+      --text-medium: #6b5d4f;
+      --text-light: #9d8b7a;
+      --border: #d4c4b0;
+      --shadow: 0 4px 8px rgba(200,16,46,0.15);
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--abc-cream);
+      color: var(--text-dark);
+      line-height: 1.5;
+      padding: 16px;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    /* ===== HEADER ===== */
+    .header {
+      background: linear-gradient(135deg, var(--abc-red) 0%, var(--abc-red-dark) 100%);
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+      color: white;
+    }
+    
+    .header h1 {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    
+    .header-meta {
+      opacity: 0.9;
+      font-size: 14px;
+    }
+    
+    /* ===== BRAND SWITCHER ===== */
+    .brand-switcher {
+      background: white;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    
+    .brand-switcher label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-dark);
+    }
+    
+    .brand-tabs {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .brand-tab {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    
+    .brand-tab:hover {
+      border-color: var(--abc-red);
+    }
+    
+    .brand-tab.active {
+      background: var(--abc-red);
+      color: white;
+      border-color: var(--abc-red);
+    }
+    
+    /* ===== CREATE EVENT CARD ===== */
+    .card {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow);
+    }
+    
+    .card h2 {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: var(--text-dark);
+    }
+    
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: var(--text-dark);
+    }
+    
+    .form-group input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      transition: border-color 0.2s;
+    }
+    
+    .form-group input:focus {
+      outline: none;
+      border-color: var(--abc-red);
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: var(--abc-red);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: var(--abc-red-dark);
+    }
+    
+    .btn-secondary {
+      background: var(--bocce-green);
+      color: white;
+    }
+    
+    .btn-secondary:hover {
+      background: #008a43;
+    }
+    
+    .btn-link {
+      background: transparent;
+      color: var(--abc-red);
+      padding: 8px 12px;
+    }
+    
+    .btn-link:hover {
+      background: var(--abc-cream-light);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    /* ===== EVENTS LIST ===== */
+    .events-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .event-item {
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    
+    .event-header {
+      padding: 16px;
+      background: var(--abc-cream-light);
+      border-bottom: 2px solid var(--border);
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .event-header:hover {
+      background: var(--abc-cream);
+    }
+    
+    .event-title {
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text-dark);
+    }
+    
+    .event-date {
+      color: var(--text-medium);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+    
+    .event-status {
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    
+    .status-created {
+      background: #fdb913;
+      color: #000;
+    }
+    
+    .status-tracking {
+      background: var(--bocce-green);
+      color: white;
+    }
+    
+    .event-body {
+      padding: 16px;
+      display: none;
+    }
+    
+    .event-body.expanded {
+      display: block;
+    }
+    
+    .setup-prompt {
+      text-align: center;
+      padding: 24px;
+      background: var(--abc-cream-light);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    
+    .setup-prompt p {
+      margin-bottom: 16px;
+      color: var(--text-medium);
+    }
+    
+    /* ===== TRACKING GRID ===== */
+    .tracking-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    @media (max-width: 768px) {
+      .tracking-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    .tracking-card {
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 16px;
+      background: var(--abc-cream-light);
+    }
+    
+    .tracking-card h4 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .qr-container {
+      text-align: center;
+      margin: 12px 0;
+    }
+    
+    .qr-container img {
+      max-width: 200px;
+      width: 100%;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .qr-loading {
+      padding: 60px;
+      background: #f0f0f0;
+      border-radius: 8px;
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .tracking-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+    
+    .tracking-actions .btn {
+      flex: 1;
+      font-size: 12px;
+      padding: 8px 12px;
+    }
+    
+    .response-count {
+      display: inline-block;
+      background: var(--abc-red);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    
+    /* ===== LOADING & EMPTY STATES ===== */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-light);
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-light);
+    }
+    
+    .empty-state-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+    }
+    
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--text-dark);
+      color: white;
+      padding: 16px 24px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    
+    .toast.show {
+      opacity: 1;
+    }
+    
+    .toast.error {
+      background: var(--abc-red);
+    }
+    
+    .toast.success {
+      background: var(--bocce-green);
+    }
+  </style>
+</head>
+<body>
+  
+  <?!= include('Header', brand) ?>
+
+  
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>Event Manager</h1>
+      <div class="header-meta">
+        Event Only MVP · Build <?= BUILD_ID ?>
+      </div>
+    </div>
+    
+    <!-- Brand Switcher -->
+    <div class="brand-switcher">
+      <label>Brand</label>
+      <div class="brand-tabs" id="brand-tabs">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+    
+    <!-- Create Event Card -->
+    <div class="card">
+      <h2>Create Event</h2>
+      <form id="create-event-form">
+        <div class="form-group">
+          <label for="event-name">Event Name *</label>
+          <input 
+            type="text" 
+            id="event-name" 
+            placeholder="ABC Core Development Class - Andy Zimmerman"
+            required
+          />
+        </div>
+        
+        <div class="form-group">
+          <label for="event-date">Event Date *</label>
+          <input 
+            type="date" 
+            id="event-date" 
+            required
+          />
+        </div>
+        
+        <div class="form-group">
+          <label for="event-time">Event Time (e.g., "7:00 PM - 9:00 PM")</label>
+          <input 
+            type="text" 
+            id="event-time" 
+            placeholder="7:00 PM - 9:00 PM"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label for="location">Where (Location/Venue)</label>
+          <input 
+            type="text" 
+            id="location" 
+            placeholder="ABC Bocce Bar, 123 Main St, Chicago"
+          />
+        </div>
+        
+        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
+        
+        <h3 style="margin-bottom: 16px; font-size: 18px;">Summary Section *</h3>
+        
+        <div class="form-group">
+          <label for="summary-text">Summary Text * (min 10 characters)</label>
+          <textarea 
+            id="summary-text" 
+            rows="4"
+            placeholder="Join us for an incredible evening of bocce ball instruction with professional coach Andy Zimmerman..."
+            required
+            style="width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px;"
+          ></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="summary-link">Summary Link * (e.g., registration page)</label>
+          <input 
+            type="url" 
+            id="summary-link" 
+            placeholder="https://americanbocceco.com/register"
+            required
+          />
+        </div>
+        
+        <div class="form-group">
+          <label for="summary-image">Summary Image URL (Optional)</label>
+          <input 
+            type="url" 
+            id="summary-image" 
+            placeholder="https://example.com/event-banner.jpg"
+          />
+        </div>
+        
+        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
+        
+        <h3 style="margin-bottom: 16px; font-size: 18px;">Videos (Optional)</h3>
+        
+        <div class="form-group">
+          <label for="video-urls">Video URLs (comma-separated)</label>
+          <textarea 
+            id="video-urls" 
+            rows="3"
+            placeholder="https://youtube.com/watch?v=abc123, https://youtube.com/watch?v=def456"
+            style="width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px;"
+          ></textarea>
+          <small style="color: var(--text-light); font-size: 12px;">YouTube, Vimeo, or direct video URLs</small>
+        </div>
+        
+        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
+        
+        <h3 style="margin-bottom: 16px; font-size: 18px;">Bio Section (Optional)</h3>
+        
+        <div class="form-group">
+          <label for="bio-image">Bio Image URL (e.g., instructor photo)</label>
+          <input 
+            type="url" 
+            id="bio-image" 
+            placeholder="https://example.com/andy-zimmerman.jpg"
+          />
+        </div>
+        
+        <div class="form-group">
+          <label for="bio-text">Bio Text</label>
+          <textarea 
+            id="bio-text" 
+            rows="4"
+            placeholder="Andy Zimmerman is a professional bocce instructor with 15 years of experience..."
+            style="width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px;"
+          ></textarea>
+        </div>
+        
+        <div class="form-group">
+          <label for="bio-link">Bio Link (e.g., instructor profile)</label>
+          <input 
+            type="url" 
+            id="bio-link" 
+            placeholder="https://americanbocceco.com/instructors/andy-zimmerman"
+          />
+        </div>
+        
+        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
+        
+        <h3 style="margin-bottom: 16px; font-size: 18px;">Public Page Configuration</h3>
+        
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px;">
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-summary-image" checked style="width: 18px; height: 18px;" />
+            <span>Show Summary Image</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-videos" checked style="width: 18px; height: 18px;" />
+            <span>Show Videos Section</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-bio" checked style="width: 18px; height: 18px;" />
+            <span>Show Bio Section</span>
+          </label>
+          
+          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+            <input type="checkbox" id="show-metrics" checked style="width: 18px; height: 18px;" />
+            <span>Show Live Metrics</span>
+          </label>
+        </div>
+        
+        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
+        
+        <h3 style="margin-bottom: 16px; font-size: 18px;">📺 Display Page (TV/Digital Signage)</h3>
+        
+        <div class="form-group">
+          <label>Display Mode</label>
+          <select id="display-mode" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 6px; font-size: 14px;">
+            <option value="static">Static (Same as Public page)</option>
+            <option value="carousel">Carousel (Rotate through URLs)</option>
+          </select>
+          <small style="color: var(--text-light); font-size: 12px;">
+            Static: Shows event page content | Carousel: Rotates through external URLs
+          </small>
+        </div>
+        
+        <div id="carousel-config" style="display: none; margin-top: 16px; padding: 16px; background: var(--abc-cream); border-radius: 8px;">
+          <h4 style="margin-bottom: 12px; font-size: 16px;">Carousel URLs (Weighted Rotation)</h4>
+          
+          <div class="form-group">
+            <label>URL 1</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" id="carousel-url-1" placeholder="https://americanbocceco.leagueapps.com/..." style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <input type="number" id="carousel-duration-1" placeholder="20" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>URL 2</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" id="carousel-url-2" placeholder="https://www.instagram.com/stories/americanbocceco/" style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <input type="number" id="carousel-duration-2" placeholder="10" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>URL 3</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" id="carousel-url-3" placeholder="https://www.americanbocceco.com/tournaments" style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <input type="number" id="carousel-duration-3" placeholder="15" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label>URL 4</label>
+            <div style="display: flex; gap: 8px;">
+              <input type="url" id="carousel-url-4" placeholder="https://www.americanbocceco.com/leagues" style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <input type="number" id="carousel-duration-4" placeholder="15" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
+              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
+            </div>
+          </div>
+          
+          <small style="color: var(--text-light); font-size: 12px; display: block; margin-top: 8px;">
+            💡 Total cycle: 60 seconds (20+10+15+15). Pages are cached for offline viewing (refreshed daily).
+          </small>
+        </div>
+        
+        <script>
+          // Show/hide carousel config
+          document.getElementById('display-mode').addEventListener('change', function(e) {
+            const carouselConfig = document.getElementById('carousel-config');
+            carouselConfig.style.display = e.target.value === 'carousel' ? 'block' : 'none';
+          });
+        </script>
+        
+        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
+        
+        <button type="submit" class="btn btn-primary" id="create-btn">
+          Create Event
+        </button>
+      </form>
+    </div>
+    
+    <!-- Events List -->
+    <div class="card">
+      <h2>Events</h2>
+      <div id="events-container">
+        <div class="loading">Loading events...</div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Toast -->
+  <div id="toast" class="toast"></div>
+  
+  <script>
+    /* ================= Event Only MVP - Admin UI ================= */
+    
+    let currentBrand = 'ABC';
+    let events = [];
+    
+    // ===== INITIALIZATION =====
+    
+    async function init() {
+      await loadBrands();
+      await loadEvents();
+      setupEventListeners();
+    }
+    
+    async function loadBrands() {
+      try {
+        const result = await NU.rpc('clientGetBrands');
+        if (result.ok) {
+          renderBrandTabs(result.brands);
+          if (result.brands.length > 0) {
+            currentBrand = result.brands[0].id;
+          }
+        }
+      } catch (error) {
+        showToast('Failed to load brands', 'error');
+      }
+    }
+    
+    async function loadEvents() {
+      try {
+        const result = await NU.rpc('clientGetEvents', currentBrand);
+        if (result.ok) {
+          events = result.events;
+          renderEvents();
+        } else {
+          showToast(result.error || 'Failed to load events', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to load events', 'error');
+        document.getElementById('events-container').innerHTML = 
+          '<div class="empty-state">Failed to load events</div>';
+      }
+    }
+    
+    function setupEventListeners() {
+      // Create event form
+      document.getElementById('create-event-form').addEventListener('submit', handleCreateEvent);
+    }
+    
+    // ===== BRAND SWITCHER =====
+    
+    function renderBrandTabs(brands) {
+      const container = document.getElementById('brand-tabs');
+      container.innerHTML = brands.map(brand => `
+        <div class="brand-tab ${brand.id === currentBrand ? 'active' : ''}" 
+             data-brand="${brand.id}">
+          ${brand.shortName}
+        </div>
+      `).join('');
+      
+      // Add click handlers
+      container.querySelectorAll('.brand-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          currentBrand = tab.dataset.brand;
+          
+          // Update active state
+          container.querySelectorAll('.brand-tab').forEach(t => 
+            t.classList.remove('active')
+          );
+          tab.classList.add('active');
+          
+          // Reload events
+          loadEvents();
+        });
+      });
+    }
+    
+    // ===== CREATE EVENT =====
+    
+    async function handleCreateEvent(e) {
+      e.preventDefault();
+      
+      const eventName = document.getElementById('event-name').value.trim();
+      const eventDate = document.getElementById('event-date').value;
+      const eventTime = document.getElementById('event-time').value.trim();
+      const location = document.getElementById('location').value.trim();
+      const summaryText = document.getElementById('summary-text').value.trim();
+      const summaryLink = document.getElementById('summary-link').value.trim();
+      const summaryImage = document.getElementById('summary-image').value.trim();
+      const videoURLs = document.getElementById('video-urls').value.trim();
+      const bioImage = document.getElementById('bio-image').value.trim();
+      const bioText = document.getElementById('bio-text').value.trim();
+      const bioLink = document.getElementById('bio-link').value.trim();
+      
+      // Get page configuration toggles
+      const showSummaryImage = document.getElementById('show-summary-image').checked;
+      const showVideos = document.getElementById('show-videos').checked;
+      const showBio = document.getElementById('show-bio').checked;
+      const showMetrics = document.getElementById('show-metrics').checked;
+      
+      // Get display configuration
+      const displayMode = document.getElementById('display-mode').value;
+      const carouselURLs = [
+        { url: document.getElementById('carousel-url-1').value.trim(), duration: parseInt(document.getElementById('carousel-duration-1').value) || 20 },
+        { url: document.getElementById('carousel-url-2').value.trim(), duration: parseInt(document.getElementById('carousel-duration-2').value) || 10 },
+        { url: document.getElementById('carousel-url-3').value.trim(), duration: parseInt(document.getElementById('carousel-duration-3').value) || 15 },
+        { url: document.getElementById('carousel-url-4').value.trim(), duration: parseInt(document.getElementById('carousel-duration-4').value) || 15 }
+      ].filter(item => item.url.length > 0); // Only include non-empty URLs
+      
+      // Validate required fields
+      if (!eventName || !eventDate || !summaryText || !summaryLink) {
+        showToast('Please fill in all required fields (marked with *)', 'error');
+        return;
+      }
+      
+      if (summaryText.length < 10) {
+        showToast('Summary text must be at least 10 characters', 'error');
+        return;
+      }
+      
+      const btn = document.getElementById('create-btn');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      
+      try {
+        const result = await NU.rpc('clientCreateEvent', 
+          currentBrand, 
+          eventName, 
+          eventDate, 
+          eventTime,
+          location,
+          summaryText,
+          summaryLink,
+          summaryImage,
+          videoURLs,
+          bioImage,
+          bioText,
+          bioLink,
+          showSummaryImage,
+          showVideos,
+          showBio,
+          showMetrics,
+          displayMode,
+          JSON.stringify(carouselURLs)
+        );
+        
+        if (result.ok) {
+          showToast('Event created!', 'success');
+          
+          // Clear form
+          document.getElementById('event-name').value = '';
+          document.getElementById('event-date').value = '';
+          document.getElementById('event-time').value = '';
+          document.getElementById('location').value = '';
+          document.getElementById('summary-text').value = '';
+          document.getElementById('summary-link').value = '';
+          document.getElementById('summary-image').value = '';
+          document.getElementById('video-urls').value = '';
+          document.getElementById('bio-image').value = '';
+          document.getElementById('bio-text').value = '';
+          document.getElementById('bio-link').value = '';
+          document.getElementById('display-mode').value = 'static';
+          document.getElementById('carousel-url-1').value = '';
+          document.getElementById('carousel-url-2').value = '';
+          document.getElementById('carousel-url-3').value = '';
+          document.getElementById('carousel-url-4').value = '';
+          document.getElementById('carousel-duration-1').value = '';
+          document.getElementById('carousel-duration-2').value = '';
+          document.getElementById('carousel-duration-3').value = '';
+          document.getElementById('carousel-duration-4').value = '';
+          document.getElementById('carousel-config').style.display = 'none';
+          
+          // Reset checkboxes
+          document.getElementById('show-summary-image').checked = true;
+          document.getElementById('show-videos').checked = true;
+          document.getElementById('show-bio').checked = true;
+          document.getElementById('show-metrics').checked = true;
+          
+          // Reload events
+          await loadEvents();
+        } else {
+          showToast(result.error || 'Failed to create event', 'error');
+        }
+      } catch (error) {
+        showToast('Failed to create event', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Event';
+      }
+    }
+    
+    // ===== RENDER EVENTS =====
+    
+    function renderEvents() {
+      const container = document.getElementById('events-container');
+      
+      if (events.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📅</div>
+            <p>No events yet</p>
+            <p style="font-size: 14px;">Create your first event above</p>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="events-list">
+          ${events.map(event => renderEventItem(event)).join('')}
+        </div>
+      `;
+      
+      // Add event listeners
+      events.forEach(event => {
+        const header = document.getElementById(`event-header-${event.eventId}`);
+        if (header) {
+          header.addEventListener('click', () => toggleEvent(event.eventId));
+        }
+        
+        if (event.status === 'CREATED') {
+          const setupBtn = document.getElementById(`setup-btn-${event.eventId}`);
+          if (setupBtn) {
+            setupBtn.addEventListener('click', () => setupTracking(event.eventId));
+          }
+        }
+      });
+    }
+    
+    function renderEventItem(event) {
+      const isExpanded = false; // Default collapsed
+      const statusClass = event.status === 'CREATED' ? 'status-created' : 'status-tracking';
+      const statusText = event.status === 'CREATED' ? 'New' : 'Tracking Active';
+      
+      return `
+        <div class="event-item" id="event-${event.eventId}">
+          <div class="event-header" id="event-header-${event.eventId}">
+            <div>
+              <div class="event-title">${escapeHtml(event.eventName)}</div>
+              <div class="event-date">${formatDate(event.eventDate)}</div>
+            </div>
+            <span class="event-status ${statusClass}">${statusText}</span>
+          </div>
+          
+          <div class="event-body ${isExpanded ? 'expanded' : ''}" id="event-body-${event.eventId}">
+            ${event.status === 'CREATED' 
+              ? renderSetupPrompt(event.eventId) 
+              : renderTrackingView(event)
+            }
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderSetupPrompt(eventId) {
+      return `
+        <div class="setup-prompt">
+          <p>Ready to start tracking registrations and attendance?</p>
+          <button class="btn btn-secondary" id="setup-btn-${eventId}">
+            Set Up Event Tracking
+          </button>
+        </div>
+      `;
+    }
+    
+    function renderTrackingView(event) {
+      return `
+        <div class="tracking-grid">
+          ${renderTrackingCard('registration', '📋 Registration', event)}
+          ${renderTrackingCard('checkin', '✅ Check-In', event)}
+          ${renderTrackingCard('walkin', '🚶 Walk-In', event)}
+          ${renderTrackingCard('survey', '📊 Survey', event)}
+        </div>
+        
+        ${renderPublicViewSection(event)}
+      `;
+    }
+    
+    function renderTrackingCard(type, title, event) {
+      const formIdKey = `${type}FormId`;
+      const formId = event[formIdKey];
+      
+      if (!formId) {
+        return `
+          <div class="tracking-card">
+            <h4>${title}</h4>
+            <div class="qr-loading">Setting up...</div>
+          </div>
+        `;
+      }
+      
+      return `
+        <div class="tracking-card">
+          <h4>
+            ${title}
+            <span class="response-count" id="count-${event.eventId}-${type}">0</span>
+          </h4>
+          
+          <div class="qr-container">
+            <img 
+              src="data:image/png;base64,${getQRPlaceholder()}" 
+              alt="${title} QR Code"
+              id="qr-${event.eventId}-${type}"
+            />
+          </div>
+          
+          <div class="tracking-actions">
+            <button class="btn btn-link" onclick="viewResponses('${formId}')">
+              View Responses
+            </button>
+            <button class="btn btn-link" onclick="copyFormUrl('${formId}')">
+              Copy Link
+            </button>
+          </div>
+        </div>
+      `;
+    }
+    
+    // Add public URL section after tracking grid
+    function renderPublicViewSection(event) {
+      return `
+        <div style="margin-top: 24px; padding: 16px; background: var(--abc-cream-light); border-radius: 8px; border: 2px solid var(--bocce-green);">
+          <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
+            <span>📊</span>
+            <span>Live Public View</span>
+          </h3>
+          <p style="margin-bottom: 12px; color: var(--text-medium); font-size: 14px;">
+            Share this link with attendees to see live stats, standings, and brackets.
+            Updates automatically every 20 seconds. Supports unlimited viewers at $0 cost.
+          </p>
+          <button 
+            class="btn btn-secondary" 
+            onclick="getPublicURL('${event.eventId}')"
+            id="public-url-btn-${event.eventId}">
+            🔗 Get Public URL
+          </button>
+          <div id="public-url-display-${event.eventId}" style="margin-top: 12px;"></div>
+        </div>
+      `;
+    }
+    
+    // ===== EVENT ACTIONS =====
+    
+    function toggleEvent(eventId) {
+      const body = document.getElementById(`event-body-${eventId}`);
+      body.classList.toggle('expanded');
+      
+      // Load counts if tracking is active
+      const event = events.find(e => e.eventId === eventId);
+      if (event && event.status === 'TRACKING_ACTIVE') {
+        loadEventCounts(eventId);
+      }
+    }
+    
+    async function setupTracking(eventId) {
+      const btn = document.getElementById(`setup-btn-${eventId}`);
+      btn.disabled = true;
+      btn.textContent = 'Setting up...';
+      
+      try {
+        const result = await NU.rpc('clientSetupEventTracking', eventId);
+        
+        if (result.ok) {
+          showToast('Event tracking set up!', 'success');
+          
+          // Reload events to show new forms/QR codes
+          await loadEvents();
+          
+          // Auto-expand the event
+          setTimeout(() => {
+            const body = document.getElementById(`event-body-${eventId}`);
+            if (body) body.classList.add('expanded');
+          }, 100);
+        } else {
+          showToast(result.error || 'Failed to set up tracking', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Set Up Event Tracking';
+        }
+      } catch (error) {
+        showToast('Failed to set up tracking', 'error');
+        btn.disabled = false;
+        btn.textContent = 'Set Up Event Tracking';
+      }
+    }
+    
+    async function loadEventCounts(eventId) {
+      try {
+        const result = await NU.rpc('clientGetEventCounts', eventId);
+        if (result.ok) {
+          ['registration', 'checkin', 'walkin', 'survey'].forEach(type => {
+            const countEl = document.getElementById(`count-${eventId}-${type}`);
+            if (countEl) {
+              countEl.textContent = result.counts[type] || 0;
+            }
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load counts:', error);
+      }
+    }
+    
+    function viewResponses(formId) {
+      const url = `https://docs.google.com/forms/d/${formId}/edit#responses`;
+      window.open(url, '_blank');
+    }
+    
+    function copyFormUrl(formId) {
+      const url = `https://docs.google.com/forms/d/e/${formId}/viewform`;
+      navigator.clipboard.writeText(url).then(() => {
+        showToast('Link copied!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy link', 'error');
+      });
+    }
+    
+    // ===== PUBLIC URL =====
+    
+    async function getPublicURL(eventId) {
+      const btn = document.getElementById(`public-url-btn-${eventId}`);
+      const display = document.getElementById(`public-url-display-${eventId}`);
+      
+      btn.disabled = true;
+      btn.textContent = 'Getting URL...';
+      
+      try {
+        const result = await NU.rpc('clientGetEventJSONUrl', eventId);
+        
+        if (result.ok) {
+          const publicUrl = result.publicPageUrl + '&fileId=' + result.fileId;
+          
+          display.innerHTML = `
+            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
+              <div style="font-size: 12px; font-weight: 600; color: var(--text-medium); margin-bottom: 6px;">
+                PUBLIC URL (Share this with attendees):
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <input 
+                  type="text" 
+                  value="${publicUrl}" 
+                  readonly 
+                  id="public-url-input-${eventId}"
+                  style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; font-family: monospace;"
+                />
+                <button 
+                  class="btn btn-secondary" 
+                  onclick="copyPublicURL('${eventId}')"
+                  style="padding: 8px 16px; white-space: nowrap;">
+                  📋 Copy
+                </button>
+              </div>
+              <div style="margin-top: 8px; font-size: 12px; color: var(--text-light);">
+                ✅ Updates every 20 seconds · ✅ Supports unlimited viewers · ✅ $0 cost forever
+              </div>
+            </div>
+          `;
+          
+          btn.textContent = '🔗 Get Public URL';
+          btn.disabled = false;
+        } else {
+          display.innerHTML = `
+            <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 14px;">
+              ⚠️ ${result.error || 'Public URL not ready yet'}
+              <br><br>
+              <strong>Setup Steps:</strong>
+              <ol style="margin: 8px 0 0 20px; line-height: 1.8;">
+                <li>Set EXPORT_FOLDER_ID in Code.gs</li>
+                <li>Set up time trigger for exportActiveEventsToJSON</li>
+                <li>Wait 1 minute for first export</li>
+                <li>Try again</li>
+              </ol>
+            </div>
+          `;
+          
+          btn.textContent = '🔗 Get Public URL';
+          btn.disabled = false;
+        }
+        
+      } catch (error) {
+        showToast('Failed to get public URL', 'error');
+        btn.textContent = '🔗 Get Public URL';
+        btn.disabled = false;
+      }
+    }
+    
+    function copyPublicURL(eventId) {
+      const input = document.getElementById(`public-url-input-${eventId}`);
+      input.select();
+      navigator.clipboard.writeText(input.value).then(() => {
+        showToast('Public URL copied!', 'success');
+      }).catch(() => {
+        showToast('Failed to copy', 'error');
+      });
+    }
+    
+    // ===== UTILITIES =====
+    
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function formatDate(dateStr) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+    
+    function getQRPlaceholder() {
+      // Return a tiny transparent PNG as placeholder
+      return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    }
+    
+    // ===== INIT =====
+    
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
