@@ -2,10 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"/>
-  <title><?= appTitle ?> · Admin</title>
+  <title>NextUp · Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  
-  <?!= include('NUSDK'); ?>
   
   <style>
     /* ===== VARIABLES ===== */
@@ -15,7 +13,6 @@
       --abc-cream: #f5f1e8;
       --abc-cream-light: #fff8e7;
       --bocce-green: #00a651;
-      --bocce-blue: #0047bb;
       --text-dark: #2c2416;
       --text-medium: #6b5d4f;
       --text-light: #9d8b7a;
@@ -103,7 +100,7 @@
       border-color: var(--abc-red);
     }
     
-    /* ===== CREATE EVENT CARD ===== */
+    /* ===== CARD SYSTEM ===== */
     .card {
       background: white;
       padding: 24px;
@@ -116,8 +113,18 @@
       font-size: 20px;
       margin-bottom: 16px;
       color: var(--text-dark);
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
     
+    .card h3 {
+      font-size: 16px;
+      margin-bottom: 12px;
+      color: var(--text-dark);
+    }
+    
+    /* ===== FORM ELEMENTS ===== */
     .form-group {
       margin-bottom: 16px;
     }
@@ -127,22 +134,63 @@
       font-weight: 600;
       margin-bottom: 6px;
       color: var(--text-dark);
+      font-size: 14px;
     }
     
-    .form-group input {
+    .form-group input[type="text"],
+    .form-group input[type="date"],
+    .form-group input[type="time"],
+    .form-group input[type="url"],
+    .form-group input[type="number"],
+    .form-group textarea,
+    .form-group select {
       width: 100%;
       padding: 12px;
       border: 2px solid var(--border);
       border-radius: 8px;
       font-size: 14px;
       transition: border-color 0.2s;
+      font-family: inherit;
     }
     
-    .form-group input:focus {
+    .form-group textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus,
+    .form-group select:focus {
       outline: none;
       border-color: var(--abc-red);
     }
     
+    .form-group .hint {
+      font-size: 12px;
+      color: var(--text-medium);
+      margin-top: 4px;
+    }
+    
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .checkbox-group label {
+      margin: 0;
+      cursor: pointer;
+      font-weight: normal;
+    }
+    
+    /* ===== BUTTONS ===== */
     .btn {
       padding: 12px 24px;
       border: none;
@@ -151,6 +199,7 @@
       font-size: 14px;
       cursor: pointer;
       transition: all 0.2s;
+      display: inline-block;
     }
     
     .btn-primary {
@@ -186,7 +235,7 @@
       cursor: not-allowed;
     }
     
-    /* ===== EVENTS LIST ===== */
+    /* ===== EVENT LIST ===== */
     .events-list {
       display: flex;
       flex-direction: column;
@@ -252,42 +301,17 @@
       display: block;
     }
     
-    .setup-prompt {
-      text-align: center;
-      padding: 24px;
+    /* ===== EVENT CARDS ===== */
+    .event-card {
       background: var(--abc-cream-light);
-      border-radius: 8px;
-      margin-bottom: 16px;
-    }
-    
-    .setup-prompt p {
-      margin-bottom: 16px;
-      color: var(--text-medium);
-    }
-    
-    /* ===== TRACKING GRID ===== */
-    .tracking-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-    
-    @media (max-width: 768px) {
-      .tracking-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    
-    .tracking-card {
       border: 2px solid var(--border);
       border-radius: 8px;
       padding: 16px;
-      background: var(--abc-cream-light);
+      margin-bottom: 16px;
     }
     
-    .tracking-card h4 {
-      font-size: 14px;
+    .event-card h3 {
+      font-size: 16px;
       font-weight: 700;
       margin-bottom: 12px;
       color: var(--text-dark);
@@ -296,64 +320,98 @@
       gap: 8px;
     }
     
-    .qr-container {
-      text-align: center;
-      margin: 12px 0;
+    .event-card.collapsed .card-body {
+      display: none;
     }
     
-    .qr-container img {
-      max-width: 200px;
-      width: 100%;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    
-    .qr-loading {
-      padding: 60px;
-      background: #f0f0f0;
-      border-radius: 8px;
-      color: #666;
-      font-size: 14px;
-    }
-    
-    .tracking-actions {
+    .card-header {
       display: flex;
-      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+    
+    .card-body {
       margin-top: 12px;
     }
     
-    .tracking-actions .btn {
-      flex: 1;
-      font-size: 12px;
-      padding: 8px 12px;
+    .collapse-icon {
+      transition: transform 0.2s;
     }
     
-    .response-count {
-      display: inline-block;
-      background: var(--abc-red);
-      color: white;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 12px;
+    .event-card.collapsed .collapse-icon {
+      transform: rotate(-90deg);
+    }
+    
+    /* ===== QR CODES ===== */
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    
+    .qr-item {
+      text-align: center;
+      padding: 12px;
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: 8px;
+    }
+    
+    .qr-item h4 {
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: var(--text-dark);
+    }
+    
+    .qr-item img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    
+    .qr-item .count {
+      font-size: 24px;
       font-weight: 700;
+      color: var(--abc-red);
+      margin: 8px 0;
     }
     
-    /* ===== LOADING & EMPTY STATES ===== */
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-light);
+    .qr-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-top: 8px;
     }
     
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: var(--text-light);
+    /* ===== CAROUSEL INPUTS ===== */
+    .carousel-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 12px;
     }
     
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 16px;
+    .carousel-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .carousel-row input[type="url"] {
+      flex: 1;
+    }
+    
+    .carousel-row input[type="number"] {
+      width: 100px;
+    }
+    
+    .carousel-row label {
+      font-size: 14px;
+      font-weight: 600;
+      min-width: 60px;
     }
     
     /* ===== TOAST ===== */
@@ -367,259 +425,140 @@
       border-radius: 8px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       opacity: 0;
-      transition: opacity 0.3s;
+      transform: translateY(20px);
+      transition: all 0.3s;
+      pointer-events: none;
       z-index: 1000;
     }
     
     .toast.show {
       opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    
+    .toast.success {
+      background: var(--bocce-green);
     }
     
     .toast.error {
       background: var(--abc-red);
     }
     
-    .toast.success {
-      background: var(--bocce-green);
+    /* ===== LOADING ===== */
+    .loading {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-medium);
+    }
+    
+    .spinner {
+      border: 3px solid var(--border);
+      border-top: 3px solid var(--abc-red);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .qr-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .carousel-row {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .carousel-row input[type="number"] {
+        width: 100%;
+      }
+    }
+    
+    /* ===== SAVE STATUS ===== */
+    .save-status {
+      font-size: 12px;
+      color: var(--text-medium);
+      font-style: italic;
+      margin-top: 8px;
     }
   </style>
 </head>
 <body>
-  
-  <?!= include('Header', brand) ?>
-
-  
   <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🎯 NextUp Event Manager</h1>
+      <div class="header-meta">Admin Dashboard · American Bocce Co.</div>
+    </div>
     
+    <!-- Brand Switcher -->
+    <div class="brand-switcher">
+      <label>Select Brand</label>
+      <div class="brand-tabs">
+        <div class="brand-tab active" data-brand="ABC">American Bocce Co.</div>
+      </div>
+    </div>
     
     <!-- Create Event Card -->
     <div class="card">
-      <h2>Create Event</h2>
-      <form id="create-event-form">
-        <div class="form-group">
-          <label for="event-name">Event Name *</label>
-          <input 
-            type="text" 
-            id="event-name" 
-            placeholder="ABC Core Development Class - Andy Zimmerman"
-            required
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="event-date">Event Date *</label>
-          <input 
-            type="date" 
-            id="event-date" 
-            required
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="event-time">Event Time (e.g., "7:00 PM - 9:00 PM")</label>
-          <input 
-            type="text" 
-            id="event-time" 
-            placeholder="7:00 PM - 9:00 PM"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="location">Where (Location/Venue)</label>
-          <input 
-            type="text" 
-            id="location" 
-            placeholder="ABC Bocce Bar, 123 Main St, Chicago"
-          />
-        </div>
-        
-        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
-        
-        <h3 style="margin-bottom: 16px; font-size: 18px;">Summary Section *</h3>
-        
-        <div class="form-group">
-          <label for="summary-text">Summary Text * (min 10 characters)</label>
-          <textarea 
-            id="summary-text" 
-            rows="4"
-            placeholder="Join us for an incredible evening of bocce ball instruction with professional coach Andy Zimmerman..."
-            required
-            style="width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px;"
-          ></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label for="summary-link">Summary Link * (e.g., registration page)</label>
-          <input 
-            type="url" 
-            id="summary-link" 
-            placeholder="https://americanbocceco.com/register"
-            required
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="summary-image">Summary Image URL (Optional)</label>
-          <input 
-            type="url" 
-            id="summary-image" 
-            placeholder="https://example.com/event-banner.jpg"
-          />
-        </div>
-        
-        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
-        
-        <h3 style="margin-bottom: 16px; font-size: 18px;">Videos (Optional)</h3>
-        
-        <div class="form-group">
-          <label for="video-urls">Video URLs (comma-separated)</label>
-          <textarea 
-            id="video-urls" 
-            rows="3"
-            placeholder="https://youtube.com/watch?v=abc123, https://youtube.com/watch?v=def456"
-            style="width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px;"
-          ></textarea>
-          <small style="color: var(--text-light); font-size: 12px;">YouTube, Vimeo, or direct video URLs</small>
-        </div>
-        
-        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
-        
-        <h3 style="margin-bottom: 16px; font-size: 18px;">Bio Section (Optional)</h3>
-        
-        <div class="form-group">
-          <label for="bio-image">Bio Image URL (e.g., instructor photo)</label>
-          <input 
-            type="url" 
-            id="bio-image" 
-            placeholder="https://example.com/andy-zimmerman.jpg"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="bio-text">Bio Text</label>
-          <textarea 
-            id="bio-text" 
-            rows="4"
-            placeholder="Andy Zimmerman is a professional bocce instructor with 15 years of experience..."
-            style="width: 100%; padding: 12px; border: 2px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px;"
-          ></textarea>
-        </div>
-        
-        <div class="form-group">
-          <label for="bio-link">Bio Link (e.g., instructor profile)</label>
-          <input 
-            type="url" 
-            id="bio-link" 
-            placeholder="https://americanbocceco.com/instructors/andy-zimmerman"
-          />
-        </div>
-        
-        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
-        
-        <h3 style="margin-bottom: 16px; font-size: 18px;">Public Page Configuration</h3>
-        
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-bottom: 24px;">
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="show-summary-image" checked style="width: 18px; height: 18px;" />
-            <span>Show Summary Image</span>
-          </label>
-          
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="show-videos" checked style="width: 18px; height: 18px;" />
-            <span>Show Videos Section</span>
-          </label>
-          
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="show-bio" checked style="width: 18px; height: 18px;" />
-            <span>Show Bio Section</span>
-          </label>
-          
-          <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-            <input type="checkbox" id="show-metrics" checked style="width: 18px; height: 18px;" />
-            <span>Show Live Metrics</span>
-          </label>
-        </div>
-        
-        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
-        
-        <h3 style="margin-bottom: 16px; font-size: 18px;">📺 Display Page (TV/Digital Signage)</h3>
-        
-        <div class="form-group">
-          <label>Display Mode</label>
-          <select id="display-mode" style="width: 100%; padding: 10px; border: 2px solid var(--border); border-radius: 6px; font-size: 14px;">
-            <option value="static">Static (Same as Public page)</option>
-            <option value="carousel">Carousel (Rotate through URLs)</option>
-          </select>
-          <small style="color: var(--text-light); font-size: 12px;">
-            Static: Shows event page content | Carousel: Rotates through external URLs
-          </small>
-        </div>
-        
-        <div id="carousel-config" style="display: none; margin-top: 16px; padding: 16px; background: var(--abc-cream); border-radius: 8px;">
-          <h4 style="margin-bottom: 12px; font-size: 16px;">Carousel URLs (Weighted Rotation)</h4>
-          
-          <div class="form-group">
-            <label>URL 1</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="url" id="carousel-url-1" placeholder="https://americanbocceco.leagueapps.com/..." style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <input type="number" id="carousel-duration-1" placeholder="20" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>URL 2</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="url" id="carousel-url-2" placeholder="https://www.instagram.com/stories/americanbocceco/" style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <input type="number" id="carousel-duration-2" placeholder="10" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>URL 3</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="url" id="carousel-url-3" placeholder="https://www.americanbocceco.com/tournaments" style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <input type="number" id="carousel-duration-3" placeholder="15" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
-            </div>
-          </div>
-          
-          <div class="form-group">
-            <label>URL 4</label>
-            <div style="display: flex; gap: 8px;">
-              <input type="url" id="carousel-url-4" placeholder="https://www.americanbocceco.com/leagues" style="flex: 1; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <input type="number" id="carousel-duration-4" placeholder="15" min="5" max="300" style="width: 80px; padding: 8px; border: 2px solid var(--border); border-radius: 6px;" />
-              <span style="display: flex; align-items: center; font-size: 14px; color: var(--text-medium);">sec</span>
-            </div>
-          </div>
-          
-          <small style="color: var(--text-light); font-size: 12px; display: block; margin-top: 8px;">
-            💡 Total cycle: 60 seconds (20+10+15+15). Pages are cached for offline viewing (refreshed daily).
-          </small>
-        </div>
-        
-        <script>
-          // Show/hide carousel config
-          document.getElementById('display-mode').addEventListener('change', function(e) {
-            const carouselConfig = document.getElementById('carousel-config');
-            carouselConfig.style.display = e.target.value === 'carousel' ? 'block' : 'none';
-          });
-        </script>
-        
-        <hr style="margin: 24px 0; border: none; border-top: 2px solid var(--border);">
-        
-        <button type="submit" class="btn btn-primary" id="create-btn">
-          Create Event
-        </button>
-      </form>
+      <h2>➕ Create New Event</h2>
+      
+      <div class="form-group">
+        <label>Event Name *</label>
+        <input type="text" id="eventName" placeholder="Halloween Tournament 2024" />
+      </div>
+      
+      <div class="form-group">
+        <label>Event Date *</label>
+        <input type="date" id="eventDate" />
+      </div>
+      
+      <div class="form-group">
+        <label>Event Time</label>
+        <input type="time" id="eventTime" />
+      </div>
+      
+      <div class="form-group">
+        <label>Location</label>
+        <input type="text" id="location" placeholder="Rock Island Public House, Blue Island, IL" />
+      </div>
+      
+      <div class="form-group">
+        <label>Summary Text * (min 10 characters)</label>
+        <textarea id="summaryText" placeholder="Join us for an exciting bocce tournament..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Summary Link * (e.g., registration page)</label>
+        <input type="url" id="summaryLink" placeholder="https://..." />
+      </div>
+      
+      <div class="form-group">
+        <label>Summary Image URL (optional)</label>
+        <input type="url" id="summaryImage" placeholder="https://..." />
+        <div class="hint">Image displayed on event page</div>
+      </div>
+      
+      <button class="btn btn-primary" id="btnCreateEvent">Create Event</button>
     </div>
     
     <!-- Events List -->
     <div class="card">
-      <h2>Events</h2>
-      <div id="events-container">
-        <div class="loading">Loading events...</div>
+      <h2>📋 Your Events</h2>
+      <div id="eventsList" class="events-list">
+        <div class="loading">
+          <div class="spinner"></div>
+          Loading events...
+        </div>
       </div>
     </div>
   </div>
@@ -628,194 +567,88 @@
   <div id="toast" class="toast"></div>
   
   <script>
-    /* ================= Event Only MVP - Admin UI ================= */
-    
+    // ===== STATE =====
     let currentBrand = 'ABC';
     let events = [];
+    let saveTimers = {};
     
-    // ===== INITIALIZATION =====
-    
+    // ===== INIT =====
     async function init() {
-      await loadBrands();
-      await loadEvents();
-      setupEventListeners();
-    }
-    
-    async function loadBrands() {
-      try {
-        const result = await NU.rpc('clientGetBrands');
-        if (result.ok) {
-          renderBrandTabs(result.brands);
-          if (result.brands.length > 0) {
-            currentBrand = result.brands[0].id;
-          }
-        }
-      } catch (error) {
-        showToast('Failed to load brands', 'error');
-      }
-    }
-    
-    async function loadEvents() {
-      try {
-        const result = await NU.rpc('clientGetEvents', currentBrand);
-        if (result.ok) {
-          events = result.events || [];  // Ensure it's an array
-          renderEvents();
-        } else {
-          // Clear loading state and show empty
-          events = [];
-          renderEvents();
-          showToast(result.error || 'Failed to load events', 'error');
-        }
-      } catch (error) {
-        // Clear loading state and show error
-        events = [];
-        const container = document.getElementById('events-container');
-        container.innerHTML = '<div class="empty-state">Failed to load events. Please refresh.</div>';
-        showToast('Failed to load events', 'error');
-      }
-    }
-    
-    function setupEventListeners() {
-      // Create event form
-      document.getElementById('create-event-form').addEventListener('submit', handleCreateEvent);
-    }
-    
-    // ===== BRAND SWITCHER =====
-    
-    function renderBrandTabs(brands) {
-      const container = document.getElementById('brand-tabs');
-      container.innerHTML = brands.map(brand => `
-        <div class="brand-tab ${brand.id === currentBrand ? 'active' : ''}" 
-             data-brand="${brand.id}">
-          ${brand.shortName}
-        </div>
-      `).join('');
+      console.log('Initializing admin...');
       
-      // Add click handlers
-      container.querySelectorAll('.brand-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-          currentBrand = tab.dataset.brand;
-          
-          // Update active state
-          container.querySelectorAll('.brand-tab').forEach(t => 
-            t.classList.remove('active')
-          );
-          tab.classList.add('active');
-          
-          // Reload events
-          loadEvents();
-        });
-      });
+      // Load events
+      await loadEvents();
+      
+      // Bind create button
+      document.getElementById('btnCreateEvent').addEventListener('click', createEvent);
     }
     
     // ===== CREATE EVENT =====
-    
-    async function handleCreateEvent(e) {
-      e.preventDefault();
-      
-      const eventName = document.getElementById('event-name').value.trim();
-      const eventDate = document.getElementById('event-date').value;
-      const eventTime = document.getElementById('event-time').value.trim();
-      const location = document.getElementById('location').value.trim();
-      const summaryText = document.getElementById('summary-text').value.trim();
-      const summaryLink = document.getElementById('summary-link').value.trim();
-      const summaryImage = document.getElementById('summary-image').value.trim();
-      const videoURLs = document.getElementById('video-urls').value.trim();
-      const bioImage = document.getElementById('bio-image').value.trim();
-      const bioText = document.getElementById('bio-text').value.trim();
-      const bioLink = document.getElementById('bio-link').value.trim();
-      
-      // Get page configuration toggles
-      const showSummaryImage = document.getElementById('show-summary-image').checked;
-      const showVideos = document.getElementById('show-videos').checked;
-      const showBio = document.getElementById('show-bio').checked;
-      const showMetrics = document.getElementById('show-metrics').checked;
-      
-      // Get display configuration
-      const displayMode = document.getElementById('display-mode').value;
-      const carouselURLs = [
-        { url: document.getElementById('carousel-url-1').value.trim(), duration: parseInt(document.getElementById('carousel-duration-1').value) || 20 },
-        { url: document.getElementById('carousel-url-2').value.trim(), duration: parseInt(document.getElementById('carousel-duration-2').value) || 10 },
-        { url: document.getElementById('carousel-url-3').value.trim(), duration: parseInt(document.getElementById('carousel-duration-3').value) || 15 },
-        { url: document.getElementById('carousel-url-4').value.trim(), duration: parseInt(document.getElementById('carousel-duration-4').value) || 15 }
-      ].filter(item => item.url.length > 0); // Only include non-empty URLs
-      
-      // Validate required fields
-      if (!eventName || !eventDate || !summaryText || !summaryLink) {
-        showToast('Please fill in all required fields (marked with *)', 'error');
-        return;
-      }
-      
-      if (summaryText.length < 10) {
-        showToast('Summary text must be at least 10 characters', 'error');
-        return;
-      }
-      
-      const btn = document.getElementById('create-btn');
+    async function createEvent() {
+      const btn = document.getElementById('btnCreateEvent');
       btn.disabled = true;
       btn.textContent = 'Creating...';
       
       try {
-        const result = await NU.rpc('clientCreateEvent', 
-          currentBrand, 
-          eventName, 
-          eventDate, 
-          eventTime,
-          location,
-          summaryText,
-          summaryLink,
-          summaryImage,
-          videoURLs,
-          bioImage,
-          bioText,
-          bioLink,
-          showSummaryImage,
-          showVideos,
-          showBio,
-          showMetrics,
-          displayMode,
-          JSON.stringify(carouselURLs)
+        const eventData = {
+          brand: currentBrand,
+          eventName: document.getElementById('eventName').value.trim(),
+          eventDate: document.getElementById('eventDate').value,
+          eventTime: document.getElementById('eventTime').value.trim(),
+          location: document.getElementById('location').value.trim(),
+          summaryText: document.getElementById('summaryText').value.trim(),
+          summaryLink: document.getElementById('summaryLink').value.trim(),
+          summaryImage: document.getElementById('summaryImage').value.trim(),
+          videoURLs: '',
+          bioImage: '',
+          bioText: '',
+          bioLink: '',
+          showSummaryImage: true,
+          showVideos: true,
+          showBio: true,
+          showMetrics: true
+        };
+        
+        // Call backend
+        const result = await callBackend('clientCreateEvent', 
+          eventData.brand,
+          eventData.eventName,
+          eventData.eventDate,
+          eventData.eventTime,
+          eventData.location,
+          eventData.summaryText,
+          eventData.summaryLink,
+          eventData.summaryImage,
+          eventData.videoURLs,
+          eventData.bioImage,
+          eventData.bioText,
+          eventData.bioLink,
+          eventData.showSummaryImage,
+          eventData.showVideos,
+          eventData.showBio,
+          eventData.showMetrics
         );
         
         if (result.ok) {
-          showToast('Event created!', 'success');
+          showToast('Event created successfully!', 'success');
           
           // Clear form
-          document.getElementById('event-name').value = '';
-          document.getElementById('event-date').value = '';
-          document.getElementById('event-time').value = '';
+          document.getElementById('eventName').value = '';
+          document.getElementById('eventDate').value = '';
+          document.getElementById('eventTime').value = '';
           document.getElementById('location').value = '';
-          document.getElementById('summary-text').value = '';
-          document.getElementById('summary-link').value = '';
-          document.getElementById('summary-image').value = '';
-          document.getElementById('video-urls').value = '';
-          document.getElementById('bio-image').value = '';
-          document.getElementById('bio-text').value = '';
-          document.getElementById('bio-link').value = '';
-          document.getElementById('display-mode').value = 'static';
-          document.getElementById('carousel-url-1').value = '';
-          document.getElementById('carousel-url-2').value = '';
-          document.getElementById('carousel-url-3').value = '';
-          document.getElementById('carousel-url-4').value = '';
-          document.getElementById('carousel-duration-1').value = '';
-          document.getElementById('carousel-duration-2').value = '';
-          document.getElementById('carousel-duration-3').value = '';
-          document.getElementById('carousel-duration-4').value = '';
-          document.getElementById('carousel-config').style.display = 'none';
-          
-          // Reset checkboxes
-          document.getElementById('show-summary-image').checked = true;
-          document.getElementById('show-videos').checked = true;
-          document.getElementById('show-bio').checked = true;
-          document.getElementById('show-metrics').checked = true;
+          document.getElementById('summaryText').value = '';
+          document.getElementById('summaryLink').value = '';
+          document.getElementById('summaryImage').value = '';
           
           // Reload events
           await loadEvents();
         } else {
           showToast(result.error || 'Failed to create event', 'error');
         }
+        
       } catch (error) {
+        console.error('Create error:', error);
         showToast('Failed to create event', 'error');
       } finally {
         btn.disabled = false;
@@ -823,35 +656,42 @@
       }
     }
     
-    // ===== RENDER EVENTS =====
+    // ===== LOAD EVENTS =====
+    async function loadEvents() {
+      try {
+        const result = await callBackend('clientGetEvents', currentBrand);
+        
+        if (result.ok) {
+          events = result.events;
+          renderEvents();
+        } else {
+          showToast('Failed to load events', 'error');
+        }
+      } catch (error) {
+        console.error('Load error:', error);
+        showToast('Failed to load events', 'error');
+      }
+    }
     
+    // ===== RENDER EVENTS =====
     function renderEvents() {
-      const container = document.getElementById('events-container');
+      const container = document.getElementById('eventsList');
       
       if (events.length === 0) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-state-icon">📅</div>
-            <p>No events yet</p>
-            <p style="font-size: 14px;">Create your first event above</p>
-          </div>
-        `;
+        container.innerHTML = '<p style="text-align: center; color: var(--text-medium);">No events yet. Create one above!</p>';
         return;
       }
       
-      container.innerHTML = `
-        <div class="events-list">
-          ${events.map(event => renderEventItem(event)).join('')}
-        </div>
-      `;
+      container.innerHTML = events.map(event => renderEvent(event)).join('');
       
-      // Add event listeners
+      // Bind event handlers
       events.forEach(event => {
         const header = document.getElementById(`event-header-${event.eventId}`);
         if (header) {
           header.addEventListener('click', () => toggleEvent(event.eventId));
         }
         
+        // Bind setup button if event is CREATED
         if (event.status === 'CREATED') {
           const setupBtn = document.getElementById(`setup-btn-${event.eventId}`);
           if (setupBtn) {
@@ -861,13 +701,14 @@
       });
     }
     
-    function renderEventItem(event) {
+    // ===== RENDER SINGLE EVENT =====
+    function renderEvent(event) {
       const isExpanded = false; // Default collapsed
-      const statusClass = event.status === 'CREATED' ? 'status-created' : 'status-tracking';
-      const statusText = event.status === 'CREATED' ? 'New' : 'Tracking Active';
+      const statusClass = event.status === 'TRACKING_ACTIVE' ? 'status-tracking' : 'status-created';
+      const statusText = event.status === 'TRACKING_ACTIVE' ? 'Active' : 'Created';
       
       return `
-        <div class="event-item" id="event-${event.eventId}">
+        <div class="event-item">
           <div class="event-header" id="event-header-${event.eventId}">
             <div>
               <div class="event-title">${escapeHtml(event.eventName)}</div>
@@ -879,66 +720,113 @@
           <div class="event-body ${isExpanded ? 'expanded' : ''}" id="event-body-${event.eventId}">
             ${event.status === 'CREATED' 
               ? renderSetupPrompt(event.eventId) 
-              : renderTrackingView(event)
+              : renderEventCards(event)
             }
           </div>
         </div>
       `;
     }
     
+    // ===== SETUP PROMPT =====
     function renderSetupPrompt(eventId) {
       return `
-        <div class="setup-prompt">
-          <p>Ready to start tracking registrations and attendance?</p>
+        <div style="text-align: center; padding: 24px;">
+          <p style="margin-bottom: 16px; color: var(--text-medium);">Ready to start tracking registrations and attendance?</p>
           <button class="btn btn-secondary" id="setup-btn-${eventId}">
-            Set Up Event Tracking
+            🚀 Set Up Event Tracking
           </button>
         </div>
       `;
     }
     
-    function renderTrackingView(event) {
+    // ===== RENDER EVENT CARDS =====
+    function renderEventCards(event) {
       return `
-        <div class="tracking-grid">
-          ${renderTrackingCard('registration', '📋 Registration', event)}
-          ${renderTrackingCard('checkin', '✅ Check-In', event)}
-          ${renderTrackingCard('walkin', '🚶 Walk-In', event)}
-          ${renderTrackingCard('survey', '📊 Survey', event)}
-        </div>
-        
-        ${renderPublicViewSection(event)}
+        ${renderEventDetailsCard(event)}
+        ${renderLinksCard(event)}
+        ${renderCounterCard(event)}
+        ${renderSummaryCard(event)}
+        ${renderVideosCard(event)}
+        ${renderBioCard(event)}
+        ${renderPublicConfigCard(event)}
+        ${renderDisplayConfigCard(event)}
+        ${renderPosterCard(event)}
       `;
     }
     
-    function renderTrackingCard(type, title, event) {
+    // ===== EVENT DETAILS CARD =====
+    function renderEventDetailsCard(event) {
+      return `
+        <div class="event-card" id="card-details-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('details-${event.eventId}')">
+            <h3>📝 Event Details</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Event Name</label>
+              <input type="text" value="${escapeHtml(event.eventName)}" 
+                     onchange="updateField('${event.eventId}', 'details', 'eventName', this.value)" />
+            </div>
+            <div class="form-group">
+              <label>Event Date</label>
+              <input type="date" value="${event.eventDate}" 
+                     onchange="updateField('${event.eventId}', 'details', 'eventDate', this.value)" />
+            </div>
+            <div class="form-group">
+              <label>Event Time</label>
+              <input type="time" value="${event.eventTime || ''}" 
+                     onchange="updateField('${event.eventId}', 'details', 'eventTime', this.value)" />
+            </div>
+            <div class="form-group">
+              <label>Location</label>
+              <input type="text" value="${escapeHtml(event.location || '')}" 
+                     onchange="updateField('${event.eventId}', 'details', 'location', this.value)" />
+            </div>
+            <div class="save-status" id="save-details-${event.eventId}"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== LINKS CARD =====
+    function renderLinksCard(event) {
+      return `
+        <div class="event-card" id="card-links-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('links-${event.eventId}')">
+            <h3>🔗 Links & QR Codes</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div class="qr-grid">
+              ${renderQRItem(event, 'registration', '📋 Registration')}
+              ${renderQRItem(event, 'checkin', '✅ Check-In')}
+              ${renderQRItem(event, 'walkin', '🚶 Walk-In')}
+              ${renderQRItem(event, 'survey', '📊 Survey')}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderQRItem(event, type, title) {
       const formIdKey = `${type}FormId`;
       const formId = event[formIdKey];
       
       if (!formId) {
         return `
-          <div class="tracking-card">
+          <div class="qr-item">
             <h4>${title}</h4>
-            <div class="qr-loading">Setting up...</div>
+            <p style="color: var(--text-medium); font-size: 12px;">Setting up...</p>
           </div>
         `;
       }
       
       return `
-        <div class="tracking-card">
-          <h4>
-            ${title}
-            <span class="response-count" id="count-${event.eventId}-${type}">0</span>
-          </h4>
-          
-          <div class="qr-container">
-            <img 
-              src="data:image/png;base64,${getQRPlaceholder()}" 
-              alt="${title} QR Code"
-              id="qr-${event.eventId}-${type}"
-            />
-          </div>
-          
-          <div class="tracking-actions">
+        <div class="qr-item">
+          <h4>${title}</h4>
+          <div class="count" id="count-${event.eventId}-${type}">0</div>
+          <div class="qr-actions">
             <button class="btn btn-link" onclick="viewResponses('${formId}')">
               View Responses
             </button>
@@ -950,25 +838,235 @@
       `;
     }
     
-    // Add public URL section after tracking grid
-    function renderPublicViewSection(event) {
+    // ===== COUNTER CARD =====
+    function renderCounterCard(event) {
       return `
-        <div style="margin-top: 24px; padding: 16px; background: var(--abc-cream-light); border-radius: 8px; border: 2px solid var(--bocce-green);">
-          <h3 style="margin-bottom: 12px; display: flex; align-items: center; gap: 8px;">
-            <span>📊</span>
-            <span>Live Public View</span>
-          </h3>
-          <p style="margin-bottom: 12px; color: var(--text-medium); font-size: 14px;">
-            Share this link with attendees to see live stats, standings, and brackets.
-            Updates automatically every 20 seconds. Supports unlimited viewers at $0 cost.
-          </p>
-          <button 
-            class="btn btn-secondary" 
-            onclick="getPublicURL('${event.eventId}')"
-            id="public-url-btn-${event.eventId}">
-            🔗 Get Public URL
-          </button>
-          <div id="public-url-display-${event.eventId}" style="margin-top: 12px;"></div>
+        <div class="event-card" id="card-counter-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('counter-${event.eventId}')">
+            <h3>👥 Total Registrations</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div style="text-align: center; padding: 24px;">
+              <div style="font-size: 48px; font-weight: 700; color: var(--abc-red);" id="total-count-${event.eventId}">
+                0
+              </div>
+              <p style="color: var(--text-medium); margin-top: 8px;">People registered</p>
+              <button class="btn btn-link" onclick="refreshCounts('${event.eventId}')" style="margin-top: 16px;">
+                🔄 Refresh
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== SUMMARY CARD =====
+    function renderSummaryCard(event) {
+      return `
+        <div class="event-card" id="card-summary-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('summary-${event.eventId}')">
+            <h3>📄 Summary Section</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Summary Text * (min 10 characters)</label>
+              <textarea onchange="updateField('${event.eventId}', 'content', 'summaryText', this.value)">${escapeHtml(event.summaryText || '')}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Summary Link * (e.g., registration page)</label>
+              <input type="url" value="${escapeHtml(event.summaryLink || '')}" 
+                     onchange="updateField('${event.eventId}', 'content', 'summaryLink', this.value)" />
+            </div>
+            <div class="form-group">
+              <label>Summary Image URL (optional)</label>
+              <input type="url" value="${escapeHtml(event.summaryImage || '')}" 
+                     onchange="updateField('${event.eventId}', 'content', 'summaryImage', this.value)" />
+            </div>
+            <div class="save-status" id="save-summary-${event.eventId}"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== VIDEOS CARD =====
+    function renderVideosCard(event) {
+      return `
+        <div class="event-card" id="card-videos-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('videos-${event.eventId}')">
+            <h3>🎥 Videos</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Video URLs (comma-separated)</label>
+              <textarea onchange="updateField('${event.eventId}', 'content', 'videoURLs', this.value)" 
+                        placeholder="https://youtube.com/..., https://vimeo.com/...">${escapeHtml(event.videoURLs || '')}</textarea>
+              <div class="hint">Enter multiple video URLs separated by commas</div>
+            </div>
+            <div class="save-status" id="save-videos-${event.eventId}"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== BIO CARD =====
+    function renderBioCard(event) {
+      return `
+        <div class="event-card" id="card-bio-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('bio-${event.eventId}')">
+            <h3>👤 Bio Section</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Bio Image URL (e.g., instructor photo)</label>
+              <input type="url" value="${escapeHtml(event.bioImage || '')}" 
+                     onchange="updateField('${event.eventId}', 'content', 'bioImage', this.value)" />
+            </div>
+            <div class="form-group">
+              <label>Bio Text</label>
+              <textarea onchange="updateField('${event.eventId}', 'content', 'bioText', this.value)">${escapeHtml(event.bioText || '')}</textarea>
+            </div>
+            <div class="form-group">
+              <label>Bio Link (e.g., instructor profile)</label>
+              <input type="url" value="${escapeHtml(event.bioLink || '')}" 
+                     onchange="updateField('${event.eventId}', 'content', 'bioLink', this.value)" />
+            </div>
+            <div class="save-status" id="save-bio-${event.eventId}"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== PUBLIC CONFIG CARD =====
+    function renderPublicConfigCard(event) {
+      return `
+        <div class="event-card" id="card-public-config-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('public-config-${event.eventId}')">
+            <h3>⚙️ Public Page Config</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <p style="color: var(--text-medium); margin-bottom: 12px; font-size: 14px;">Control what's visible on the public event page</p>
+            
+            <div class="checkbox-group">
+              <input type="checkbox" id="show-summary-${event.eventId}" 
+                     ${event.showSummaryImage !== false ? 'checked' : ''} 
+                     onchange="updatePublicConfig('${event.eventId}', 'showSummaryImage', this.checked)" />
+              <label for="show-summary-${event.eventId}">Show Summary Image</label>
+            </div>
+            
+            <div class="checkbox-group">
+              <input type="checkbox" id="show-videos-${event.eventId}" 
+                     ${event.showVideos !== false ? 'checked' : ''} 
+                     onchange="updatePublicConfig('${event.eventId}', 'showVideos', this.checked)" />
+              <label for="show-videos-${event.eventId}">Show Video Section</label>
+            </div>
+            
+            <div class="checkbox-group">
+              <input type="checkbox" id="show-bio-${event.eventId}" 
+                     ${event.showBio !== false ? 'checked' : ''} 
+                     onchange="updatePublicConfig('${event.eventId}', 'showBio', this.checked)" />
+              <label for="show-bio-${event.eventId}">Show Bio Section</label>
+            </div>
+            
+            <div class="checkbox-group">
+              <input type="checkbox" id="show-metrics-${event.eventId}" 
+                     ${event.showMetrics !== false ? 'checked' : ''} 
+                     onchange="updatePublicConfig('${event.eventId}', 'showMetrics', this.checked)" />
+              <label for="show-metrics-${event.eventId}">Show Live Metrics</label>
+            </div>
+            
+            <div class="save-status" id="save-public-config-${event.eventId}"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== DISPLAY CONFIG CARD =====
+    function renderDisplayConfigCard(event) {
+      const displayMode = event.displayMode || 'same_as_public';
+      const carouselURLs = event.carouselURLs ? JSON.parse(event.carouselURLs) : [
+        { url: '', seconds: 10 },
+        { url: '', seconds: 10 },
+        { url: '', seconds: 10 },
+        { url: '', seconds: 10 }
+      ];
+      
+      return `
+        <div class="event-card" id="card-display-config-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('display-config-${event.eventId}')">
+            <h3>📺 Display Page Config</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <div class="form-group">
+              <label>Display Mode</label>
+              <select id="display-mode-${event.eventId}" onchange="updateDisplayMode('${event.eventId}', this.value)">
+                <option value="same_as_public" ${displayMode === 'same_as_public' ? 'selected' : ''}>Same as Public</option>
+                <option value="carousel" ${displayMode === 'carousel' ? 'selected' : ''}>Carousel (Weighted Rotation)</option>
+              </select>
+            </div>
+            
+            <div id="carousel-inputs-${event.eventId}" style="${displayMode === 'carousel' ? '' : 'display: none;'}">
+              <h4 style="margin: 16px 0 12px 0; font-size: 14px;">Carousel URLs</h4>
+              <div class="carousel-inputs">
+                ${carouselURLs.map((item, i) => `
+                  <div class="carousel-row">
+                    <label>URL ${i + 1}</label>
+                    <input type="url" value="${escapeHtml(item.url)}" 
+                           placeholder="https://..." 
+                           onchange="updateCarouselURL('${event.eventId}', ${i}, 'url', this.value)" />
+                    <input type="number" value="${item.seconds}" min="1" max="60" 
+                           onchange="updateCarouselURL('${event.eventId}', ${i}, 'seconds', this.value)" />
+                    <span style="font-size: 12px; color: var(--text-medium);">sec</span>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            
+            <div class="save-status" id="save-display-config-${event.eventId}"></div>
+          </div>
+        </div>
+      `;
+    }
+    
+    // ===== POSTER CARD =====
+    function renderPosterCard(event) {
+      return `
+        <div class="event-card" id="card-poster-${event.eventId}">
+          <div class="card-header" onclick="toggleCard('poster-${event.eventId}')">
+            <h3>🎨 Poster</h3>
+            <span class="collapse-icon">▼</span>
+          </div>
+          <div class="card-body">
+            <p style="color: var(--text-medium); margin-bottom: 16px; font-size: 14px;">
+              Generate QR codes for promotional posters
+            </p>
+            
+            <div class="form-group">
+              <label>Poster URL 1 (Sign-up Form)</label>
+              <input type="url" id="poster-url1-${event.eventId}" placeholder="https://..." />
+            </div>
+            
+            <div class="form-group">
+              <label>Poster URL 2 (Public Page)</label>
+              <input type="url" id="poster-url2-${event.eventId}" placeholder="https://..." />
+            </div>
+            
+            <div class="form-group">
+              <label>Poster URL 3 (Sponsor/Promo - Optional)</label>
+              <input type="url" id="poster-url3-${event.eventId}" placeholder="https://..." />
+            </div>
+            
+            <button class="btn btn-secondary" onclick="generatePosterQR('${event.eventId}')">
+              Generate QR Codes
+            </button>
+            
+            <div id="poster-qr-output-${event.eventId}" style="margin-top: 16px;"></div>
+          </div>
         </div>
       `;
     }
@@ -979,10 +1077,17 @@
       const body = document.getElementById(`event-body-${eventId}`);
       body.classList.toggle('expanded');
       
-      // Load counts if tracking is active
+      // Load counts if expanded and tracking is active
       const event = events.find(e => e.eventId === eventId);
-      if (event && event.status === 'TRACKING_ACTIVE') {
+      if (body.classList.contains('expanded') && event && event.status === 'TRACKING_ACTIVE') {
         loadEventCounts(eventId);
+      }
+    }
+    
+    function toggleCard(cardId) {
+      const card = document.getElementById(`card-${cardId}`);
+      if (card) {
+        card.classList.toggle('collapsed');
       }
     }
     
@@ -992,12 +1097,10 @@
       btn.textContent = 'Setting up...';
       
       try {
-        const result = await NU.rpc('clientSetupEventTracking', eventId);
+        const result = await callBackend('clientSetupEventTracking', eventId);
         
         if (result.ok) {
           showToast('Event tracking set up!', 'success');
-          
-          // Reload events to show new forms/QR codes
           await loadEvents();
           
           // Auto-expand the event
@@ -1008,29 +1111,44 @@
         } else {
           showToast(result.error || 'Failed to set up tracking', 'error');
           btn.disabled = false;
-          btn.textContent = 'Set Up Event Tracking';
+          btn.textContent = '🚀 Set Up Event Tracking';
         }
       } catch (error) {
+        console.error('Setup error:', error);
         showToast('Failed to set up tracking', 'error');
         btn.disabled = false;
-        btn.textContent = 'Set Up Event Tracking';
+        btn.textContent = '🚀 Set Up Event Tracking';
       }
     }
     
     async function loadEventCounts(eventId) {
       try {
-        const result = await NU.rpc('clientGetEventCounts', eventId);
+        const result = await callBackend('clientGetEventCounts', eventId);
         if (result.ok) {
+          const counts = result.counts;
+          
+          // Update individual counts
           ['registration', 'checkin', 'walkin', 'survey'].forEach(type => {
             const countEl = document.getElementById(`count-${eventId}-${type}`);
             if (countEl) {
-              countEl.textContent = result.counts[type] || 0;
+              countEl.textContent = counts[type] || 0;
             }
           });
+          
+          // Update total count
+          const totalEl = document.getElementById(`total-count-${eventId}`);
+          if (totalEl) {
+            totalEl.textContent = counts.registration || 0;
+          }
         }
       } catch (error) {
         console.error('Failed to load counts:', error);
       }
+    }
+    
+    async function refreshCounts(eventId) {
+      await loadEventCounts(eventId);
+      showToast('Counts refreshed', 'success');
     }
     
     function viewResponses(formId) {
@@ -1047,82 +1165,211 @@
       });
     }
     
-    // ===== PUBLIC URL =====
+    // ===== UPDATE FUNCTIONS =====
     
-    async function getPublicURL(eventId) {
-      const btn = document.getElementById(`public-url-btn-${eventId}`);
-      const display = document.getElementById(`public-url-display-${eventId}`);
+    async function updateField(eventId, section, field, value) {
+      // Clear existing timer
+      const timerKey = `${eventId}-${section}`;
+      if (saveTimers[timerKey]) {
+        clearTimeout(saveTimers[timerKey]);
+      }
       
-      btn.disabled = true;
-      btn.textContent = 'Getting URL...';
+      // Set new timer (debounce)
+      saveTimers[timerKey] = setTimeout(async () => {
+        const statusEl = document.getElementById(`save-${section}-${eventId}`);
+        if (statusEl) statusEl.textContent = 'Saving...';
+        
+        try {
+          let result;
+          
+          if (section === 'details') {
+            result = await callBackend('clientUpdateEventDetails', eventId, {
+              [field]: value
+            });
+          } else if (section === 'content') {
+            result = await callBackend('clientUpdateEventContent', eventId, {
+              [field]: value
+            });
+          }
+          
+          if (result && result.ok) {
+            if (statusEl) statusEl.textContent = 'Saved ✓';
+            setTimeout(() => {
+              if (statusEl) statusEl.textContent = '';
+            }, 2000);
+          } else {
+            if (statusEl) statusEl.textContent = 'Save failed ✗';
+          }
+        } catch (error) {
+          console.error('Update error:', error);
+          if (statusEl) statusEl.textContent = 'Save failed ✗';
+        }
+      }, 1000);
+    }
+    
+    async function updatePublicConfig(eventId, field, value) {
+      const statusEl = document.getElementById(`save-public-config-${eventId}`);
+      if (statusEl) statusEl.textContent = 'Saving...';
       
       try {
-        const result = await NU.rpc('clientGetEventJSONUrl', eventId);
+        const result = await callBackend('clientUpdatePublicConfig', eventId, {
+          [field]: value
+        });
         
         if (result.ok) {
-          const publicUrl = result.publicPageUrl + '&fileId=' + result.fileId;
-          
-          display.innerHTML = `
-            <div style="background: white; padding: 12px; border-radius: 6px; border: 1px solid var(--border);">
-              <div style="font-size: 12px; font-weight: 600; color: var(--text-medium); margin-bottom: 6px;">
-                PUBLIC URL (Share this with attendees):
-              </div>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <input 
-                  type="text" 
-                  value="${publicUrl}" 
-                  readonly 
-                  id="public-url-input-${eventId}"
-                  style="flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 4px; font-size: 12px; font-family: monospace;"
-                />
-                <button 
-                  class="btn btn-secondary" 
-                  onclick="copyPublicURL('${eventId}')"
-                  style="padding: 8px 16px; white-space: nowrap;">
-                  📋 Copy
-                </button>
-              </div>
-              <div style="margin-top: 8px; font-size: 12px; color: var(--text-light);">
-                ✅ Updates every 20 seconds · ✅ Supports unlimited viewers · ✅ $0 cost forever
-              </div>
-            </div>
-          `;
-          
-          btn.textContent = '🔗 Get Public URL';
-          btn.disabled = false;
+          if (statusEl) statusEl.textContent = 'Saved ✓';
+          setTimeout(() => {
+            if (statusEl) statusEl.textContent = '';
+          }, 2000);
         } else {
-          display.innerHTML = `
-            <div style="padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; font-size: 14px;">
-              ⚠️ ${result.error || 'Public URL not ready yet'}
-              <br><br>
-              <strong>Setup Steps:</strong>
-              <ol style="margin: 8px 0 0 20px; line-height: 1.8;">
-                <li>Set EXPORT_FOLDER_ID in Code.gs</li>
-                <li>Set up time trigger for exportActiveEventsToJSON</li>
-                <li>Wait 1 minute for first export</li>
-                <li>Try again</li>
-              </ol>
-            </div>
-          `;
-          
-          btn.textContent = '🔗 Get Public URL';
-          btn.disabled = false;
+          if (statusEl) statusEl.textContent = 'Save failed ✗';
         }
-        
       } catch (error) {
-        showToast('Failed to get public URL', 'error');
-        btn.textContent = '🔗 Get Public URL';
-        btn.disabled = false;
+        console.error('Update error:', error);
+        if (statusEl) statusEl.textContent = 'Save failed ✗';
       }
     }
     
-    function copyPublicURL(eventId) {
-      const input = document.getElementById(`public-url-input-${eventId}`);
-      input.select();
-      navigator.clipboard.writeText(input.value).then(() => {
-        showToast('Public URL copied!', 'success');
-      }).catch(() => {
-        showToast('Failed to copy', 'error');
+    async function updateDisplayMode(eventId, mode) {
+      const carouselDiv = document.getElementById(`carousel-inputs-${eventId}`);
+      if (carouselDiv) {
+        carouselDiv.style.display = mode === 'carousel' ? '' : 'none';
+      }
+      
+      const statusEl = document.getElementById(`save-display-config-${eventId}`);
+      if (statusEl) statusEl.textContent = 'Saving...';
+      
+      try {
+        const result = await callBackend('clientUpdateDisplayConfig', eventId, {
+          displayMode: mode
+        });
+        
+        if (result.ok) {
+          if (statusEl) statusEl.textContent = 'Saved ✓';
+          setTimeout(() => {
+            if (statusEl) statusEl.textContent = '';
+          }, 2000);
+        } else {
+          if (statusEl) statusEl.textContent = 'Save failed ✗';
+        }
+      } catch (error) {
+        console.error('Update error:', error);
+        if (statusEl) statusEl.textContent = 'Save failed ✗';
+      }
+    }
+    
+    let carouselData = {};
+    
+    async function updateCarouselURL(eventId, index, field, value) {
+      if (!carouselData[eventId]) {
+        carouselData[eventId] = [
+          { url: '', seconds: 10 },
+          { url: '', seconds: 10 },
+          { url: '', seconds: 10 },
+          { url: '', seconds: 10 }
+        ];
+      }
+      
+      carouselData[eventId][index][field] = field === 'seconds' ? parseInt(value) : value;
+      
+      // Debounced save
+      const timerKey = `carousel-${eventId}`;
+      if (saveTimers[timerKey]) {
+        clearTimeout(saveTimers[timerKey]);
+      }
+      
+      saveTimers[timerKey] = setTimeout(async () => {
+        const statusEl = document.getElementById(`save-display-config-${eventId}`);
+        if (statusEl) statusEl.textContent = 'Saving...';
+        
+        try {
+          const result = await callBackend('clientUpdateDisplayConfig', eventId, {
+            carouselURLs: carouselData[eventId]
+          });
+          
+          if (result.ok) {
+            if (statusEl) statusEl.textContent = 'Saved ✓';
+            setTimeout(() => {
+              if (statusEl) statusEl.textContent = '';
+            }, 2000);
+          } else {
+            if (statusEl) statusEl.textContent = 'Save failed ✗';
+          }
+        } catch (error) {
+          console.error('Update error:', error);
+          if (statusEl) statusEl.textContent = 'Save failed ✗';
+        }
+      }, 1000);
+    }
+    
+    async function generatePosterQR(eventId) {
+      const url1 = document.getElementById(`poster-url1-${eventId}`).value.trim();
+      const url2 = document.getElementById(`poster-url2-${eventId}`).value.trim();
+      const url3 = document.getElementById(`poster-url3-${eventId}`).value.trim();
+      
+      if (!url1 && !url2 && !url3) {
+        showToast('Please enter at least one URL', 'error');
+        return;
+      }
+      
+      try {
+        const result = await callBackend('clientUpdatePosterData', eventId, {
+          url1, url2, url3
+        });
+        
+        if (result.ok) {
+          const output = document.getElementById(`poster-qr-output-${eventId}`);
+          
+          let html = '<div class="qr-grid">';
+          
+          if (url1 && result.qrCodes.url1) {
+            html += `
+              <div class="qr-item">
+                <h4>URL 1 - Sign Up</h4>
+                <img src="data:image/png;base64,${result.qrCodes.url1}" alt="QR Code 1" />
+              </div>
+            `;
+          }
+          
+          if (url2 && result.qrCodes.url2) {
+            html += `
+              <div class="qr-item">
+                <h4>URL 2 - Public Page</h4>
+                <img src="data:image/png;base64,${result.qrCodes.url2}" alt="QR Code 2" />
+              </div>
+            `;
+          }
+          
+          if (url3 && result.qrCodes.url3) {
+            html += `
+              <div class="qr-item">
+                <h4>URL 3 - Promo</h4>
+                <img src="data:image/png;base64,${result.qrCodes.url3}" alt="QR Code 3" />
+              </div>
+            `;
+          }
+          
+          html += '</div>';
+          output.innerHTML = html;
+          
+          showToast('QR codes generated!', 'success');
+        } else {
+          showToast(result.error || 'Failed to generate QR codes', 'error');
+        }
+      } catch (error) {
+        console.error('QR generation error:', error);
+        showToast('Failed to generate QR codes', 'error');
+      }
+    }
+    
+    // ===== BACKEND CALLER =====
+    
+    function callBackend(fnName, ...args) {
+      return new Promise((resolve, reject) => {
+        google.script.run
+          .withSuccessHandler(resolve)
+          .withFailureHandler(reject)
+          [fnName](...args);
       });
     }
     
@@ -1154,13 +1401,7 @@
       });
     }
     
-    function getQRPlaceholder() {
-      // Return a tiny transparent PNG as placeholder
-      return 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
-    }
-    
     // ===== INIT =====
-    
     document.addEventListener('DOMContentLoaded', init);
   </script>
 </body>
