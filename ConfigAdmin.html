@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>NextUp Configuration</title>
+  <base target="_top">
+  <?!= include('Styles'); ?>
+  <style>
+    body { 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      max-width: 1000px; 
+      margin: 40px auto; 
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    .header {
+      background: linear-gradient(135deg, #c8102e 0%, #8a0a1f 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    .header h1 { margin: 0; font-size: 28px; }
+    .config-section {
+      background: white;
+      padding: 25px;
+      margin: 20px 0;
+      border-radius: 12px;
+    }
+    .config-section h2 { color: #c8102e; margin-top: 0; }
+    .domain-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px;
+      background: white;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+    button { background: #c8102e; color: white; border: none; padding: 12px 24px; 
+             border-radius: 6px; cursor: pointer; margin: 5px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>🔧 NextUp Configuration</h1>
+    <p>View current platform settings</p>
+  </div>
+  
+  <div id="content">
+    <div class="config-section">
+      <h2>📊 System Overview</h2>
+      <p>Version: <span id="version">—</span></p>
+      <p>Brands: <span id="brandCount">—</span></p>
+      <p>Domains: <span id="domainCount">—</span></p>
+    </div>
+    
+    <div class="config-section">
+      <h2>🌐 Domain Mappings</h2>
+      <div id="domainList"></div>
+    </div>
+    
+    <div class="config-section">
+      <h2>🏢 Brands</h2>
+      <div id="brandList"></div>
+    </div>
+    
+    <div class="config-section">
+      <button onclick="loadConfig()">🔄 Refresh</button>
+      <button onclick="window.location.href='?p=Admin&brand=ABC'">← Back to Admin</button>
+    </div>
+  </div>
+
+  <script>
+    function loadConfig() {
+      google.script.run.withSuccessHandler(displayConfig).getConfig();
+    }
+    
+    function displayConfig(cfg) {
+      document.getElementById('version').textContent = cfg.VERSION || 'Unknown';
+      document.getElementById('brandCount').textContent = Object.keys(cfg.BRANDS || {}).length;
+      document.getElementById('domainCount').textContent = Object.keys(cfg.DOMAIN_TO_BRAND || {}).length;
+      
+      const domainList = document.getElementById('domainList');
+      domainList.innerHTML = '';
+      Object.entries(cfg.DOMAIN_TO_BRAND || {}).forEach(([domain, brand]) => {
+        domainList.innerHTML += `<div class="domain-item"><span>${domain}</span><span>${brand}</span></div>`;
+      });
+      
+      const brandList = document.getElementById('brandList');
+      brandList.innerHTML = '';
+      Object.entries(cfg.BRANDS || {}).forEach(([key, brand]) => {
+        brandList.innerHTML += `<div class="domain-item"><strong>${key}:</strong> ${brand.name}</div>`;
+      });
+    }
+    
+    window.onload = loadConfig;
+  </script>
+</body>
+</html>
