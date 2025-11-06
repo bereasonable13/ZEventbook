@@ -95,7 +95,26 @@ function doGet(e) {
   try {
     const brandSlug = e.parameter.brand || e.parameter.b || 'abc';
     const brand = getBrand(brandSlug);
-    const page = e.parameter.p || 'Admin';
+    
+    // Normalize page name (case-insensitive, capitalize first letter)
+    let pageName = e.parameter.p || 'Admin';
+    pageName = pageName.charAt(0).toUpperCase() + pageName.slice(1).toLowerCase();
+    
+    // Valid pages that exist
+    const validPages = ['Admin', 'Configadmin', 'Display', 'Healthcheck', 'Poster', 'Public', 'Test'];
+    
+    // Map common variations
+    const pageMap = {
+      'Configadmin': 'ConfigAdmin',
+      'Healthcheck': 'HealthCheck'
+    };
+    
+    // Normalize and validate
+    const page = pageMap[pageName] || pageName;
+    if (!validPages.includes(page) && !validPages.includes(pageName)) {
+      return createErrorPage('Invalid page: ' + pageName);
+    }
+    
     const template = HtmlService.createTemplateFromFile(page);
     
     template.brand = brand;
