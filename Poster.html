@@ -573,15 +573,7 @@
 </button>
 
 <script>
-    function getBrandFromRequest() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const brandParam = urlParams.get("brand");
-      if (brandParam) return brandParam;
-      const hostname = window.location.hostname;
-      const domainMap = {"abc.zeventbooks.io": "ABC", "events.zeventbooks.io": "ABC", "zeventbooks.io": "ABC"};
-      if (domainMap[hostname]) return domainMap[hostname];
-      return "ABC";
-    }
+    
 /* ================= Poster v5.1 (With Image Upload) ================= */
 
 // Get event ID from URL
@@ -640,7 +632,7 @@ function handleImageSelect(event) {
   // Validate file
   const validation = validateImage(file);
   if (!validation.valid) {
-    alert('❌ ' + validation.error);
+    NU.toast(validation.error, 'error');
     event.target.value = ''; // Reset input
     return;
   }
@@ -818,7 +810,7 @@ async function loadPoster() {
     await loadQRCodes(eventId, event);
     
   } catch (e) {
-    console.error('Error loading poster:', e);
+    NU.handleError(e, 'loadPoster', false);
     document.getElementById('eventTitle').textContent = 'Error Loading Event';
     document.getElementById('eventDate').textContent = e.message || 'Please try again';
     document.getElementById('eventDetails').textContent = '';
@@ -891,7 +883,7 @@ async function loadQRCodes(eventId, event) {
     }
     
   } catch (e) {
-    console.error('Error loading QR codes:', e);
+    NU.handleError(e, 'loadQRCodes', false);
     document.getElementById('signupLoading').innerHTML = '<span style="color: var(--abc-red);">❌ Failed to load</span>';
     document.getElementById('publicLoading').innerHTML = '<span style="color: var(--abc-red);">❌ Failed to load</span>';
   }

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <?!= include('NUSDK'); ?>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NextUp Event Manager</title>
@@ -116,36 +117,16 @@
   
   <script>
     // Domain-based brand detection
-    function getBrandFromRequest() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const brandParam = urlParams.get('brand');
-      if (brandParam) return brandParam;
-      
-      const hostname = window.location.hostname;
-      const domainMap = {
-        'abc.zeventbooks.io': 'ABC',
-        'events.zeventbooks.io': 'ABC',
-        'zeventbooks.io': 'ABC',
-        'www.zeventbooks.io': 'ABC'
-      };
-      
-      if (domainMap[hostname]) return domainMap[hostname];
-      return 'ABC';
-    }
     
-    const currentBrand = getBrandFromRequest();
+    
+    const currentBrand = NU.getBrand();
     console.log('Header.html brand:', currentBrand);
     
     // Load brand configuration and update header
     async function loadBrandHeader() {
       try {
         // Get brand config from backend
-        const config = await new Promise((resolve, reject) => {
-          google.script.run
-            .withSuccessHandler(resolve)
-            .withFailureHandler(reject)
-            .getConfig();
-        });
+        const config = await NU.getConfig();
         
         const brand = config.BRANDS[currentBrand];
         if (!brand) {
@@ -212,7 +193,7 @@
         }
         
       } catch (error) {
-        console.error('Failed to load brand header:', error);
+        NU.handleError(error, "loadBrandHeader", false);
         // Fallback to default
         document.getElementById('brandName').textContent = 'American Bocce Company';
       }

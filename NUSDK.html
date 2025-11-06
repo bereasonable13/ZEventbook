@@ -105,3 +105,31 @@ window.NU = (function() {
   };
 })();
 </script>
+  
+  return {
+    // Backend communication
+    rpc,
+    
+    // User interface
+    toast,
+    loading,
+    
+    // Error handling
+    handleError,
+    
+    // Brand management
+    getBrand,
+    getConfig,
+    getBrandConfig,
+    
+    // Logging
+    log,
+    info: (where, msg, data) => log('info', where, msg, data),
+    warn: (where, msg, data) => log('warn', where, msg, data),
+    error: (where, msg, data) => log('error', where, msg, data),
+    
+    // Utilities
+    getBuildInfo
+  };
+})();
+</script>

@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <?!= include('NUSDK'); ?>
   <meta charset="utf-8"/>
   <title>NextUp · Admin</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -415,55 +416,7 @@
     }
     
     /* ===== TOAST ===== */
-    .toast {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: var(--text-dark);
-      color: white;
-      padding: 16px 24px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-      opacity: 0;
-      transform: translateY(20px);
-      transition: all 0.3s;
-      pointer-events: none;
-      z-index: 1000;
-    }
-    
-    .toast.show {
-      opacity: 1;
-      transform: translateY(0);
-      pointer-events: auto;
-    }
-    
-    .toast.success {
-      background: var(--bocce-green);
-    }
-    
-    .toast.error {
-      background: var(--abc-red);
-    }
-    
-    /* ===== LOADING ===== */
-    .loading {
-      text-align: center;
-      padding: 40px;
-      color: var(--text-medium);
-    }
-    
-    .spinner {
-      border: 3px solid var(--border);
-      border-top: 3px solid var(--abc-red);
-      border-radius: 50%;
-      width: 40px;
-      height: 40px;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
+    /* Toast styles moved to NUSDK */
       100% { transform: rotate(360deg); }
     }
     
@@ -572,38 +525,16 @@
   </div>
   
   <!-- Toast -->
-  <div id="toast" class="toast"></div>
+  <!-- Toast provided by NUSDK -->
   
   <script>
     // ==========================================
     // DOMAIN-BASED BRAND DETECTION
     // ==========================================
-    function getBrandFromRequest() {
-      // 1. URL parameter (testing/override)
-      const urlParams = new URLSearchParams(window.location.search);
-      const brandParam = urlParams.get("brand");
-      if (brandParam) {
-        return brandParam;
-      }
-      
-      // 2. Custom domain mapping
-      const hostname = window.location.hostname;
-      const domainMap = {
-        "abc.zeventbooks.io": "ABC",
-        "events.zeventbooks.io": "ABC",
-        "zeventbooks.io": "ABC"
-      };
-      
-      if (domainMap[hostname]) {
-        return domainMap[hostname];
-      }
-      
-      // 3. Default
-      return "ABC";
-    }
+    
     
     // ===== STATE =====
-    let currentBrand = getBrandFromRequest();
+    let currentBrand = NU.getBrand();
     let events = [];
     let saveTimers = {};
     
@@ -625,12 +556,12 @@
     async function populateEntityDropdowns() {
       try {
         // Get config to access entities for current brand
-        const config = await callBackend('getConfig');
+        const config = await NU.getConfig();
         const brandConfig = config.BRANDS[currentBrand];
         
         if (!brandConfig || !brandConfig.entities) {
           console.error('No entities found for brand:', currentBrand);
-          showToast('Failed to load entities', 'error');
+          NU.toast('Failed to load entities', 'error');
           return;
         }
         
@@ -652,7 +583,7 @@
         
       } catch (error) {
         console.error('Failed to populate entity dropdowns:', error);
-        showToast('Failed to load entities. Please refresh the page.', 'error');
+        NU.toast('Failed to load entities. Please refresh the page.', 'error');
       }
     }
     
@@ -684,7 +615,7 @@
         
         // Validate entity
         if (!eventData.entity) {
-          showToast('Please select an entity', 'error');
+          NU.toast('Please select an entity', 'error');
           btn.disabled = false;
           btn.textContent = 'Create Event';
           return;
@@ -692,7 +623,7 @@
         };
         
         // Call backend
-        const result = await callBackend('clientCreateEvent', 
+        const result = await NU.rpc('clientCreateEvent', 
           eventData.brand,
           eventData.entity,
           eventData.eventName,
@@ -713,7 +644,7 @@
         );
         
         if (result.ok) {
-          showToast('Event created successfully!', 'success');
+          NU.toast('Event created successfully!', 'success');
           
           // Clear form
           document.getElementById('eventName').value = '';
@@ -736,7 +667,7 @@
         
       } catch (error) {
         console.error('Create error:', error);
-        showToast('Failed to create event', 'error');
+        NU.toast('Failed to create event', 'error');
       } finally {
         btn.disabled = false;
         btn.textContent = 'Create Event';
@@ -746,17 +677,17 @@
     // ===== LOAD EVENTS =====
     async function loadEvents() {
       try {
-        const result = await callBackend('clientGetEvents', currentBrand);
+        const result = await NU.rpc('clientGetEvents', currentBrand);
         
         if (result.ok) {
           events = result.events;
           renderEvents();
         } else {
-          showToast('Failed to load events', 'error');
+          NU.toast('Failed to load events', 'error');
         }
       } catch (error) {
         console.error('Load error:', error);
-        showToast('Failed to load events', 'error');
+        NU.toast('Failed to load events', 'error');
       }
     }
     
@@ -1193,10 +1124,10 @@
       btn.textContent = 'Setting up...';
       
       try {
-        const result = await callBackend('clientSetupEventTracking', eventId);
+        const result = await NU.rpc('clientSetupEventTracking', eventId);
         
         if (result.ok) {
-          showToast('Event tracking set up!', 'success');
+          NU.toast('Event tracking set up!', 'success');
           await loadEvents();
       
       // Populate entity dropdowns
@@ -1214,7 +1145,7 @@
         }
       } catch (error) {
         console.error('Setup error:', error);
-        showToast('Failed to set up tracking', 'error');
+        NU.toast('Failed to set up tracking', 'error');
         btn.disabled = false;
         btn.textContent = '🚀 Set Up Event Tracking';
       }
@@ -1222,7 +1153,7 @@
     
     async function loadEventCounts(eventId) {
       try {
-        const result = await callBackend('clientGetEventCounts', eventId);
+        const result = await NU.rpc('clientGetEventCounts', eventId);
         if (result.ok) {
           const counts = result.counts;
           
@@ -1247,7 +1178,7 @@
     
     async function refreshCounts(eventId) {
       await loadEventCounts(eventId);
-      showToast('Counts refreshed', 'success');
+      NU.toast('Counts refreshed', 'success');
     }
     
     function viewResponses(formId) {
@@ -1258,9 +1189,9 @@
     function copyFormUrl(formId) {
       const url = `https://docs.google.com/forms/d/e/${formId}/viewform`;
       navigator.clipboard.writeText(url).then(() => {
-        showToast('Link copied!', 'success');
+        NU.toast('Link copied!', 'success');
       }).catch(() => {
-        showToast('Failed to copy link', 'error');
+        NU.toast('Failed to copy link', 'error');
       });
     }
     
@@ -1282,11 +1213,11 @@
           let result;
           
           if (section === 'details') {
-            result = await callBackend('clientUpdateEventDetails', eventId, {
+            result = await NU.rpc('clientUpdateEventDetails', eventId, {
               [field]: value
             });
           } else if (section === 'content') {
-            result = await callBackend('clientUpdateEventContent', eventId, {
+            result = await NU.rpc('clientUpdateEventContent', eventId, {
               [field]: value
             });
           }
@@ -1311,7 +1242,7 @@
       if (statusEl) statusEl.textContent = 'Saving...';
       
       try {
-        const result = await callBackend('clientUpdatePublicConfig', eventId, {
+        const result = await NU.rpc('clientUpdatePublicConfig', eventId, {
           [field]: value
         });
         
@@ -1339,7 +1270,7 @@
       if (statusEl) statusEl.textContent = 'Saving...';
       
       try {
-        const result = await callBackend('clientUpdateDisplayConfig', eventId, {
+        const result = await NU.rpc('clientUpdateDisplayConfig', eventId, {
           displayMode: mode
         });
         
@@ -1382,7 +1313,7 @@
         if (statusEl) statusEl.textContent = 'Saving...';
         
         try {
-          const result = await callBackend('clientUpdateDisplayConfig', eventId, {
+          const result = await NU.rpc('clientUpdateDisplayConfig', eventId, {
             carouselURLs: carouselData[eventId]
           });
           
@@ -1407,12 +1338,12 @@
       const url3 = document.getElementById(`poster-url3-${eventId}`).value.trim();
       
       if (!url1 && !url2 && !url3) {
-        showToast('Please enter at least one URL', 'error');
+        NU.toast('Please enter at least one URL', 'error');
         return;
       }
       
       try {
-        const result = await callBackend('clientUpdatePosterData', eventId, {
+        const result = await NU.rpc('clientUpdatePosterData', eventId, {
           url1, url2, url3
         });
         
@@ -1451,19 +1382,19 @@
           html += '</div>';
           output.innerHTML = html;
           
-          showToast('QR codes generated!', 'success');
+          NU.toast('QR codes generated!', 'success');
         } else {
           showToast(result.error || 'Failed to generate QR codes', 'error');
         }
       } catch (error) {
         console.error('QR generation error:', error);
-        showToast('Failed to generate QR codes', 'error');
+        NU.toast('Failed to generate QR codes', 'error');
       }
     }
     
     // ===== BACKEND CALLER =====
     
-    function callBackend(fnName, ...args) {
+    function NU.rpc(fnName, ...args) {
       return new Promise((resolve, reject) => {
         google.script.run
           .withSuccessHandler(resolve)
@@ -1474,10 +1405,7 @@
     
     // ===== UTILITIES =====
     
-    function showToast(message, type = 'info') {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.className = `toast ${type} show`;
+    show`;
       
       setTimeout(() => {
         toast.classList.remove('show');

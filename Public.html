@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <?!= include('NUSDK'); ?>
   <meta charset="utf-8"/>
   <title>Live Event View</title>
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
@@ -446,15 +447,7 @@
   </div>
   
   <script>
-    function getBrandFromRequest() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const brandParam = urlParams.get("brand");
-      if (brandParam) return brandParam;
-      const hostname = window.location.hostname;
-      const domainMap = {"abc.zeventbooks.io": "ABC", "events.zeventbooks.io": "ABC", "zeventbooks.io": "ABC"};
-      if (domainMap[hostname]) return domainMap[hostname];
-      return "ABC";
-    }
+    
     const CONFIG = { REFRESH_MS: 20000, JSON_BASE_URL: 'https://drive.google.com/uc?id=', MAX_RETRIES: 3 };
     let eventId, jsonFileId, retryCount = 0, refreshInterval;
     
@@ -463,10 +456,10 @@
         const params = new URLSearchParams(location.search);
         eventId = params.get('event');
         jsonFileId = params.get('fileId');
-        if (!eventId || !jsonFileId) { showError('Invalid URL'); return; }
+        if (!eventId || !jsonFileId) { NU.toast('Invalid URL', 'error'); return; }
         await refreshData();
         refreshInterval = setInterval(refreshData, CONFIG.REFRESH_MS);
-      } catch (e) { showError('Failed to load'); }
+      } catch (e) { NU.toast('Failed to load', 'error'); }
     }
     
     async function refreshData() {
@@ -478,7 +471,7 @@
         renderPage(d);
         retryCount = 0;
       } catch (e) {
-        if (++retryCount >= CONFIG.MAX_RETRIES) { showError('Failed to load data'); clearInterval(refreshInterval); }
+        if (++retryCount >= CONFIG.MAX_RETRIES) { NU.toast('Failed to load data', 'error'); clearInterval(refreshInterval); }
       }
     }
     

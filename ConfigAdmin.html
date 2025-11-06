@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <?!= include('NUSDK'); ?>
   <title>NextUp Configuration</title>
   <base target="_top">
   <?!= include('Styles'); ?>
@@ -72,7 +73,7 @@
 
   <script>
     function loadConfig() {
-      google.script.run.withSuccessHandler(displayConfig).getConfig();
+      NU.getConfig().then(displayConfig).catch(e => NU.handleError(e, "loadConfig"));
     }
     
     function displayConfig(cfg) {
