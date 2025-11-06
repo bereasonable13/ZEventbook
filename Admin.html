@@ -525,13 +525,7 @@
       <div class="form-group">
         <label>Entity *</label>
         <select id="entity">
-          <option value="">Select entity...</option>
-          <option value="ABC-Leagues">ABC Leagues</option>
-          <option value="ABC-Tournaments">ABC Tournaments</option>
-          <option value="ABC-ChicagoBocceClub">Chicago Bocce Club</option>
-          <option value="ABC-ChicagoBocceLeague">Chicago Bocce League</option>
-          <option value="ABC-Other">Other</option>
-        </select>
+          <option value="">Loading entities...</option>
         <div class="hint">Which organization is hosting this event?</div>
       </div>
 
@@ -620,8 +614,46 @@
       // Load events
       await loadEvents();
       
+      // Populate entity dropdowns
+      await populateEntityDropdowns();
+      
       // Bind create button
       document.getElementById('btnCreateEvent').addEventListener('click', createEvent);
+    }
+    
+    // ===== POPULATE ENTITY DROPDOWNS =====
+    async function populateEntityDropdowns() {
+      try {
+        // Get config to access entities for current brand
+        const config = await callBackend('getConfig');
+        const brandConfig = config.BRANDS[currentBrand];
+        
+        if (!brandConfig || !brandConfig.entities) {
+          console.error('No entities found for brand:', currentBrand);
+          showToast('Failed to load entities', 'error');
+          return;
+        }
+        
+        const entities = brandConfig.entities;
+        console.log('Loading', entities.length, 'entities for', currentBrand);
+        
+        // Populate create form dropdown
+        const createDropdown = document.getElementById('entity');
+        if (createDropdown) {
+          createDropdown.innerHTML = '<option value="">Select entity...</option>';
+          entities.forEach(entity => {
+            const option = document.createElement('option');
+            option.value = entity.id;
+            option.textContent = entity.name;
+            createDropdown.appendChild(option);
+          });
+          console.log('✓ Create form entity dropdown populated');
+        }
+        
+      } catch (error) {
+        console.error('Failed to populate entity dropdowns:', error);
+        showToast('Failed to load entities. Please refresh the page.', 'error');
+      }
     }
     
     // ===== CREATE EVENT =====
@@ -695,6 +727,9 @@
           
           // Reload events
           await loadEvents();
+      
+      // Populate entity dropdowns
+      await populateEntityDropdowns();
         } else {
           showToast(result.error || 'Failed to create event', 'error');
         }
@@ -828,12 +863,7 @@
       <div class="form-group">
         <label>Entity *</label>
         <select id="entity">
-          <option value="">Select entity...</option>
-          <option value="ABC-Leagues">ABC Leagues</option>
-          <option value="ABC-Tournaments">ABC Tournaments</option>
-          <option value="ABC-ChicagoBocceClub">Chicago Bocce Club</option>
-          <option value="ABC-ChicagoBocceLeague">Chicago Bocce League</option>
-          <option value="ABC-Other">Other</option>
+          <option value="">Loading entities...</option>
         </select>
         <div class="hint">Which organization is hosting this event?</div>
       </div>
@@ -1168,6 +1198,9 @@
         if (result.ok) {
           showToast('Event tracking set up!', 'success');
           await loadEvents();
+      
+      // Populate entity dropdowns
+      await populateEntityDropdowns();
           
           // Auto-expand the event
           setTimeout(() => {
