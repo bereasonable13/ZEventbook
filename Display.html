@@ -20,6 +20,15 @@
   <div id="offline-notice">📶 Offline - Showing cached content</div>
   
   <script>
+    function getBrandFromRequest() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const brandParam = urlParams.get("brand");
+      if (brandParam) return brandParam;
+      const hostname = window.location.hostname;
+      const domainMap = {"abc.zeventbooks.io": "ABC", "events.zeventbooks.io": "ABC", "zeventbooks.io": "ABC"};
+      if (domainMap[hostname]) return domainMap[hostname];
+      return "ABC";
+    }
     const CONFIG = { REFRESH_MS: 20000, JSON_BASE_URL: 'https://drive.google.com/uc?id=' };
     let eventId, jsonFileId, displayMode = 'static', carouselItems = [], currentIndex = 0, carouselInterval, refreshInterval;
     

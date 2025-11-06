@@ -1,17 +1,25 @@
-# Development files
-.eslintrc.js
-.prettierrc
-.gitignore
-.git/
-.github/
-node_modules/
-package.json
-package-lock.json
-jest.config.js
+# Exclude everything except Apps Script files
+**/**
+!*.gs
+!*.html
+!appsscript.json
+
+# Explicitly exclude problematic directories
+scripts/**
+tests/**
+node_modules/**
+.git/**
+.github/**
+src/**
+docs/**
+assets/**
+monitoring/**
+
+# Exclude config files
+*.json
+!appsscript.json
+*.js
 *.md
-tests/
-scripts/
-coverage/
-*.backup
-fix-*.py
-fix-*.sh
+.eslintrc*
+.prettierrc
+package*.json

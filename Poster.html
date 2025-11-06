@@ -573,6 +573,15 @@
 </button>
 
 <script>
+    function getBrandFromRequest() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const brandParam = urlParams.get("brand");
+      if (brandParam) return brandParam;
+      const hostname = window.location.hostname;
+      const domainMap = {"abc.zeventbooks.io": "ABC", "events.zeventbooks.io": "ABC", "zeventbooks.io": "ABC"};
+      if (domainMap[hostname]) return domainMap[hostname];
+      return "ABC";
+    }
 /* ================= Poster v5.1 (With Image Upload) ================= */
 
 // Get event ID from URL

@@ -581,35 +581,8 @@
   <div id="toast" class="toast"></div>
   
   <script>
-    // ==========================================
-    // DOMAIN-BASED BRAND DETECTION
-    // ==========================================
-    function getBrandFromRequest() {
-      // 1. URL parameter (testing/override)
-      const urlParams = new URLSearchParams(window.location.search);
-      const brandParam = urlParams.get("brand");
-      if (brandParam) {
-        return brandParam;
-      }
-      
-      // 2. Custom domain mapping
-      const hostname = window.location.hostname;
-      const domainMap = {
-        "abc.zeventbooks.io": "ABC",
-        "events.zeventbooks.io": "ABC",
-        "zeventbooks.io": "ABC"
-      };
-      
-      if (domainMap[hostname]) {
-        return domainMap[hostname];
-      }
-      
-      // 3. Default
-      return "ABC";
-    }
-    
     // ===== STATE =====
-    let currentBrand = getBrandFromRequest();
+    let currentBrand = 'ABC';
     let events = [];
     let saveTimers = {};
     
@@ -633,7 +606,6 @@
       try {
         const eventData = {
           brand: currentBrand,
-          entity: document.getElementById('entity').value.trim(),
           eventName: document.getElementById('eventName').value.trim(),
           eventDate: document.getElementById('eventDate').value,
           eventTime: document.getElementById('eventTime').value.trim(),
@@ -649,20 +621,11 @@
           showVideos: true,
           showBio: true,
           showMetrics: true
-        
-        // Validate entity
-        if (!eventData.entity) {
-          showToast('Please select an entity', 'error');
-          btn.disabled = false;
-          btn.textContent = 'Create Event';
-          return;
-        }
         };
         
         // Call backend
         const result = await callBackend('clientCreateEvent', 
           eventData.brand,
-          eventData.entity,
           eventData.eventName,
           eventData.eventDate,
           eventData.eventTime,
@@ -691,7 +654,6 @@
           document.getElementById('summaryText').value = '';
           document.getElementById('summaryLink').value = '';
           document.getElementById('summaryImage').value = '';
-          document.getElementById('entity').value = '';
           
           // Reload events
           await loadEvents();

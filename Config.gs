@@ -186,3 +186,10 @@ function getAssetUrl(filename) {
 function getEventUrl(eventId) {
   return `${GITHUB.BASE_URL}/${GITHUB.EVENTS_PATH}/event_${eventId}.json`;
 }
+
+// Domain to Brand Mapping
+CONFIG.DOMAIN_TO_BRAND = {
+  "abc.zeventbooks.io": "ABC",
+  "events.zeventbooks.io": "ABC", 
+  "zeventbooks.io": "ABC"
+};
