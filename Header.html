@@ -3,23 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= brand.name ?> Event Manager</title>
+  <title>NextUp Event Manager</title>
   
   <style>
-    /* Dynamic brand styling injected via Apps Script */
-    :root {
-      --brand-primary: <?= brand.colors.primary ?>;
-      --brand-secondary: <?= brand.colors.secondary ?>;
-      --brand-accent: <?= brand.colors.accent ?>;
-      --brand-text: <?= brand.colors.text ?>;
-      --brand-background: <?= brand.colors.background ?>;
-    }
-    
     .brand-header {
-      background: linear-gradient(135deg, var(--brand-primary) 0%, var(--brand-secondary) 100%);
+      background: linear-gradient(135deg, #c8102e 0%, #8a0a1f 100%);
       padding: 20px;
       text-align: center;
-      border-bottom: 4px solid var(--brand-accent);
+      border-bottom: 4px solid #d4af37;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
     
@@ -60,29 +51,6 @@
       font-size: 14px;
       font-style: italic;
       margin: 10px 0 0 0;
-    }
-    
-    /* Team-specific styling */
-    .team-info {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 10px;
-      margin-top: 10px;
-      padding: 10px;
-      background: rgba(255,255,255,0.1);
-      border-radius: 8px;
-    }
-    
-    .team-league-badge {
-      background: var(--brand-accent);
-      color: white;
-      padding: 5px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
     }
     
     .social-links {
@@ -127,59 +95,137 @@
 <body>
   
   <div class="brand-header">
-    
-    <!-- Logo -->
     <div class="brand-logo-container">
       <img 
+        id="brandLogo"
         class="brand-logo" 
-        src="<?= brand.logo ?>" 
-        alt="<?= brand.name ?> Logo"
+        src="" 
+        alt="Logo"
+        style="display: none;"
         onerror="this.style.display='none'"
       />
     </div>
     
-    <!-- Brand Name -->
-    <h1 class="brand-name"><?= brand.name ?></h1>
+    <h1 id="brandName" class="brand-name">Loading...</h1>
     
-    <!-- Tagline -->
-    <? if (brand.tagline) { ?>
-      <div class="brand-tagline"><?= brand.tagline ?></div>
-    <? } ?>
+    <div id="brandTagline" class="brand-tagline" style="display: none;"></div>
+    <div id="brandDescription" class="brand-description" style="display: none;"></div>
     
-    <!-- Description -->
-    <? if (brand.description) { ?>
-      <div class="brand-description"><?= brand.description ?></div>
-    <? } ?>
-    
-    <!-- Team-specific info (for CBL teams) -->
-    <? if (brand.league) { ?>
-      <div class="team-info">
-        <span class="team-league-badge"><?= brand.league ?> Franchise</span>
-        <? if (brand.venue) { ?>
-          <span style="color: rgba(255,255,255,0.9); font-size: 13px;">
-            @ <?= brand.venue ?>
-          </span>
-        <? } ?>
-      </div>
-    <? } ?>
-    
-    <!-- Social Links -->
-    <? if (brand.website || brand.instagram) { ?>
-      <div class="social-links">
-        <? if (brand.website) { ?>
-          <a href="<?= brand.website ?>" target="_blank" class="social-link">
-            🌐 Website
-          </a>
-        <? } ?>
-        <? if (brand.instagram) { ?>
-          <a href="https://instagram.com/<?= brand.instagram ?>" target="_blank" class="social-link">
-            📸 <?= brand.instagram ?>
-          </a>
-        <? } ?>
-      </div>
-    <? } ?>
-    
+    <div id="socialLinks" class="social-links" style="display: none;"></div>
   </div>
+  
+  <script>
+    // Domain-based brand detection
+    function getBrandFromRequest() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const brandParam = urlParams.get('brand');
+      if (brandParam) return brandParam;
+      
+      const hostname = window.location.hostname;
+      const domainMap = {
+        'abc.zeventbooks.io': 'ABC',
+        'events.zeventbooks.io': 'ABC',
+        'zeventbooks.io': 'ABC',
+        'www.zeventbooks.io': 'ABC'
+      };
+      
+      if (domainMap[hostname]) return domainMap[hostname];
+      return 'ABC';
+    }
+    
+    const currentBrand = getBrandFromRequest();
+    console.log('Header.html brand:', currentBrand);
+    
+    // Load brand configuration and update header
+    async function loadBrandHeader() {
+      try {
+        // Get brand config from backend
+        const config = await new Promise((resolve, reject) => {
+          google.script.run
+            .withSuccessHandler(resolve)
+            .withFailureHandler(reject)
+            .getConfig();
+        });
+        
+        const brand = config.BRANDS[currentBrand];
+        if (!brand) {
+          console.error('Brand not found:', currentBrand);
+          return;
+        }
+        
+        // Update title
+        document.title = brand.name + ' Event Manager';
+        
+        // Update brand name
+        document.getElementById('brandName').textContent = brand.name;
+        
+        // Update logo if available
+        if (brand.logo) {
+          const logoEl = document.getElementById('brandLogo');
+          logoEl.src = brand.logo;
+          logoEl.alt = brand.name + ' Logo';
+          logoEl.style.display = 'block';
+        }
+        
+        // Update tagline if available
+        if (brand.tagline) {
+          const taglineEl = document.getElementById('brandTagline');
+          taglineEl.textContent = brand.tagline;
+          taglineEl.style.display = 'block';
+        }
+        
+        // Update description if available
+        if (brand.description) {
+          const descEl = document.getElementById('brandDescription');
+          descEl.textContent = brand.description;
+          descEl.style.display = 'block';
+        }
+        
+        // Update social links if available
+        if (brand.website || brand.instagram) {
+          const socialEl = document.getElementById('socialLinks');
+          let linksHTML = '';
+          
+          if (brand.website) {
+            linksHTML += `<a href="${brand.website}" target="_blank" class="social-link">🌐 Website</a>`;
+          }
+          if (brand.instagram) {
+            linksHTML += `<a href="https://instagram.com/${brand.instagram}" target="_blank" class="social-link">📸 ${brand.instagram}</a>`;
+          }
+          
+          socialEl.innerHTML = linksHTML;
+          socialEl.style.display = 'flex';
+        }
+        
+        // Apply brand colors if available
+        if (brand.colors) {
+          const header = document.querySelector('.brand-header');
+          if (brand.colors.primary && brand.colors.secondary) {
+            header.style.background = `linear-gradient(135deg, ${brand.colors.primary} 0%, ${brand.colors.secondary} 100%)`;
+          } else if (brand.colors.primary) {
+            header.style.background = brand.colors.primary;
+          }
+          
+          if (brand.colors.accent) {
+            header.style.borderBottomColor = brand.colors.accent;
+          }
+        }
+        
+      } catch (error) {
+        console.error('Failed to load brand header:', error);
+        // Fallback to default
+        document.getElementById('brandName').textContent = 'American Bocce Company';
+      }
+    }
+    
+    // Load on page load
+    if (window.google && window.google.script) {
+      loadBrandHeader();
+    } else {
+      // Fallback if not in Apps Script environment
+      document.getElementById('brandName').textContent = 'American Bocce Company';
+    }
+  </script>
   
 </body>
 </html>
