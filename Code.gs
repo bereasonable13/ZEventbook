@@ -822,6 +822,20 @@ function validateEventInput(data) {
   if (!data.brand) {
     return { valid: false, error: 'Brand is required' };
   }
+  
+  if (!data.entity || data.entity.trim().length === 0) {
+    return { valid: false, error: 'Entity is required' };
+  }
+  
+  // Validate entity belongs to brand
+  const brandConfig = CONFIG.BRANDS[data.brand];
+  if (brandConfig && brandConfig.entities) {
+    const validEntities = brandConfig.entities.map(e => e.id);
+    if (!validEntities.includes(data.entity.trim())) {
+      return { valid: false, error: 'Invalid entity "' + data.entity + '" for brand ' + data.brand };
+    }
+  }
+  
   if (!data.eventName || data.eventName.trim().length < 3) {
     return { valid: false, error: 'Event name must be at least 3 characters' };
   }
@@ -839,6 +853,7 @@ function validateEventInput(data) {
     valid: true,
     data: {
       brand: data.brand,
+      entity: data.entity ? data.entity.trim() : '',
       eventName: data.eventName.trim(),
       eventDate: data.eventDate,
       eventTime: data.eventTime ? data.eventTime.trim() : '',
@@ -857,6 +872,7 @@ function validateEventInput(data) {
     }
   };
 }
+
 
 function isValidURL(string) {
   try {
