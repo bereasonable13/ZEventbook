@@ -3,7 +3,7 @@ const fs = require('fs');
 
 console.log('🔍 Verifying deployment...\n');
 
-const required = ['Code.js', 'Config.js', 'Admin.html', '.clasp.json'];
+const required = ['Code.gs', 'Config.gs', 'Admin.html', '.clasp.json'];
 let errors = 0;
 
 required.forEach(file => {
