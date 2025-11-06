@@ -606,6 +606,7 @@
       try {
         const eventData = {
           brand: currentBrand,
+          entity: document.getElementById('entity').value.trim(),
           eventName: document.getElementById('eventName').value.trim(),
           eventDate: document.getElementById('eventDate').value,
           eventTime: document.getElementById('eventTime').value.trim(),
@@ -621,6 +622,14 @@
           showVideos: true,
           showBio: true,
           showMetrics: true
+        
+        // Validate entity
+        if (!eventData.entity) {
+          showToast('Please select an entity', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Create Event';
+          return;
+        }
         };
         
         // Call backend
@@ -655,6 +664,7 @@
           document.getElementById('summaryText').value = '';
           document.getElementById('summaryLink').value = '';
           document.getElementById('summaryImage').value = '';
+          document.getElementById('entity').value = '';
           
           // Reload events
           await loadEvents();

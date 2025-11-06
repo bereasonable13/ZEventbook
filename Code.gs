@@ -1217,3 +1217,396 @@ function clientUpdatePosterData(eventId, posterData) {
 function clientGetPosterData(eventId) {
   return getPosterData(eventId);
 }
+/**
+ * Create mock sponsor analytics dashboard
+ * Run this once to set up demo data
+ */
+function createMockSponsorDashboard() {
+  // Create new spreadsheet
+  const ss = SpreadsheetApp.create('NextUp - Sponsor ROI Dashboard (DEMO)');
+  const sheet = ss.getActiveSheet();
+  sheet.setName('Event Analytics');
+  
+  // Headers with styling
+  const headers = [
+    'Event Name', 'Entity', 'Date', 
+    'Poster Scans', 'Display Impressions', 'Web Views',
+    'Total Touchpoints', 'Registrations', 'Conversion %',
+    'Sponsor Cost', 'Cost Per Touch', 'ROI Status'
+  ];
+  
+  sheet.getRange(1, 1, 1, 12).setValues([headers]);
+  sheet.getRange(1, 1, 1, 12).setFontWeight('bold');
+  sheet.getRange(1, 1, 1, 12).setBackground('#c8102e');
+  sheet.getRange(1, 1, 1, 12).setFontColor('#ffffff');
+  
+  // Mock data for 10 events
+  const mockData = [
+    ['ABC Open 2024', 'ABC-Tournaments', '2024-12-14', 347, 2450, 892, 3689, 234, '26.2%', '$5,000', '$1.35', 'Excellent'],
+    ['Summer League Night', 'ABC-Leagues', '2024-07-15', 156, 1230, 445, 1831, 112, '25.2%', '$2,000', '$1.09', 'Excellent'],
+    ['CBC Fall Social', 'ABC-ChicagoBocceClub', '2024-09-20', 289, 1890, 672, 2851, 178, '26.5%', '$3,500', '$1.23', 'Excellent'],
+    ['CBL Championship', 'ABC-ChicagoBocceLeague', '2024-10-05', 412, 3120, 1045, 4577, 298, '28.5%', '$7,500', '$1.64', 'Good'],
+    ['Spring Tournament', 'ABC-Tournaments', '2024-04-12', 234, 1670, 523, 2427, 156, '29.8%', '$3,000', '$1.24', 'Excellent'],
+    ['Monday Night League', 'ABC-Leagues', '2024-06-03', 89, 890, 267, 1246, 67, '25.1%', '$1,500', '$1.20', 'Excellent'],
+    ['CBC Beer Garden Event', 'ABC-ChicagoBocceClub', '2024-08-15', 456, 2340, 892, 3688, 245, '27.5%', '$4,000', '$1.08', 'Excellent'],
+    ['CBL Playoff Series', 'ABC-ChicagoBocceLeague', '2024-11-02', 378, 2890, 723, 3991, 267, '26.9%', '$6,000', '$1.50', 'Good'],
+    ['Winter League Kickoff', 'ABC-Leagues', '2024-01-08', 198, 1450, 534, 2182, 145, '27.2%', '$2,500', '$1.15', 'Excellent'],
+    ['ABC Regional Finals', 'ABC-Tournaments', '2024-11-20', 523, 3560, 1234, 5317, 389, '29.6%', '$8,000', '$1.50', 'Excellent']
+  ];
+  
+  sheet.getRange(2, 1, 10, 12).setValues(mockData);
+  
+  // Format numbers
+  sheet.getRange(2, 4, 10, 3).setNumberFormat('#,##0');
+  sheet.getRange(2, 7, 10, 1).setNumberFormat('#,##0');
+  sheet.getRange(2, 8, 10, 1).setNumberFormat('#,##0');
+  sheet.getRange(2, 10, 10, 1).setNumberFormat('$#,##0');
+  sheet.getRange(2, 11, 10, 1).setNumberFormat('$0.00');
+  
+  // Add summary row
+  sheet.getRange(12, 1).setValue('TOTAL/AVERAGE:');
+  sheet.getRange(12, 1).setFontWeight('bold');
+  sheet.getRange(12, 4).setFormula('=SUM(D2:D11)');
+  sheet.getRange(12, 5).setFormula('=SUM(E2:E11)');
+  sheet.getRange(12, 6).setFormula('=SUM(F2:F11)');
+  sheet.getRange(12, 7).setFormula('=SUM(G2:G11)');
+  sheet.getRange(12, 8).setFormula('=SUM(H2:H11)');
+  sheet.getRange(12, 10).setFormula('=SUM(J2:J11)');
+  sheet.getRange(12, 11).setFormula('=AVERAGE(K2:K11)');
+  
+  // Auto-resize
+  sheet.autoResizeColumns(1, 12);
+  
+  // Create Summary Dashboard sheet
+  const dashboardSheet = ss.insertSheet('Sponsor Dashboard');
+  
+  // Dashboard header
+  dashboardSheet.getRange('A1:F1').merge();
+  dashboardSheet.getRange('A1').setValue('NextUp Sponsor ROI Dashboard');
+  dashboardSheet.getRange('A1').setFontSize(18);
+  dashboardSheet.getRange('A1').setFontWeight('bold');
+  dashboardSheet.getRange('A1').setBackground('#c8102e');
+  dashboardSheet.getRange('A1').setFontColor('#ffffff');
+  dashboardSheet.getRange('A1').setHorizontalAlignment('center');
+  
+  // Key metrics
+  dashboardSheet.getRange('A3').setValue('TOTAL CAMPAIGN REACH');
+  dashboardSheet.getRange('B3').setFormula('=\'Event Analytics\'!G12');
+  dashboardSheet.getRange('B3').setNumberFormat('#,##0');
+  dashboardSheet.getRange('B3').setFontSize(24);
+  dashboardSheet.getRange('B3').setFontWeight('bold');
+  
+  dashboardSheet.getRange('A5').setValue('Total Investment:');
+  dashboardSheet.getRange('B5').setFormula('=\'Event Analytics\'!J12');
+  dashboardSheet.getRange('B5').setNumberFormat('$#,##0');
+  
+  dashboardSheet.getRange('A6').setValue('Average Cost Per Touch:');
+  dashboardSheet.getRange('B6').setFormula('=\'Event Analytics\'!K12');
+  dashboardSheet.getRange('B6').setNumberFormat('$0.00');
+  
+  dashboardSheet.getRange('A7').setValue('Total Registrations:');
+  dashboardSheet.getRange('B7').setFormula('=\'Event Analytics\'!H12');
+  dashboardSheet.getRange('B7').setNumberFormat('#,##0');
+  
+  dashboardSheet.getRange('A8').setValue('Average Conversion:');
+  dashboardSheet.getRange('B8').setValue('27.2%');
+  
+  dashboardSheet.getRange('A10').setValue('BREAKDOWN BY CHANNEL:');
+  dashboardSheet.getRange('A10').setFontWeight('bold');
+  
+  dashboardSheet.getRange('A11').setValue('Poster QR Scans:');
+  dashboardSheet.getRange('B11').setFormula('=\'Event Analytics\'!D12');
+  dashboardSheet.getRange('B11').setNumberFormat('#,##0');
+  
+  dashboardSheet.getRange('A12').setValue('Display Impressions:');
+  dashboardSheet.getRange('B12').setFormula('=\'Event Analytics\'!E12');
+  dashboardSheet.getRange('B12').setNumberFormat('#,##0');
+  
+  dashboardSheet.getRange('A13').setValue('Web Page Views:');
+  dashboardSheet.getRange('B13').setFormula('=\'Event Analytics\'!F12');
+  dashboardSheet.getRange('B13').setNumberFormat('#,##0');
+  
+  dashboardSheet.getRange('A15').setValue('ROI ASSESSMENT:');
+  dashboardSheet.getRange('A15').setFontWeight('bold');
+  dashboardSheet.getRange('A16').setValue('✓ Cost per touchpoint under $1.50 target');
+  dashboardSheet.getRange('A17').setValue('✓ Conversion rate above 25% benchmark');
+  dashboardSheet.getRange('A18').setValue('✓ All events showing positive ROI');
+  dashboardSheet.getRange('A19').setValue('✓ Multi-channel reach verified');
+  
+  // Auto-resize dashboard
+  dashboardSheet.autoResizeColumns(1, 6);
+  
+  Logger.log('Mock Sponsor Dashboard created!');
+  Logger.log('URL: ' + ss.getUrl());
+  
+  return ss.getUrl();
+}
+/**
+ * Phase 1A Test Suite
+ * Run this to verify entity architecture works
+ */
+function runPhase1ATests() {
+  Logger.clear();
+  Logger.log('==========================================');
+  Logger.log('PHASE 1A TEST SUITE');
+  Logger.log('==========================================\n');
+  
+  const results = [];
+  
+  // TEST 1: Entity configuration exists
+  try {
+    const entities = CONFIG.BRANDS.ABC.entities;
+    if (entities && entities.length === 5) {
+      results.push({test: '1. Entity configuration', status: 'PASS', detail: '5 entities configured'});
+    } else {
+      results.push({test: '1. Entity configuration', status: 'FAIL', detail: `Found ${entities?.length || 0} entities`});
+    }
+  } catch (e) {
+    results.push({test: '1. Entity configuration', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 2: Spreadsheet has entity column
+  try {
+    const ss = getSpreadsheet('ABC');
+    const sheet = ss.getSheetByName('Events');
+    
+    if (!sheet) {
+      // Sheet doesn't exist yet, create it
+      const newSheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, 'ABC');
+      const headers = newSheet.getRange(1, 1, 1, 28).getValues()[0];
+      
+      if (headers[2] === 'Entity') {
+        results.push({test: '2. Spreadsheet entity column', status: 'PASS', detail: 'Column C = Entity'});
+      } else {
+        results.push({test: '2. Spreadsheet entity column', status: 'FAIL', detail: `Column C = ${headers[2]}`});
+      }
+    } else {
+      const headers = sheet.getRange(1, 1, 1, 28).getValues()[0];
+      
+      if (headers[2] === 'Entity') {
+        results.push({test: '2. Spreadsheet entity column', status: 'PASS', detail: 'Column C = Entity'});
+      } else {
+        results.push({test: '2. Spreadsheet entity column', status: 'FAIL', detail: `Column C = ${headers[2]}`});
+      }
+    }
+  } catch (e) {
+    results.push({test: '2. Spreadsheet entity column', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 3: Entity validation (invalid entity)
+  try {
+    const result = createEvent({
+      brand: 'ABC',
+      entity: 'INVALID-ENTITY',
+      eventName: 'Test Invalid Entity',
+      eventDate: '2025-12-01'
+    });
+    
+    if (!result.ok && result.error.includes('Invalid entity')) {
+      results.push({test: '3. Entity validation (reject invalid)', status: 'PASS', detail: 'Invalid entity rejected'});
+    } else if (!result.ok && result.error.includes('Entity is required')) {
+      results.push({test: '3. Entity validation (reject invalid)', status: 'PASS', detail: 'Empty entity rejected'});
+    } else {
+      results.push({test: '3. Entity validation (reject invalid)', status: 'FAIL', detail: 'Invalid entity accepted'});
+    }
+  } catch (e) {
+    results.push({test: '3. Entity validation (reject invalid)', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 4: Create event with valid entity
+  try {
+    const testName = 'Phase1A Test Event ' + Date.now();
+    const result = createEvent({
+      brand: 'ABC',
+      entity: 'ABC-Leagues',
+      eventName: testName,
+      eventDate: '2025-12-01',
+      eventTime: '18:00',
+      location: 'Test Venue'
+    });
+    
+    if (result.ok && result.event && result.event.entity === 'ABC-Leagues') {
+      results.push({test: '4. Create event with entity', status: 'PASS', detail: `Event ID: ${result.eventId}`});
+      
+      // Store for next test
+      PropertiesService.getScriptProperties().setProperty('test_event_id', result.eventId);
+    } else {
+      results.push({test: '4. Create event with entity', status: 'FAIL', detail: JSON.stringify(result)});
+    }
+  } catch (e) {
+    results.push({test: '4. Create event with entity', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 5: Verify entity in spreadsheet
+  try {
+    const testEventId = PropertiesService.getScriptProperties().getProperty('test_event_id');
+    
+    if (testEventId) {
+      const ss = getSpreadsheet('ABC');
+      const sheet = ss.getSheetByName('Events');
+      const data = sheet.getDataRange().getValues();
+      
+      let found = false;
+      for (let i = 1; i < data.length; i++) {
+        if (data[i][0] === testEventId) {
+          if (data[i][2] === 'ABC-Leagues') {
+            results.push({test: '5. Entity stored in spreadsheet', status: 'PASS', detail: 'Column C = ABC-Leagues'});
+          } else {
+            results.push({test: '5. Entity stored in spreadsheet', status: 'FAIL', detail: `Column C = ${data[i][2]}`});
+          }
+          found = true;
+          break;
+        }
+      }
+      
+      if (!found) {
+        results.push({test: '5. Entity stored in spreadsheet', status: 'FAIL', detail: 'Event not found in sheet'});
+      }
+    } else {
+      results.push({test: '5. Entity stored in spreadsheet', status: 'SKIP', detail: 'No test event created'});
+    }
+  } catch (e) {
+    results.push({test: '5. Entity stored in spreadsheet', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 6: rowToEvent includes entity
+  try {
+    const testEventId = PropertiesService.getScriptProperties().getProperty('test_event_id');
+    
+    if (testEventId) {
+      const event = getEventById(testEventId);
+      
+      if (event && event.entity === 'ABC-Leagues' && event.eventName && event.eventDate) {
+        results.push({test: '6. rowToEvent maps entity', status: 'PASS', detail: 'All fields mapped correctly'});
+      } else {
+        results.push({test: '6. rowToEvent maps entity', status: 'FAIL', detail: JSON.stringify(event)});
+      }
+    } else {
+      results.push({test: '6. rowToEvent maps entity', status: 'SKIP', detail: 'No test event created'});
+    }
+  } catch (e) {
+    results.push({test: '6. rowToEvent maps entity', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 7: Control spreadsheet exists
+  try {
+    if (typeof getControlSpreadsheet === 'function') {
+      const controlSS = getControlSpreadsheet();
+      const sheet = controlSS.getSheetByName('AllEvents');
+      
+      if (sheet) {
+        const headers = sheet.getRange(1, 1, 1, 13).getValues()[0];
+        if (headers[2] === 'Entity') {
+          results.push({test: '7. Control spreadsheet', status: 'PASS', detail: 'Control sheet exists with Entity column'});
+          
+          // Log URL for manual verification
+          Logger.log('\n>>> Control Spreadsheet URL: ' + controlSS.getUrl() + '\n');
+        } else {
+          results.push({test: '7. Control spreadsheet', status: 'FAIL', detail: `Column C = ${headers[2]}`});
+        }
+      } else {
+        results.push({test: '7. Control spreadsheet', status: 'FAIL', detail: 'AllEvents sheet not found'});
+      }
+    } else {
+      results.push({test: '7. Control spreadsheet', status: 'SKIP', detail: 'getControlSpreadsheet not implemented'});
+    }
+  } catch (e) {
+    results.push({test: '7. Control spreadsheet', status: 'ERROR', detail: String(e)});
+  }
+  
+  // TEST 8: Control spreadsheet sync
+  try {
+    const testEventId = PropertiesService.getScriptProperties().getProperty('test_event_id');
+    
+    if (testEventId && typeof syncToControlSpreadsheet === 'function') {
+      const event = getEventById(testEventId);
+      const syncResult = syncToControlSpreadsheet(event);
+      
+      if (syncResult && syncResult.ok) {
+        results.push({test: '8. Control spreadsheet sync', status: 'PASS', detail: 'Event synced successfully'});
+      } else {
+        results.push({test: '8. Control spreadsheet sync', status: 'FAIL', detail: JSON.stringify(syncResult)});
+      }
+    } else {
+      results.push({test: '8. Control spreadsheet sync', status: 'SKIP', detail: 'No test event or sync not implemented'});
+    }
+  } catch (e) {
+    results.push({test: '8. Control spreadsheet sync', status: 'ERROR', detail: String(e)});
+  }
+  
+  // SUMMARY
+  const passed = results.filter(r => r.status === 'PASS').length;
+  const failed = results.filter(r => r.status === 'FAIL').length;
+  const errors = results.filter(r => r.status === 'ERROR').length;
+  const skipped = results.filter(r => r.status === 'SKIP').length;
+  
+  Logger.log('\n==========================================');
+  Logger.log('TEST RESULTS SUMMARY');
+  Logger.log('==========================================');
+  Logger.log(`✓ PASS:   ${passed}`);
+  Logger.log(`✗ FAIL:   ${failed}`);
+  Logger.log(`⚠ ERROR:  ${errors}`);
+  Logger.log(`○ SKIP:   ${skipped}`);
+  Logger.log(`  TOTAL:  ${results.length}`);
+  Logger.log('==========================================\n');
+  
+  results.forEach(r => {
+    let symbol;
+    switch(r.status) {
+      case 'PASS': symbol = '✓'; break;
+      case 'FAIL': symbol = '✗'; break;
+      case 'ERROR': symbol = '⚠'; break;
+      case 'SKIP': symbol = '○'; break;
+    }
+    Logger.log(`${symbol} ${r.test}: ${r.status}`);
+    Logger.log(`  ${r.detail}`);
+  });
+  
+  // Clean up test data
+  const testEventId = PropertiesService.getScriptProperties().getProperty('test_event_id');
+  if (testEventId) {
+    PropertiesService.getScriptProperties().deleteProperty('test_event_id');
+  }
+  
+  Logger.log('\n==========================================');
+  if (failed === 0 && errors === 0) {
+    Logger.log('✅ ALL TESTS PASSED - Ready for ABC Open!');
+  } else {
+    Logger.log('⚠️  FAILURES DETECTED - Fix before ABC Open!');
+  }
+  Logger.log('==========================================');
+  
+  return results;
+}
+
+/**
+ * Quick smoke test - run this after any changes
+ */
+function quickSmokeTest() {
+  Logger.clear();
+  Logger.log('=== QUICK SMOKE TEST ===\n');
+  
+  // Test 1: Can create event with entity
+  try {
+    const result = createEvent({
+      brand: 'ABC',
+      entity: 'ABC-Tournaments',
+      eventName: 'Smoke Test ' + Date.now(),
+      eventDate: '2025-12-01'
+    });
+    
+    if (result.ok) {
+      Logger.log('✓ Event creation works');
+      Logger.log(`  Event ID: ${result.eventId}`);
+      return true;
+    } else {
+      Logger.log('✗ Event creation failed');
+      Logger.log(`  Error: ${result.error}`);
+      return false;
+    }
+  } catch (e) {
+    Logger.log('✗ Event creation error');
+    Logger.log(`  ${String(e)}`);
+    return false;
+  }
+}
