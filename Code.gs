@@ -21,14 +21,22 @@
 
 const CONFIG = {
   APP_NAME: 'NextUp Event Manager',
-  VERSION: '4.1.2-NamedSpreadsheets',
-  BUILD_DATE: '2025-11-03',
+  VERSION: '4.2.0-EntityArchitecture',
+  BUILD_DATE: '2025-11-06',
 
   // Multi-brand configuration
   BRANDS: {
     'ABC': {
       name: 'American Bocce Co.',
       shortName: 'ABC',
+      entities: [        { id: 'ABC-Leagues', name: 'ABC Leagues' },        { id: 'ABC-Tournaments', name: 'ABC Tournaments' },        { id: 'ABC-ChicagoBocceClub', name: 'Chicago Bocce Club' },        { id: 'ABC-ChicagoBocceLeague', name: 'Chicago Bocce League' },        { id: 'ABC-Other', name: 'Other' }      ],
+      entities: [
+        { id: 'ABC-Leagues', name: 'ABC Leagues' },
+        { id: 'ABC-Tournaments', name: 'ABC Tournaments' },
+        { id: 'ABC-ChicagoBocceClub', name: 'Chicago Bocce Club' },
+        { id: 'ABC-ChicagoBocceLeague', name: 'Chicago Bocce League' },
+        { id: 'ABC-Other', name: 'Other' }
+      ],
       colors: {
         primary: '#c8102e',
         secondary: '#f5f1e8',
@@ -49,6 +57,8 @@ const CONFIG = {
   },
   
   DEFAULT_BRAND: 'ABC',
+  CONTROL_SPREADSHEET_NAME: 'zeventbook-control',
+  CONTROL_SPREADSHEET_NAME: 'zeventbook-control',
   EVENTS_SHEET_NAME: 'Events',
   ERROR_LOG_SHEET_NAME: 'ErrorLog',
   QR_CODE_SIZE: 300,
@@ -199,7 +209,7 @@ function getOrCreateSheet(sheetName, brand) {
     if (sheetName === CONFIG.EVENTS_SHEET_NAME) {
       // Initialize Events sheet with headers
       sheet.getRange(1, 1, 1, 26).setValues([[
-        'Event ID', 'Brand', 'Event Name', 'Event Date', 'Created At',
+        'Event ID', 'Brand', 'Entity', 'Event Name', 'Event Date', 'Created At',
         'Registration Form ID', 'Check-In Form ID', 'Walk-In Form ID', 'Survey Form ID',
         'Data Sheet ID', 'Status',
         'Summary Text', 'Summary Link', 'Summary Image',
@@ -242,6 +252,7 @@ function createEvent(data) {
     sheet.appendRow([
       eventId,
       validated.brand,
+      validated.entity || '',
       validated.eventName,
       validated.eventDate,
       createdAt,
@@ -389,30 +400,31 @@ function rowToEvent(row) {
   return {
     eventId: row[0],
     brand: row[1],
-    eventName: row[2],
-    eventDate: row[3],
-    createdAt: row[4],
-    registrationFormId: row[5],
-    checkinFormId: row[6],
-    walkinFormId: row[7],
-    surveyFormId: row[8],
-    dataSheetId: row[9],
-    status: row[10],
-    summaryText: row[11] || '',
-    summaryLink: row[12] || '',
-    summaryImage: row[13] || '',
-    location: row[14] || '',
-    videoURLs: row[15] || '',
-    bioImage: row[16] || '',
-    bioText: row[17] || '',
-    bioLink: row[18] || '',
-    eventTime: row[19] || '',
-    showSummaryImage: row[20] !== false,
-    showVideos: row[21] !== false,
-    showBio: row[22] !== false,
-    showMetrics: row[23] !== false,
-    displayMode: row[24] || 'same_as_public',
-    carouselURLs: row[25] || ''
+    entity: row[2] || '',
+    eventName: row[3],
+    eventDate: row[4],
+    createdAt: row[5],
+    registrationFormId: row[6],
+    checkinFormId: row[7],
+    walkinFormId: row[8],
+    surveyFormId: row[9],
+    dataSheetId: row[10],
+    status: row[11],
+    summaryText: row[12] || '',
+    summaryLink: row[13] || '',
+    summaryImage: row[14] || '',
+    location: row[15] || '',
+    videoURLs: row[16] || '',
+    bioImage: row[17] || '',
+    bioText: row[18] || '',
+    bioLink: row[19] || '',
+    eventTime: row[20] || '',
+    showSummaryImage: row[21] !== false,
+    showVideos: row[22] !== false,
+    showBio: row[23] !== false,
+    showMetrics: row[24] !== false,
+    displayMode: row[25] || 'same_as_public',
+    carouselURLs: row[26] || ''
   };
 }
 
@@ -1136,9 +1148,9 @@ function manualExportNow() {
 // CLIENT-CALLABLE FUNCTIONS
 // ============================================
 
-function clientCreateEvent(brand, eventName, eventDate, eventTime, location, summaryText, summaryLink, summaryImage, videoURLs, bioImage, bioText, bioLink, showSummaryImage, showVideos, showBio, showMetrics) {
+function clientCreateEvent(brand, entity, eventName, eventDate, eventTime, location, summaryText, summaryLink, summaryImage, videoURLs, bioImage, bioText, bioLink, showSummaryImage, showVideos, showBio, showMetrics) {
   return createEvent({ 
-    brand, eventName, eventDate, eventTime, location, 
+    brand, entity, eventName, eventDate, eventTime, location, 
     summaryText, summaryLink, summaryImage, videoURLs, 
     bioImage, bioText, bioLink,
     showSummaryImage, showVideos, showBio, showMetrics
