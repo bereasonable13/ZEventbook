@@ -1164,6 +1164,24 @@ function manualExportNow() {
 // CLIENT-CALLABLE FUNCTIONS
 // ============================================
 
+// ==========================================
+// CONFIG ACCESS
+// ==========================================
+
+/**
+ * Get complete configuration object
+ * Used by NUSDK and frontend pages
+ */
+function getConfig() {
+  return {
+    VERSION: CONFIG.VERSION,
+    BRANDS: CONFIG.BRANDS,
+    DOMAIN_TO_BRAND: CONFIG.DOMAIN_TO_BRAND,
+    DEFAULT_BRAND: 'ABC'
+  };
+}
+
+
 function clientCreateEvent(brand, entity, eventName, eventDate, eventTime, location, summaryText, summaryLink, summaryImage, videoURLs, bioImage, bioText, bioLink, showSummaryImage, showVideos, showBio, showMetrics) {
   return createEvent({ 
     brand, entity, eventName, eventDate, eventTime, location, 
