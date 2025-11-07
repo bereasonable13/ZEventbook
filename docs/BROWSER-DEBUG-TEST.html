@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Entity Dropdown Debug Test</title>
+</head>
+<body>
+  <h1>Entity Dropdown Debug Test</h1>
+  <pre id="log"></pre>
+  
+  <script>
+    const log = document.getElementById('log');
+    function logMsg(msg) {
+      log.textContent += msg + '\n';
+      console.log(msg);
+    }
+    
+    // Test 1: Can we access google.script.run?
+    logMsg('Test 1: google.script.run available?');
+    if (window.google && window.google.script && window.google.script.run) {
+      logMsg('✓ google.script.run is available');
+    } else {
+      logMsg('❌ google.script.run NOT available - are we in Apps Script?');
+    }
+    
+    // Test 2: Call getConfig directly
+    logMsg('\nTest 2: Calling getConfig()...');
+    google.script.run
+      .withSuccessHandler(function(result) {
+        logMsg('✓ getConfig() SUCCESS!');
+        logMsg('Result: ' + JSON.stringify(result, null, 2));
+        
+        // Test 3: Check if BRANDS exists
+        if (result.BRANDS) {
+          logMsg('\n✓ BRANDS exists');
+          logMsg('Brand keys: ' + Object.keys(result.BRANDS).join(', '));
+          
+          // Test 4: Check ABC entities
+          if (result.BRANDS.ABC && result.BRANDS.ABC.entities) {
+            logMsg('\n✓ ABC entities found: ' + result.BRANDS.ABC.entities.length);
+            result.BRANDS.ABC.entities.forEach(function(entity) {
+              logMsg('  - ' + entity.id + ': ' + entity.name);
+            });
+          } else {
+            logMsg('\n❌ ABC entities NOT found');
+          }
+        } else {
+          logMsg('\n❌ BRANDS not in result');
+        }
+      })
+      .withFailureHandler(function(error) {
+        logMsg('❌ getConfig() FAILED!');
+        logMsg('Error: ' + error);
+      })
+      .getConfig();
+  </script>
+</body>
+</html>

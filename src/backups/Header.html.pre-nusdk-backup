@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <?!= include('NUSDK'); ?>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NextUp Event Manager</title>
+  
+  <style>
+    .brand-header {
+      background: linear-gradient(135deg, #c8102e 0%, #8a0a1f 100%);
+      padding: 20px;
+      text-align: center;
+      border-bottom: 4px solid #d4af37;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .brand-logo-container {
+      margin-bottom: 15px;
+    }
+    
+    .brand-logo {
+      max-width: 200px;
+      height: auto;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+      transition: transform 0.3s ease;
+    }
+    
+    .brand-logo:hover {
+      transform: scale(1.05);
+    }
+    
+    .brand-name {
+      color: white;
+      font-size: 28px;
+      font-weight: 700;
+      margin: 10px 0 5px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+      letter-spacing: 0.5px;
+    }
+    
+    .brand-tagline {
+      color: rgba(255,255,255,0.9);
+      font-size: 16px;
+      font-weight: 400;
+      margin: 5px 0;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+    
+    .brand-description {
+      color: rgba(255,255,255,0.8);
+      font-size: 14px;
+      font-style: italic;
+      margin: 10px 0 0 0;
+    }
+    
+    .social-links {
+      margin-top: 15px;
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+    }
+    
+    .social-link {
+      color: rgba(255,255,255,0.9);
+      text-decoration: none;
+      font-size: 14px;
+      transition: color 0.3s ease;
+    }
+    
+    .social-link:hover {
+      color: white;
+      text-decoration: underline;
+    }
+    
+    /* Mobile responsive */
+    @media (max-width: 768px) {
+      .brand-logo {
+        max-width: 150px;
+      }
+      
+      .brand-name {
+        font-size: 24px;
+      }
+      
+      .brand-tagline {
+        font-size: 14px;
+      }
+      
+      .brand-description {
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  
+  <div class="brand-header">
+    <div class="brand-logo-container">
+      <img 
+        id="brandLogo"
+        class="brand-logo" 
+        src="" 
+        alt="Logo"
+        style="display: none;"
+        onerror="this.style.display='none'"
+      />
+    </div>
+    
+    <h1 id="brandName" class="brand-name">Loading...</h1>
+    
+    <div id="brandTagline" class="brand-tagline" style="display: none;"></div>
+    <div id="brandDescription" class="brand-description" style="display: none;"></div>
+    
+    <div id="socialLinks" class="social-links" style="display: none;"></div>
+  </div>
+  
+  <script>
+    // Domain-based brand detection
+    
+    
+    const currentBrand = NU.getBrand();
+    console.log('Header.html brand:', currentBrand);
+    
+    // Load brand configuration and update header
+    async function loadBrandHeader() {
+      try {
+        // Get brand config from backend
+        const config = await NU.getConfig();
+        
+        const brand = config.BRANDS[currentBrand];
+        if (!brand) {
+          console.error('Brand not found:', currentBrand);
+          return;
+        }
+        
+        // Update title
+        document.title = brand.name + ' Event Manager';
+        
+        // Update brand name
+        document.getElementById('brandName').textContent = brand.name;
+        
+        // Update logo if available
+        if (brand.logo) {
+          const logoEl = document.getElementById('brandLogo');
+          logoEl.src = brand.logo;
+          logoEl.alt = brand.name + ' Logo';
+          logoEl.style.display = 'block';
+        }
+        
+        // Update tagline if available
+        if (brand.tagline) {
+          const taglineEl = document.getElementById('brandTagline');
+          taglineEl.textContent = brand.tagline;
+          taglineEl.style.display = 'block';
+        }
+        
+        // Update description if available
+        if (brand.description) {
+          const descEl = document.getElementById('brandDescription');
+          descEl.textContent = brand.description;
+          descEl.style.display = 'block';
+        }
+        
+        // Update social links if available
+        if (brand.website || brand.instagram) {
+          const socialEl = document.getElementById('socialLinks');
+          let linksHTML = '';
+          
+          if (brand.website) {
+            linksHTML += `<a href="${brand.website}" target="_blank" class="social-link">🌐 Website</a>`;
+          }
+          if (brand.instagram) {
+            linksHTML += `<a href="https://instagram.com/${brand.instagram}" target="_blank" class="social-link">📸 ${brand.instagram}</a>`;
+          }
+          
+          socialEl.innerHTML = linksHTML;
+          socialEl.style.display = 'flex';
+        }
+        
+        // Apply brand colors if available
+        if (brand.colors) {
+          const header = document.querySelector('.brand-header');
+          if (brand.colors.primary && brand.colors.secondary) {
+            header.style.background = `linear-gradient(135deg, ${brand.colors.primary} 0%, ${brand.colors.secondary} 100%)`;
+          } else if (brand.colors.primary) {
+            header.style.background = brand.colors.primary;
+          }
+          
+          if (brand.colors.accent) {
+            header.style.borderBottomColor = brand.colors.accent;
+          }
+        }
+        
+      } catch (error) {
+        NU.handleError(error, "loadBrandHeader", false);
+        // Fallback to default
+        document.getElementById('brandName').textContent = 'American Bocce Company';
+      }
+    }
+    
+    // Load on page load
+    if (window.google && window.google.script) {
+      loadBrandHeader();
+    } else {
+      // Fallback if not in Apps Script environment
+      document.getElementById('brandName').textContent = 'American Bocce Company';
+    }
+  </script>
+  
+</body>
+</html>

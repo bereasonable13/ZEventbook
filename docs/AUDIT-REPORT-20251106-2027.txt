@@ -1,0 +1,682 @@
+==========================================
+NEXTUP COMPLETE SYSTEM AUDIT
+Multi-Perspective Analysis
+==========================================
+
+Thu Nov  6 08:27:06 PM CST 2025
+
+==========================================
+1. ARCHITECTURE: CONFIGURATION ANALYSIS
+==========================================
+
+📋 Configuration Files:
+-rw-r--r-- 1 mzdano mzdano  436 Nov  3 17:11 appsscript.json
+-rw-r--r-- 1 mzdano mzdano 4.3K Nov  6 20:14 Config.gs
+
+🔍 Config.gs Structure Analysis:
+✓ Config.gs exists
+
+CONFIG object structure:
+5:const CONFIG = {
+6:  VERSION: '6.1.0',
+12:  BRANDS: {
+103:  DOMAIN_TO_BRAND: {
+115:  BRAND_HIERARCHY: {
+136:  GITHUB: {
+
+Closing braces (structure validation):
+148:};
+
+Brand count:
+2
+2
+2
+
+Entity definitions per brand:
+      entities: [
+        { id: 'ABC-Leagues', name: 'ABC Leagues', description: 'Recreational and competitive bocce leagues' },
+--
+      entities: [
+        { id: 'CBC-Events', name: 'CBC Events', description: 'Chicago Bocce Club events' }
+--
+      entities: [
+        { id: 'CBL-Events', name: 'CBL Events', description: 'Chicago Bocce League events' }
+
+🔍 Code.gs Configuration Usage:
+✓ Code.gs exists
+
+CONFIG references in Code.gs:
+56:    template.BUILD_ID = CONFIG.VERSION;
+110:  const brandSlug = (brand || CONFIG.DEFAULT_BRAND).toUpperCase();
+162:    if (sheetName === CONFIG.EVENTS_SHEET_NAME) {
+195:    const brandConfig = CONFIG.BRANDS[validated.brand];
+203:    const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, validated.brand);
+260:    const brandConfig = CONFIG.BRANDS[event.brand];
+306:    const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, brand);
+332:    const brands = Object.keys(CONFIG.BRANDS);
+335:      const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, brand);
+417:    const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, event.brand);
+467:    const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, event.brand);
+532:    const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, event.brand);
+579:    const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, event.brand);
+685:  const fields = CONFIG.FORM_FIELDS[fieldKey];
+754:    const qrUrl = `${CONFIG.QR_CODE_API}?size=${CONFIG.QR_CODE_SIZE}x${CONFIG.QR_CODE_SIZE}&data=${encodeURIComponent(url)}`;
+784:  const brandConfig = CONFIG.BRANDS[data.brand];
+840:  const sheet = getOrCreateSheet(CONFIG.EVENTS_SHEET_NAME, brand);
+858:  return CONFIG.BRANDS[key] || CONFIG.BRANDS[CONFIG.DEFAULT_BRAND];
+862:  return CONFIG.BRANDS[brand] || CONFIG.BRANDS[CONFIG.DEFAULT_BRAND];
+866:  return Object.keys(CONFIG.BRANDS).filter(
+
+Functions that access CONFIG:
+
+==========================================
+2. ARCHITECTURE: FUNCTION FLOW ANALYSIS
+==========================================
+
+📊 Backend Functions (Code.gs):
+     1	28:function doGet(e) {
+     2	67:function include(filename, brand) {
+     3	78:function createErrorPage(message) {
+     4	108:function getSpreadsheet(brand) {
+     5	155:function getOrCreateSheet(sheetName, brand) {
+     6	187:function createEvent(data) {
+     7	253:function setupEventTracking(eventId) {
+     8	304:function getEvents(brand) {
+     9	329:function getEventById(eventId) {
+    10	352:function rowToEvent(row) {
+    11	384:function getEventCounts(eventId) {
+    12	410:function updateEventDetails(eventId, updates) {
+    13	460:function updateEventContent(eventId, content) {
+    14	525:function updatePublicConfig(eventId, config) {
+    15	572:function updateDisplayConfig(eventId, displayConfig) {
+    16	615:function updatePosterData(eventId, posterData) {
+    17	645:function getPosterData(eventId) {
+    18	674:function createForm(formType, event, brandConfig, responseSheetId) {
+    19	716:function createEventDataSheet(eventName) {
+    20	737:function getFormResponseCount(formId) {
+    21	752:function generateQRCode(url) {
+    22	768:function generateEventId() {
+    23	774:function validateEventInput(data) {
+    24	830:function isValidURL(string) {
+    25	839:function updateEventFormIds(eventId, brand, formIds) {
+    26	856:function getBrand(brandSlug) {
+    27	861:function getBrandConfig(brand) {
+    28	865:function getAvailableBrands() {
+    29	879:function logActivity(action, data) {
+    30	887:function logError(where, error, context) {
+    31	915:function exportActiveEventsToJSON() {
+    32	953:function getActiveEvents() {
+    33	988:function exportEventToJSON(event) {
+    34	1003:function generatePublicBundle(event) {
+    35	1065:function createOrUpdateDriveFile(folderId, fileName, content) {
+    36	1078:function getEventJSONUrl(eventId) {
+    37	1109:function manualExportNow() {
+    38	1128:function getConfig() {
+    39	1138:function clientCreateEvent(brand, entity, eventName, eventDate, eventTime, location, summaryText, summaryLink, summaryImage, videoURLs, bioImage, bioText, bioLink, showSummaryImage, showVideos, showBio, showMetrics) {
+    40	1147:function clientSetupEventTracking(eventId) {
+    41	1151:function clientGetEvents(brand) {
+    42	1155:function clientGetEventCounts(eventId) {
+    43	1159:function clientGetBrands() {
+    44	1163:function clientGetBrandConfig(brand) {
+    45	1176:function clientGetEventJSONUrl(eventId) {
+    46	1180:function clientManualExportNow() {
+    47	1184:function clientUpdateEventDetails(eventId, updates) {
+    48	1188:function clientUpdateEventContent(eventId, content) {
+    49	1192:function clientUpdatePublicConfig(eventId, config) {
+    50	1196:function clientUpdateDisplayConfig(eventId, displayConfig) {
+    51	1200:function clientUpdatePosterData(eventId, posterData) {
+    52	1204:function clientGetPosterData(eventId) {
+    53	1211:function createMockSponsorDashboard() {
+    54	1335:function runPhase1ATests() {
+    55	1572:function quickSmokeTest() {
+
+📊 Backend Functions - Client-facing (clientXXX):
+1138:function clientCreateEvent(brand, entity, eventName, eventDate, eventTime, location, summaryText, summaryLink, summaryImage, videoURLs, bioImage, bioText, bioLink, showSummaryImage, showVideos, showBio, showMetrics) {
+1147:function clientSetupEventTracking(eventId) {
+1151:function clientGetEvents(brand) {
+1155:function clientGetEventCounts(eventId) {
+1159:function clientGetBrands() {
+1163:function clientGetBrandConfig(brand) {
+1176:function clientGetEventJSONUrl(eventId) {
+1180:function clientManualExportNow() {
+1184:function clientUpdateEventDetails(eventId, updates) {
+1188:function clientUpdateEventContent(eventId, content) {
+1192:function clientUpdatePublicConfig(eventId, config) {
+1196:function clientUpdateDisplayConfig(eventId, displayConfig) {
+1200:function clientUpdatePosterData(eventId, posterData) {
+1204:function clientGetPosterData(eventId) {
+
+📊 doGet() Entry Point:
+function doGet(e) {
+  try {
+    const brandSlug = e.parameter.brand || e.parameter.b || 'abc';
+    const brand = getBrand(brandSlug);
+    
+    // Normalize page name (case-insensitive, capitalize first letter)
+    let pageName = e.parameter.p || 'Admin';
+    pageName = pageName.charAt(0).toUpperCase() + pageName.slice(1).toLowerCase();
+    
+    // Valid pages that exist
+    const validPages = ['Admin', 'Configadmin', 'Display', 'Healthcheck', 'Poster', 'Public', 'Test'];
+    
+    // Map common variations
+    const pageMap = {
+      'Configadmin': 'ConfigAdmin',
+      'Healthcheck': 'HealthCheck'
+    };
+    
+    // Normalize and validate
+    const page = pageMap[pageName] || pageName;
+    if (!validPages.includes(page) && !validPages.includes(pageName)) {
+      return createErrorPage('Invalid page: ' + pageName);
+    }
+    
+    const template = HtmlService.createTemplateFromFile(page);
+    
+    template.brand = brand;
+    template.appTitle = brand.name;
+    template.BUILD_ID = CONFIG.VERSION;
+    
+    return template.evaluate()
+      .setTitle(brand.name + ' Event Manager')
+      .addMetaTag('viewport', 'width=device-width,initial-scale=1,viewport-fit=cover')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  } catch (error) {
+    return createErrorPage('Failed to load page: ' + error);
+  }
+}
+
+📊 getConfig() Implementation:
+function getConfig() {
+  return {
+    VERSION: CONFIG.VERSION,
+    BRANDS: CONFIG.BRANDS,
+    DOMAIN_TO_BRAND: CONFIG.DOMAIN_TO_BRAND,
+    DEFAULT_BRAND: 'ABC'
+  };
+}
+
+🔍 Frontend RPC Calls:
+
+Admin.html:
+626:        const result = await NU.rpc('clientCreateEvent', 
+680:        const result = await NU.rpc('clientGetEvents', currentBrand);
+1127:        const result = await NU.rpc('clientSetupEventTracking', eventId);
+1156:        const result = await NU.rpc('clientGetEventCounts', eventId);
+1216:            result = await NU.rpc('clientUpdateEventDetails', eventId, {
+1220:            result = await NU.rpc('clientUpdateEventContent', eventId, {
+1245:        const result = await NU.rpc('clientUpdatePublicConfig', eventId, {
+1273:        const result = await NU.rpc('clientUpdateDisplayConfig', eventId, {
+1316:          const result = await NU.rpc('clientUpdateDisplayConfig', eventId, {
+1346:        const result = await NU.rpc('clientUpdatePosterData', eventId, {
+1397:    function NU.rpc(fnName, ...args) {
+1399:        google.script.run
+
+Public.html:
+
+Reports.html:
+
+==========================================
+3. FRONTEND: INTEGRATION TRACING
+==========================================
+
+📱 HTML Pages:
+     1	Admin.html
+     2	ConfigAdmin.html
+     3	Display.html
+     4	Header.html
+     5	HealthCheck.html
+     6	NUSDK.html
+     7	Poster.html
+     8	Public.html
+     9	Styles.html
+    10	Test.html
+
+🔗 NUSDK Integration:
+Pages that include NUSDK:
+     1	Admin.html
+     2	ConfigAdmin.html
+     3	Display.html
+     4	Header.html
+     5	HealthCheck.html
+     6	Poster.html
+     7	Public.html
+
+NUSDK.html Functions Exported:
+Return object:
+    return { ok: false, error: errorMsg };
+  }
+
+  function getBrand() {
+    const params = new URLSearchParams(window.location.search);
+    const brandParam = params.get('brand') || params.get('b');
+    if (brandParam) return brandParam.toUpperCase();
+    const hostname = window.location.hostname;
+    if (hostname.includes('abc.')) return 'ABC';
+    if (hostname.includes('cbc.')) return 'CBC';
+    if (hostname.includes('cbl.')) return 'CBL';
+    return 'ABC';
+  }
+  
+  function getConfig() {
+    return rpc('getConfig');
+  }
+  
+  function getBrandConfig(brandId) {
+    return rpc('clientGetBrandConfig', brandId);
+
+🔗 Header Integration:
+Pages that include Header:
+     1	Poster.html
+     2	Test.html
+
+🔗 Styles Integration:
+Pages that include Styles:
+     1	ConfigAdmin.html
+     2	HealthCheck.html
+     3	Test.html
+
+📊 Admin.html Data Flow:
+
+State variables:
+537:    let currentBrand = NU.getBrand();
+538:    let events = [];
+539:    let saveTimers = {};
+
+Init function:
+542:    async function init() {
+
+Entity population:
+549:      await populateEntityDropdowns();
+556:    async function populateEntityDropdowns() {
+663:      await populateEntityDropdowns();
+1134:      await populateEntityDropdowns();
+
+Create event function:
+591:    async function createEvent() {
+
+==========================================
+4. FRONTEND DESIGNER: UI/UX ANALYSIS
+==========================================
+
+🎨 CSS Architecture:
+
+Styles.html size:
+409 Styles.html
+
+CSS Variables/Custom Properties:
+0
+custom properties defined
+
+Responsive Breakpoints:
+3
+media queries found
+
+Component Consistency Check:
+
+Button classes used:
+class="btn"
+class="btn btn-link"
+class="btn btn-primary"
+class="btn btn-primary btn-lg print-button no-print"
+class="btn btn-secondary"
+class="btn-remove-image"
+class="btn-secondary"
+
+Card classes used:
+class="card"
+class="card-body"
+class="card-header"
+class="event-card"
+class="metric-card"
+
+🎨 Brand Theming:
+
+Brand colors referenced:
+Header.html:182:        if (brand.colors) {
+Header.html:184:          if (brand.colors.primary && brand.colors.secondary) {
+Header.html:185:            header.style.background = `linear-gradient(135deg, ${brand.colors.primary} 0%, ${brand.colors.secondary} 100%)`;
+Header.html:186:          } else if (brand.colors.primary) {
+Header.html:187:            header.style.background = brand.colors.primary;
+Header.html:190:          if (brand.colors.accent) {
+Header.html:191:            header.style.borderBottomColor = brand.colors.accent;
+
+Logo usage:
+Header.html:144:        if (brand.logo) {
+Header.html:146:          logoEl.src = brand.logo;
+
+==========================================
+5. SDET: TEST AUTOMATION STATUS
+==========================================
+
+📁 Test Directory Structure:
+tests/contract/.gitkeep
+tests/contract/brand-config.test.js
+tests/unit/.gitkeep
+tests/integration/.gitkeep
+tests/e2e/.gitkeep
+tests/smoke/basic.test.js
+tests/config/test-config.js
+tests/setup.js
+
+📊 Test Files:
+     1	./tests/contract/brand-config.test.js
+     2	./tests/smoke/basic.test.js
+     3	./node_modules/@sinonjs/commons/lib/prototypes/copy-prototype-methods.test.js
+     4	./node_modules/@sinonjs/commons/lib/prototypes/index.test.js
+     5	./node_modules/@sinonjs/commons/lib/called-in-order.test.js
+     6	./node_modules/@sinonjs/commons/lib/class-name.test.js
+     7	./node_modules/@sinonjs/commons/lib/deprecated.test.js
+     8	./node_modules/@sinonjs/commons/lib/every.test.js
+     9	./node_modules/@sinonjs/commons/lib/function-name.test.js
+    10	./node_modules/@sinonjs/commons/lib/global.test.js
+    11	./node_modules/@sinonjs/commons/lib/index.test.js
+    12	./node_modules/@sinonjs/commons/lib/order-by-first-call.test.js
+    13	./node_modules/@sinonjs/commons/lib/type-of.test.js
+    14	./node_modules/@sinonjs/commons/lib/value-to-string.test.js
+    15	./node_modules/gensync/test/index.test.js
+    16	./node_modules/json-schema-traverse/spec/index.spec.js
+
+📋 Package.json Test Scripts:
+  "scripts": {
+    "test": "jest",
+    "test:config": "jest tests/contract/brand-config.test.js --verbose",
+    "test:contract": "jest tests/contract --verbose",
+    "test:unit": "jest tests/unit --verbose",
+    "test:smoke": "jest tests/smoke --verbose",
+    "test:all": "jest --verbose",
+    "lint": "eslint '**/*.js' --ignore-pattern 'node_modules/**'",
+    "verify": "node scripts/verify-deployment.js"
+  },
+  "devDependencies": {
+
+🧪 Test.html Verification Suite:
+✓ Test.html exists
+
+❌ GAPS - Missing Test Coverage:
+- No automated unit tests for NUSDK functions
+- No automated integration tests for Code.gs functions
+- No E2E tests with Playwright/Cypress
+- No CI/CD pipeline with automated testing
+- No test coverage reporting
+- No contract tests between frontend/backend
+
+==========================================
+6. QA TESTER: E2E USER FLOW ANALYSIS
+==========================================
+
+🎯 PRIMARY USER FLOW: Create Event
+
+Step 1: Navigate to Admin
+  URL: zeventbook.io/exec?p=admin&brand=ABC
+  Expected: Page loads, SDK initializes
+  Verification: Console shows "[NU] SDK loaded"
+
+Step 2: Select Entity
+  Action: Click entity dropdown
+  Expected: Dropdown populates with 5 options
+  Verification: Options appear (ABC-Leagues, ABC-Tournaments, etc.)
+  ❌ BROKEN: Currently shows "Loading entities..."
+
+Step 3: Fill Form
+  Actions:
+    - Enter event name
+    - Select date
+    - Enter location
+    - Enter summary
+  Expected: All fields accept input
+  Verification: No validation errors
+
+Step 4: Submit Event
+  Action: Click "Create Event"
+  Expected: 
+    - Loading overlay appears
+    - RPC call to clientCreateEvent()
+    - Success toast appears top-right
+    - Event ID generated
+  ❌ CANNOT TEST: Entity dropdown blocked
+
+Step 5: View Public Page
+  URL: zeventbook.io/exec?p=public&event={eventId}
+  Expected:
+    - Event details display
+    - Mobile responsive
+    - QR code visible
+  ❌ CANNOT TEST: No event created yet
+
+Step 6: View Display
+  URL: zeventbook.io/exec?p=display&event={eventId}
+  Expected:
+    - Full screen display
+    - Auto-refresh
+  ❌ CANNOT TEST: No event created yet
+
+🚨 BLOCKING ISSUES:
+1. Entity dropdown not populating (SyntaxError in Code.gs line 88)
+2. Cannot complete event creation flow
+3. Cannot test downstream pages (Public, Display, Poster)
+
+✅ WHAT WORKS:
+- Page routing (doGet)
+- NUSDK loading
+- Basic page rendering
+- Brand detection
+
+
+==========================================
+7. DEVOPS: DEPLOYMENT PIPELINE ANALYSIS
+==========================================
+
+📁 Repository Structure:
+origin	https://github.com/bereasonable13/zeventbook.git (fetch)
+origin	https://github.com/bereasonable13/zeventbook.git (push)
+
+Current branch:
+* dev
+
+📋 .clasp.json Configuration:
+{
+  "scriptId": "1KttRXT0Sq2663irNS0FlUi3mMkHL9QisErtY4pAqwtqPKH2ZuS7y_Upe",
+  "rootDir": "./",
+  "filePushOrder": [
+    "Config.gs",
+    "Code.gs"
+  ],
+  "deploymentId": "AKfycbzxPOs9lqA-vQOYfw3iGYqEdGPQwrqCDvhkrEMk51m2JCZmRffhbbdNARGed-UpBeFK"
+}
+
+📋 Deployment Configuration:
+Stable deployment ID configured:
+✓ Yes
+
+🔄 Deployment Script:
+✓ deploy.sh exists
+#!/bin/bash
+# Deploy to stable production URL
+
+DEPLOYMENT_ID="AKfycbzxPOs9lqA-vQOYfw3iGYqEdGPQwrqCDvhkrEMk51m2JCZmRffhbbdNARGed-UpBeFK"
+DESCRIPTION="${1:-Update}"
+
+echo "🚀 Deploying to production..."
+clasp push --force
+clasp deploy -i "$DEPLOYMENT_ID" -d "$DESCRIPTION"
+
+echo ""
+echo "✅ DEPLOYED!"
+echo "🧪 TEST: https://script.google.com/macros/s/$DEPLOYMENT_ID/exec?p=admin&brand=ABC"
+
+📊 Recent Deployments:
+Found 11 deployments.
+- AKfycbyOmPVf4M6VPq_-qhBoNgOMpnBHqdmHt2e-FywP07w @HEAD 
+- AKfycbxGnF6JWfmbEox5bKRtzLrVWhcqNxculLEH0IsZFvERCB_5zScOhPZDzfoYWKqoZGEC @3 - v6.1 - Brand detection working - 2nd try
+- AKfycbyVnXONxOsqvQ3T6pdU6tNQEFOR8oXVe_2LzaI_fipe-SxXF1eukKiexOEk0W12GIuf @6 - v6.3 - Multi-brand test config + all HTML pages
+- AKfycbypX_TxANxPTxVFkEpnbNxSAEsbWTu4zBQdAoLPzBn7v2khR07AG7hSoM_LsGY7aAi4 @5 - v6.1 - Remove extra header card to clean up Admin.html
+- AKfycby6SGKitRi8UsxXSdNOCcVgi7swVItEAGTVOpZjdeMfjRd5S9aArWbTBBsotrS019DG @4 - v6.1 - Removed eslintrc error
+- AKfycbzxPOs9lqA-vQOYfw3iGYqEdGPQwrqCDvhkrEMk51m2JCZmRffhbbdNARGed-UpBeFK @15 - Emergency fix: Config syntax
+- AKfycbwe2-TJu5uQzc8fawT1DabMkdw9xtgGI_FcTUfFnDImZVS_NCuKUv388H6Xha8nd5Po @2 - v6.1 - Brand header working
+- AKfycbw0oueoyKEcuFhhTA4TIRRL_fGaXBKDUY01BWLGKEXXczdqn1E6_CuSX0qua54T34Gv @7 - v6.3 - Fixing clasp deployments so local, apps script, and GitHub are in sync
+- AKfycbwlwvK-RbH2fXgXh4PcA2Ts7U80tA18FZCY7CwBKR8-E5xyouriKyT8RhJ6nWxORCLj @1 - zeventbook 6.1 
+- AKfycbzLRHNNozGtTK_2RJRHu5yzYk_jL6xRCwWxzGGW7Mnf2qkNdSjBG_LsDnnLB6ysLfFZ @12 - Stable deployment - Phase 1 complete
+- AKfycbyHWCFWB_PMmAbMW5AEO8VDLFIDDWNHq3XcLrAbMElkSdY61PWYHVl73J5L0HU4vkct @8 
+
+🔍 Current Deployment Status:
+Deployment Flow:
+1. ✓ Local files → Git (working)
+2. ✓ Git → GitHub (working)  
+3. ✓ GitHub → Apps Script (clasp push working)
+4. ✓ Apps Script → Deployment (clasp deploy working)
+5. ❌ Deployment verification (no automated checks)
+
+Missing DevOps Components:
+- No CI/CD pipeline (GitHub Actions)
+- No automated deployment verification
+- No smoke tests post-deployment
+- No rollback automation
+- No environment management (dev/staging/prod)
+- No deployment quality gates
+
+==========================================
+8. CRITICAL ISSUES FOUND
+==========================================
+
+🚨 BLOCKING (Must Fix Now):
+1. SyntaxError in Code.gs line 88
+   - Prevents entity dropdown from populating
+   - Blocks all event creation
+   - User cannot proceed past form
+
+2. Entity Dropdown Not Populating
+   - RPC call to getConfig() failing
+   - populateEntityDropdowns() stuck
+   - Shows "Loading entities..." indefinitely
+
+⚠️  HIGH PRIORITY:
+3. Header.html Branding Not Loading
+   - Logo not displaying
+   - Brand colors not applying
+   - Tagline/description missing
+
+4. No Automated Tests
+   - Cannot verify deployments work
+   - Manual testing required for every change
+   - No regression detection
+
+5. No CI/CD Pipeline
+   - Manual deployment process
+   - No quality gates
+   - Risk of broken deployments
+
+📋 MEDIUM PRIORITY:
+6. Reports.html Not Tested
+   - Master dashboard exists but unverified
+   - May have similar issues to Admin page
+
+7. Display/Poster Pages Unverified
+   - Unknown if they work end-to-end
+   - Need event creation to test
+
+8. Mobile Responsiveness Untested
+   - No device testing documented
+   - Unknown user experience on phones
+
+💡 LOW PRIORITY:
+9. Code Organization
+   - Some duplication between files
+   - Could benefit from refactoring
+
+10. Performance Optimization
+    - No caching strategy
+    - No lazy loading
+    - Room for improvement
+
+==========================================
+9. IMMEDIATE ACTION PLAN
+==========================================
+
+🎯 STEP 1: Fix Syntax Error (15 minutes)
+  Task: Find and fix line 88 in Code.gs
+  Command: sed -n '80,100p' Code.gs
+  Goal: Eliminate SyntaxError
+  Test: Console shows no errors
+
+🎯 STEP 2: Verify Config Integration (10 minutes)
+  Task: Ensure getConfig() returns proper data
+  Test: Call NU.getConfig() in console
+  Goal: Returns CONFIG object with BRANDS
+
+🎯 STEP 3: Test Entity Dropdown (5 minutes)
+  Task: Verify populateEntityDropdowns() works
+  Test: Dropdown shows 5 ABC entities
+  Goal: User can select entity
+
+🎯 STEP 4: Create Test Event (10 minutes)
+  Task: Fill form and submit
+  Test: Event creation succeeds
+  Goal: Event ID returned, spreadsheet created
+
+🎯 STEP 5: Verify Public Page (5 minutes)
+  Task: Open public page URL
+  Test: Event details display
+  Goal: User can view event
+
+🎯 STEP 6: Document Working URLs (5 minutes)
+  Task: Create URL reference doc
+  Test: All URLs work
+  Goal: Clear documentation
+
+Total: ~50 minutes to working MVP
+
+🔄 STEP 7: Add Basic E2E Test (1 hour)
+  Task: Create Playwright test for event creation
+  File: tests/e2e/create-event.spec.js
+  Goal: Automated smoke test
+
+🔄 STEP 8: CI/CD Pipeline (2 hours)
+  Task: Create .github/workflows/deploy.yml
+  Goal: Automated testing + deployment
+  Includes: Quality gates, rollback capability
+
+📚 STEP 9: Documentation (1 hour)
+  Task: Create user guide + developer docs
+  Files: README.md, CONTRIBUTING.md, API.md
+  Goal: Self-service onboarding
+
+==========================================
+10. ARCHITECTURE RECOMMENDATIONS
+==========================================
+
+✨ CONFIGURATION MANAGEMENT:
+- ✓ GOOD: Single CONFIG object in Config.gs
+- ✓ GOOD: Brand hierarchy defined
+- 💡 IMPROVE: Add schema validation
+- 💡 IMPROVE: Add environment configs (dev/prod)
+
+✨ CODE ORGANIZATION:
+- ✓ GOOD: Separation of concerns (Config, Code, UI)
+- ✓ GOOD: NUSDK abstraction layer
+- 💡 IMPROVE: Extract validation logic to separate file
+- 💡 IMPROVE: Create utilities.gs for shared functions
+
+✨ FRONTEND ARCHITECTURE:
+- ✓ GOOD: Consistent include pattern (NUSDK, Header, Styles)
+- ✓ GOOD: Component-based thinking
+- 💡 IMPROVE: Extract shared UI components
+- 💡 IMPROVE: Add state management (for complex flows)
+
+✨ DATA FLOW:
+- ✓ GOOD: Clear RPC boundary (NU.rpc)
+- ✓ GOOD: Standardized error handling
+- 💡 IMPROVE: Add request/response typing
+- 💡 IMPROVE: Add caching layer
+
+✨ TESTING STRATEGY:
+- ❌ MISSING: Unit tests
+- ❌ MISSING: Integration tests
+- ❌ MISSING: E2E tests
+- 💡 ADD: Jest for backend, Playwright for E2E
+
+✨ DEVOPS:
+- ✓ GOOD: Git workflow established
+- ✓ GOOD: Stable deployment ID configured
+- ❌ MISSING: CI/CD pipeline
+- 💡 ADD: GitHub Actions, quality gates

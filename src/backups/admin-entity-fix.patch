@@ -1,0 +1,10 @@
+--- Admin.html (before)
++++ Admin.html (after)
+
+# FIX 1: Make entity dropdowns dynamic
+# Replace both hardcoded dropdowns with dynamic population
+
+# FIX 2: Add entity population function after init()
+# FIX 3: Call it during initialization
+# FIX 4: Add error handling
+# FIX 5: Update edit form to show current entity

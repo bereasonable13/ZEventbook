@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <title>Live Event View</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  
+  <style>
+    /* ===== VARIABLES ===== */
+    :root {
+      --abc-red: #c8102e;
+      --abc-cream: #f5f1e8;
+      --bocce-green: #00a651;
+      --text-dark: #2c2416;
+      --text-medium: #6b5d4f;
+      --text-light: #9d8b7a;
+      --border: #d4c4b0;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--abc-cream);
+      color: var(--text-dark);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0;
+    }
+    
+    /* ===== HERO SECTION ===== */
+    .hero {
+      background: linear-gradient(135deg, var(--abc-red) 0%, #a00d25 100%);
+      color: white;
+      padding: 60px 20px;
+      text-align: center;
+    }
+    
+    .hero h1 {
+      font-size: 40px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      line-height: 1.2;
+    }
+    
+    .hero-meta {
+      font-size: 18px;
+      opacity: 0.95;
+      margin-bottom: 8px;
+    }
+    
+    .hero-meta-item {
+      display: inline-block;
+      margin: 0 16px;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 16px;
+      background: var(--bocce-green);
+      animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.8; }
+    }
+    
+    /* ===== SUMMARY SECTION ===== */
+    .summary-section {
+      background: white;
+      padding: 40px 20px;
+    }
+    
+    .summary-content {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .summary-image {
+      width: 100%;
+      max-height: 400px;
+      object-fit: cover;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+    
+    .summary-text {
+      font-size: 18px;
+      line-height: 1.8;
+      color: var(--text-medium);
+      margin-bottom: 24px;
+    }
+    
+    .summary-cta {
+      display: inline-block;
+      padding: 16px 32px;
+      background: var(--abc-red);
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 16px;
+      transition: all 0.2s;
+    }
+    
+    .summary-cta:hover {
+      background: #a00d25;
+      transform: translateY(-2px);
+    }
+    
+    /* ===== METRICS SECTION ===== */
+    .metrics-section {
+      background: var(--abc-cream);
+      padding: 40px 20px;
+    }
+    
+    .section-title {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 32px;
+      color: var(--text-dark);
+    }
+    
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .metric-card {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(200,16,46,0.1);
+      text-align: center;
+    }
+    
+    .metric-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-medium);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    
+    .metric-value {
+      font-size: 48px;
+      font-weight: 700;
+      color: var(--abc-red);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+    
+    .metric-detail {
+      font-size: 14px;
+      color: var(--text-light);
+    }
+    
+    /* ===== VIDEOS SECTION ===== */
+    .videos-section {
+      background: white;
+      padding: 40px 20px;
+    }
+    
+    .videos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    
+    .video-container {
+      position: relative;
+      padding-bottom: 56.25%; /* 16:9 aspect ratio */
+      height: 0;
+      overflow: hidden;
+      border-radius: 12px;
+      background: #000;
+    }
+    
+    .video-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    
+    /* ===== BIO SECTION ===== */
+    .bio-section {
+      background: var(--abc-cream);
+      padding: 40px 20px;
+    }
+    
+    .bio-content {
+      max-width: 800px;
+      margin: 0 auto;
+      display: flex;
+      gap: 32px;
+      align-items: flex-start;
+    }
+    
+    .bio-image {
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 12px;
+      flex-shrink: 0;
+    }
+    
+    .bio-text-content {
+      flex: 1;
+    }
+    
+    .bio-text {
+      font-size: 16px;
+      line-height: 1.8;
+      color: var(--text-medium);
+      margin-bottom: 16px;
+    }
+    
+    .bio-link {
+      color: var(--abc-red);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .bio-link:hover {
+      text-decoration: underline;
+    }
+    
+    /* ===== FOOTER ===== */
+    .footer {
+      background: var(--text-dark);
+      color: white;
+      padding: 24px 20px;
+      text-align: center;
+    }
+    
+    .last-update {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 8px;
+    }
+    
+    .footer-brand {
+      font-size: 14px;
+      opacity: 0.6;
+    }
+    
+    /* ===== LOADING & ERROR ===== */
+    .loading-state, .error-state {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+    }
+    
+    .loading-spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid var(--border);
+      border-top-color: var(--abc-red);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 24px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error-icon {
+      font-size: 64px;
+      margin-bottom: 24px;
+    }
+    
+    .error-message {
+      font-size: 18px;
+      color: var(--text-medium);
+      max-width: 500px;
+      text-align: center;
+    }
+    
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 768px) {
+      .hero h1 {
+        font-size: 28px;
+      }
+      
+      .hero-meta {
+        font-size: 16px;
+      }
+      
+      .hero-meta-item {
+        display: block;
+        margin: 8px 0;
+      }
+      
+      .section-title {
+        font-size: 24px;
+      }
+      
+      .metric-value {
+        font-size: 36px;
+      }
+      
+      .bio-content {
+        flex-direction: column;
+        text-align: center;
+      }
+      
+      .bio-image {
+        width: 150px;
+        height: 150px;
+        margin: 0 auto;
+      }
+      
+      .videos-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* ===== HIDE EMPTY SECTIONS ===== */
+    .section-hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Loading state -->
+  <div id="loading-state" class="loading-state">
+    <div class="loading-spinner"></div>
+    <p style="color: var(--text-medium);">Loading event...</p>
+  </div>
+  
+  <!-- Main content -->
+  <div id="main-content" style="display: none;">
+    
+    <!-- Hero -->
+    <div class="hero">
+      <div class="container">
+        <h1 id="event-title">Event Title</h1>
+        <div class="hero-meta">
+          <span class="hero-meta-item" id="event-date">📅 Date</span>
+          <span class="hero-meta-item" id="event-time">🕐 Time</span>
+          <span class="hero-meta-item" id="event-location">📍 Location</span>
+        </div>
+        <div id="status-badge"></div>
+      </div>
+    </div>
+    
+    <!-- Summary -->
+    <div class="summary-section" id="summary-section">
+      <div class="summary-content">
+        <img id="summary-image" class="summary-image" style="display: none;" alt="Event" />
+        <p class="summary-text" id="summary-text"></p>
+        <a id="summary-link" class="summary-cta" href="#" target="_blank">Learn More</a>
+      </div>
+    </div>
+    
+    <!-- Metrics -->
+    <div class="metrics-section">
+      <div class="container">
+        <h2 class="section-title">📊 Live Event Stats</h2>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Registered</div>
+            <div class="metric-value" id="metric-registered">0</div>
+            <div class="metric-detail">Pre-registered</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Checked In</div>
+            <div class="metric-value" id="metric-checkedin">0</div>
+            <div class="metric-detail"><span id="metric-showup-rate">0</span>% show-up</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Walk-Ins</div>
+            <div class="metric-value" id="metric-walkins">0</div>
+            <div class="metric-detail"><span id="metric-walkin-rate">0</span>% of attendees</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Total</div>
+            <div class="metric-value" id="metric-total">0</div>
+            <div class="metric-detail">Attendees</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Surveys</div>
+            <div class="metric-value" id="metric-surveys">0</div>
+            <div class="metric-detail"><span id="metric-survey-rate">0</span>% response</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Videos -->
+    <div class="videos-section section-hidden" id="videos-section">
+      <div class="container">
+        <h2 class="section-title">🎥 Videos</h2>
+        <div class="videos-grid" id="videos-grid"></div>
+      </div>
+    </div>
+    
+    <!-- Bio -->
+    <div class="bio-section section-hidden" id="bio-section">
+      <div class="container">
+        <h2 class="section-title">👤 About</h2>
+        <div class="bio-content">
+          <img id="bio-image" class="bio-image" style="display: none;" alt="Bio" />
+          <div class="bio-text-content">
+            <p class="bio-text" id="bio-text"></p>
+            <a id="bio-link" class="bio-link" href="#" target="_blank" style="display: none;">Learn More →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+      <div class="container">
+        <div class="last-update" id="last-update">...</div>
+        <div class="footer-brand">NextUp Event Manager</div>
+      </div>
+    </div>
+    
+  </div>
+  
+  <script>
+    function getBrandFromRequest() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const brandParam = urlParams.get("brand");
+      if (brandParam) return brandParam;
+      const hostname = window.location.hostname;
+      const domainMap = {"abc.zeventbooks.io": "ABC", "events.zeventbooks.io": "ABC", "zeventbooks.io": "ABC"};
+      if (domainMap[hostname]) return domainMap[hostname];
+      return "ABC";
+    }
+    const CONFIG = { REFRESH_MS: 20000, JSON_BASE_URL: 'https://drive.google.com/uc?id=', MAX_RETRIES: 3 };
+    let eventId, jsonFileId, retryCount = 0, refreshInterval;
+    
+    async function init() {
+      try {
+        const params = new URLSearchParams(location.search);
+        eventId = params.get('event');
+        jsonFileId = params.get('fileId');
+        if (!eventId || !jsonFileId) { showError('Invalid URL'); return; }
+        await refreshData();
+        refreshInterval = setInterval(refreshData, CONFIG.REFRESH_MS);
+      } catch (e) { showError('Failed to load'); }
+    }
+    
+    async function refreshData() {
+      try {
+        const url = `${CONFIG.JSON_BASE_URL}${jsonFileId}&t=${Date.now()}`;
+        const r = await fetch(url);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const d = await r.json();
+        renderPage(d);
+        retryCount = 0;
+      } catch (e) {
+        if (++retryCount >= CONFIG.MAX_RETRIES) { showError('Failed to load data'); clearInterval(refreshInterval); }
+      }
+    }
+    
+    function renderPage(d) {
+      if (!d || !d.ok) return;
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('main-content').style.display = 'block';
+      renderHero(d.eventMeta);
+      renderSummary(d.content.summary, d.pageConfig);
+      renderMetrics(d.metrics, d.pageConfig);
+      renderVideos(d.content.videos, d.pageConfig);
+      renderBio(d.content.bio, d.pageConfig);
+      document.getElementById('last-update').textContent = `Updated: ${new Date(d.timestamp).toLocaleTimeString()}`;
+    }
+    
+    function renderHero(m) {
+      document.getElementById('event-title').textContent = m.name || 'Event';
+      const de = document.getElementById('event-date');
+      de.textContent = m.dateISO ? `📅 ${new Date(m.dateISO).toLocaleDateString('en-US', {weekday:'long',year:'numeric',month:'long',day:'numeric'})}` : '';
+      if (!m.dateISO) de.style.display = 'none';
+      const te = document.getElementById('event-time');
+      te.textContent = m.time ? `🕐 ${m.time}` : '';
+      if (!m.time) te.style.display = 'none';
+      const le = document.getElementById('event-location');
+      le.textContent = m.location ? `📍 ${m.location}` : '';
+      if (!m.location) le.style.display = 'none';
+      if (m.status === 'TRACKING_ACTIVE') document.getElementById('status-badge').innerHTML = '<span class="status-badge">● LIVE</span>';
+    }
+    
+    function renderSummary(s, config) {
+      if (s.text) document.getElementById('summary-text').textContent = s.text;
+      if (s.image && config.showSummaryImage) { const i = document.getElementById('summary-image'); i.src = s.image; i.style.display = 'block'; }
+      if (s.link) document.getElementById('summary-link').href = s.link;
+    }
+    
+    function renderMetrics(m, config) {
+      const section = document.querySelector('.metrics-section');
+      if (!config.showMetrics) { section.style.display = 'none'; return; }
+      section.style.display = 'block';
+      document.getElementById('metric-registered').textContent = m.registered || 0;
+      document.getElementById('metric-checkedin').textContent = m.checkedIn || 0;
+      document.getElementById('metric-walkins').textContent = m.walkIns || 0;
+      document.getElementById('metric-total').textContent = m.totalAttendees || 0;
+      document.getElementById('metric-surveys').textContent = m.surveys || 0;
+      document.getElementById('metric-showup-rate').textContent = m.showUpRate || 0;
+      document.getElementById('metric-walkin-rate').textContent = m.walkinRate || 0;
+      document.getElementById('metric-survey-rate').textContent = m.surveyRate || 0;
+    }
+    
+    function renderVideos(v, config) {
+      const s = document.getElementById('videos-section');
+      if (!config.showVideos || !v || v.length === 0) { s.classList.add('section-hidden'); return; }
+      s.classList.remove('section-hidden');
+      document.getElementById('videos-grid').innerHTML = v.map(url => {
+        let e = url;
+        const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/);
+        if (yt) e = `https://www.youtube.com/embed/${yt[1]}`;
+        const vm = url.match(/vimeo\.com\/(\d+)/);
+        if (vm) e = `https://player.vimeo.com/video/${vm[1]}`;
+        return `<div class="video-container"><iframe src="${e}" allowfullscreen></iframe></div>`;
+      }).join('');
+    }
+    
+    function renderBio(b, config) {
+      const s = document.getElementById('bio-section');
+      if (!config.showBio || (!b.text && !b.image)) { s.classList.add('section-hidden'); return; }
+      s.classList.remove('section-hidden');
+      if (b.image) { const i = document.getElementById('bio-image'); i.src = b.image; i.style.display = 'block'; }
+      if (b.text) document.getElementById('bio-text').textContent = b.text;
+      if (b.link) { const l = document.getElementById('bio-link'); l.href = b.link; l.style.display = 'inline-block'; }
+    }
+    
+    function showError(msg) {
+      document.getElementById('loading-state').innerHTML = `<div class="error-icon">⚠️</div><p class="error-message">${msg}</p>`;
+    }
+    
+    document.addEventListener('DOMContentLoaded', init);
+    window.addEventListener('beforeunload', () => { if (refreshInterval) clearInterval(refreshInterval); });
+  </script>
+</body>
+</html>

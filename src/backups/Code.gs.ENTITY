@@ -1,0 +1,45 @@
+/**
+ * NextUp Event Manager - Backend
+ * Version: 4.2.0 (Entity Architecture)
+ * Built: November 6, 2025
+ */
+
+const CONFIG = {
+  APP_NAME: 'NextUp Event Manager',
+  VERSION: '4.2.0-EntityArchitecture',
+  BUILD_DATE: '2025-11-06',
+
+  BRANDS: {
+    'ABC': {
+      name: 'American Bocce Co.',
+      shortName: 'ABC',
+      entities: [
+        { id: 'ABC-Leagues', name: 'ABC Leagues' },
+        { id: 'ABC-Tournaments', name: 'ABC Tournaments' },
+        { id: 'ABC-ChicagoBocceClub', name: 'Chicago Bocce Club' },
+        { id: 'ABC-ChicagoBocceLeague', name: 'Chicago Bocce League' },
+        { id: 'ABC-Other', name: 'Other' }
+      ],
+      colors: {
+        primary: '#c8102e',
+        secondary: '#f5f1e8',
+        accent: '#00a651'
+      },
+      features: {
+        eventOnly: true,
+        tournament: false,
+        season: false,
+        seasonTournament: false
+      },
+      formBranding: {
+        headerImage: 'https://www.americanbocceco.com/logo.png',
+        backgroundColor: '#c8102e',
+        textColor: '#ffffff'
+      }
+    }
+  },
+  
+  DEFAULT_BRAND: 'ABC',
+  CONTROL_SPREADSHEET_NAME: 'zeventbook-control',
+  EVENTS_SHEET_NAME: 'Events',
+  // ... rest of your current Code.gs config
