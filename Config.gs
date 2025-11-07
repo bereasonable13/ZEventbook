@@ -112,6 +112,27 @@ const CONFIG = {
     'cbl.zeventbook.io': 'CBL'
   },
   
+  BRAND_HIERARCHY: {
+    'ABC': {
+      isParent: true,
+      children: ['CBC', 'CBL'],
+      canViewAll: true,
+      name: 'American Bocce Company Ecosystem'
+    },
+    'CBC': {
+      isParent: false,
+      parent: 'ABC',
+      canViewAll: false,
+      name: 'Chicago Bocce Club'
+    },
+    'CBL': {
+      isParent: false,
+      parent: 'ABC',
+      canViewAll: false,
+      name: 'Chicago Bocce League'
+    }
+  },
+  
   GITHUB: {
     ENABLED: true,
     USERNAME: 'bereasonable13',
