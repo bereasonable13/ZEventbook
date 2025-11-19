@@ -1,0 +1,268 @@
+#!/bin/bash
+
+echo "=========================================="
+echo "FIX: ENTITY DROPDOWN + UX IMPROVEMENT"
+echo "=========================================="
+echo ""
+
+# STEP 1: Check why dropdown not populating - test in browser
+cat << 'ENDTEST'
+FIRST: Open browser console and test if getConfig works:
+
+1. Open: https://script.google.com/macros/s/AKfycbzxPOs9lqA-vQOYfw3iGYqEdGPQwrqCDvhkrEMk51m2JCZmRffhbbdNARGed-UpBeFK/exec?p=admin&brand=ABC
+
+2. Open console (F12) and paste:
+
+google.script.run
+  .withSuccessHandler(function(result) {
+    console.log('SUCCESS:', result);
+    console.log('ABC entities:', result.BRANDS.ABC.entities);
+  })
+  .withFailureHandler(function(error) {
+    console.error('FAILED:', error);
+  })
+  .getConfig();
+
+3. Tell me what you see!
+
+If getConfig WORKS, then issue is in populateEntityDropdowns()
+If getConfig FAILS, then issue is in backend
+
+========================================
+MEANWHILE: I'll prepare the UX fix
+========================================
+ENDTEST
+
+# STEP 2: Create improved Admin.html with brand selection
+cat > Admin-IMPROVED.html << 'ENDADMIN'
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <?!= include('NUSDK'); ?>
+  <meta charset="utf-8"/>
+  <title>NextUp Admin</title>
+  <?!= include('Styles'); ?>
+</head>
+<body>
+  <div class="container">
+    <?!= include('Header'); ?>
+    
+    <div class="card">
+      <h2>+ Create New Event</h2>
+      
+      <!-- IMPROVED: Brand Selection First -->
+      <div class="form-group">
+        <label>Brand *</label>
+        <select id="brandSelect" onchange="updateEntitiesForBrand()">
+          <option value="">Select brand...</option>
+          <option value="ABC">American Bocce Co.</option>
+          <option value="CBC">Chicago Bocce Club</option>
+          <option value="CBL">Chicago Bocce League</option>
+        </select>
+        <div class="hint">Which brand is hosting this event?</div>
+      </div>
+      
+      <!-- Entity dropdown (populates based on brand) -->
+      <div class="form-group">
+        <label>Entity *</label>
+        <select id="entity">
+          <option value="">Select brand first...</option>
+        </select>
+        <div class="hint">Which organization within the brand?</div>
+      </div>
+      
+      <div class="form-group">
+        <label>Event Name *</label>
+        <input type="text" id="eventName" placeholder="ABC Open 2025" />
+      </div>
+      
+      <div class="form-group">
+        <label>Event Date *</label>
+        <input type="date" id="eventDate" />
+      </div>
+      
+      <div class="form-group">
+        <label>Location</label>
+        <input type="text" id="location" placeholder="Rock Island Public House, Blue Island, IL" />
+      </div>
+      
+      <div class="form-group">
+        <label>Summary Text *</label>
+        <textarea id="summaryText" rows="3" placeholder="Join us for an exciting bocce tournament..."></textarea>
+      </div>
+      
+      <div class="form-group">
+        <label>Summary Link *</label>
+        <input type="url" id="summaryLink" placeholder="https://..." />
+      </div>
+      
+      <button id="btnCreateEvent" class="btn-primary">Create Event</button>
+    </div>
+  </div>
+  
+  <script>
+    let currentBrand = NU.getBrand();
+    let configData = null;
+    
+    // Load config on init
+    async function init() {
+      try {
+        console.log('Loading config...');
+        configData = await NU.getConfig();
+        console.log('Config loaded:', configData);
+        
+        // Pre-select brand if in URL
+        if (currentBrand) {
+          document.getElementById('brandSelect').value = currentBrand;
+          updateEntitiesForBrand();
+        }
+        
+        // Bind create button
+        document.getElementById('btnCreateEvent').addEventListener('click', createEvent);
+        
+      } catch (error) {
+        console.error('Init failed:', error);
+        NU.toast('Failed to load configuration', 'error');
+      }
+    }
+    
+    // Update entities dropdown when brand changes
+    function updateEntitiesForBrand() {
+      const brandSelect = document.getElementById('brandSelect');
+      const entitySelect = document.getElementById('entity');
+      const selectedBrand = brandSelect.value;
+      
+      console.log('Updating entities for brand:', selectedBrand);
+      
+      if (!selectedBrand) {
+        entitySelect.innerHTML = '<option value="">Select brand first...</option>';
+        return;
+      }
+      
+      if (!configData || !configData.BRANDS || !configData.BRANDS[selectedBrand]) {
+        console.error('Brand config not found:', selectedBrand);
+        NU.toast('Brand configuration not found', 'error');
+        return;
+      }
+      
+      const brand = configData.BRANDS[selectedBrand];
+      const entities = brand.entities || [];
+      
+      console.log('Found', entities.length, 'entities for', selectedBrand);
+      
+      // Populate dropdown
+      entitySelect.innerHTML = '<option value="">Select entity...</option>';
+      entities.forEach(entity => {
+        const option = document.createElement('option');
+        option.value = entity.id;
+        option.textContent = entity.name;
+        entitySelect.appendChild(option);
+      });
+      
+      console.log('✓ Entity dropdown populated');
+    }
+    
+    // Create event
+    async function createEvent() {
+      const btn = document.getElementById('btnCreateEvent');
+      btn.disabled = true;
+      btn.textContent = 'Creating...';
+      
+      try {
+        const brand = document.getElementById('brandSelect').value;
+        const entity = document.getElementById('entity').value;
+        const eventName = document.getElementById('eventName').value.trim();
+        const eventDate = document.getElementById('eventDate').value;
+        const location = document.getElementById('location').value.trim();
+        const summaryText = document.getElementById('summaryText').value.trim();
+        const summaryLink = document.getElementById('summaryLink').value.trim();
+        
+        // Validation
+        if (!brand) {
+          NU.toast('Please select a brand', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Create Event';
+          return;
+        }
+        
+        if (!entity) {
+          NU.toast('Please select an entity', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Create Event';
+          return;
+        }
+        
+        if (!eventName || eventName.length < 3) {
+          NU.toast('Please enter an event name (min 3 characters)', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Create Event';
+          return;
+        }
+        
+        if (!eventDate) {
+          NU.toast('Please select an event date', 'error');
+          btn.disabled = false;
+          btn.textContent = 'Create Event';
+          return;
+        }
+        
+        // Call backend
+        const result = await NU.rpc('clientCreateEvent',
+          brand, entity, eventName, eventDate, '', location,
+          summaryText, summaryLink, '', '', '', '', '', 
+          true, true, true, true
+        );
+        
+        if (result.ok) {
+          NU.toast('Event created successfully! ID: ' + result.eventId, 'success');
+          
+          // Clear form
+          document.getElementById('eventName').value = '';
+          document.getElementById('eventDate').value = '';
+          document.getElementById('location').value = '';
+          document.getElementById('summaryText').value = '';
+          document.getElementById('summaryLink').value = '';
+          
+        } else {
+          NU.toast('Error: ' + result.error, 'error');
+        }
+        
+      } catch (error) {
+        console.error('Create event failed:', error);
+        NU.toast('Failed to create event', 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Create Event';
+      }
+    }
+    
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+ENDADMIN
+
+echo "✅ Created Admin-IMPROVED.html with:"
+echo "   - Brand dropdown (ABC, CBC, CBL)"
+echo "   - Entity dropdown (populates based on brand)"
+echo "   - Clearer labels and UX"
+echo ""
+echo "=========================================="
+echo "NEXT STEPS"
+echo "=========================================="
+echo ""
+cat << 'ENDNEXT'
+1. FIRST: Test if getConfig works in console (see above)
+   
+2. IF getConfig works:
+   - Replace Admin.html with Admin-IMPROVED.html
+   - Deploy
+   - Test new two-step selection
+   
+3. IF getConfig fails:
+   - Debug backend issue first
+   - Then apply UX improvements
+
+Tell me the console test results!
+ENDNEXT
+
